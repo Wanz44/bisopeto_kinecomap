@@ -110,13 +110,13 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     const referralCode = `KIN-${user.firstName.substring(0, 3).toUpperCase()}-${user.id ? user.id.slice(-4) : '2024'}`;
 
     const data = [
-      { name: 'Lun', uv: 2 },
-      { name: 'Mar', uv: 1 },
-      { name: 'Mer', uv: 3 },
+      { name: 'Lun', uv: 0 },
+      { name: 'Mar', uv: 0 },
+      { name: 'Mer', uv: 0 },
       { name: 'Jeu', uv: 0 },
-      { name: 'Ven', uv: 2 },
-      { name: 'Sam', uv: 4 },
-      { name: 'Dim', uv: 1 },
+      { name: 'Ven', uv: 0 },
+      { name: 'Sam', uv: 0 },
+      { name: 'Dim', uv: 0 },
     ];
 
     const handleReferralShare = () => {
@@ -185,7 +185,7 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {[
                     { icon: Trash2, label: 'Collectes', value: user.collections, color: 'text-green-500', bg: 'bg-green-500/10' },
-                    { icon: Recycle, label: 'Recyclage', value: '85%', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { icon: Recycle, label: 'Recyclage', value: '0%', color: 'text-blue-500', bg: 'bg-blue-500/10' },
                     { icon: Star, label: 'Points', value: user.points, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
                     { icon: Award, label: 'Badges', value: user.badges, color: 'text-purple-500', bg: 'bg-purple-500/10' }
                 ].map((stat, idx) => (
