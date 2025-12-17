@@ -162,10 +162,10 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                     <div className="max-w-md bg-black/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
                         <div className="flex justify-between items-end mb-2">
                             <span className="text-xs font-bold uppercase tracking-wider opacity-80">Propreté Quartier</span>
-                            <span className="text-xl font-black">75%</span>
+                            <span className="text-xl font-black">0%</span>
                         </div>
                         <div className="bg-black/20 h-3 rounded-full overflow-hidden backdrop-blur-sm">
-                            <div className="bg-white h-full rounded-full w-3/4 shadow-[0_0_15px_rgba(255,255,255,0.8)] relative overflow-hidden">
+                            <div className="bg-white h-full rounded-full w-0 shadow-[0_0_15px_rgba(255,255,255,0.8)] relative overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent w-full -translate-x-full animate-[shimmer_2s_infinite]"></div>
                             </div>
                         </div>
