@@ -268,8 +268,30 @@ export const UserAPI = {
         return getCollection<User>(KEYS.USERS);
     },
 
-    add: async (user: User): Promise<User> => {
-        // Admin Add (Local simulation for demo)
+    add: async (user: User, password?: string): Promise<User> => {
+        // 1. Supabase (Simulated for Admin Add without logging out)
+        // In a real app, use Supabase Admin API (Service Role) via Edge Function
+        if (isSupabaseConfigured() && supabase) {
+             // For this demo, we just insert into profiles assuming user will be created/invited separately
+             // or we simulate the add for immediate listing.
+             const dbProfile = {
+                first_name: user.firstName,
+                last_name: user.lastName,
+                email: user.email,
+                phone: user.phone,
+                type: user.type,
+                address: user.address,
+                points: 0,
+                collections: 0,
+                badges: 0,
+                subscription: user.subscription,
+                permissions: user.permissions
+             };
+             const { data } = await supabase.from('profiles').insert(dbProfile).select().single();
+             if (data) return { ...user, id: data.id };
+        }
+
+        // 2. Local Storage
         const users = getCollection<User>(KEYS.USERS);
         const newUser = { ...user, id: `u-${Date.now()}` };
         users.unshift(newUser);
@@ -316,7 +338,18 @@ export const UserAPI = {
             const { error } = await (supabase.auth as any).resetPasswordForEmail(identifier);
             return !error;
         }
+        // Simulation pour Local Storage
         return true; 
+    },
+
+    confirmPasswordReset: async (identifier: string, newPassword: string): Promise<boolean> => {
+        if (isSupabaseConfigured() && supabase) {
+            const { error } = await (supabase.auth as any).updateUser({ password: newPassword });
+            return !error;
+        }
+        // Simulation pour Local Storage
+        await new Promise(r => setTimeout(r, 1500));
+        return true;
     },
 
     verifyOTP: async (code: string): Promise<boolean> => {

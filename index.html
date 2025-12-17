@@ -14,7 +14,9 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
 
-    <title>KIN ECO-MAP</title>
+    <title>BISO PETO - KIN ECO-MAP | Gestion intelligente des déchets à Kinshasa</title>
+    <meta name="description" content="Application innovante pour moderniser la gestion des déchets, l'assainissement urbain et la sensibilisation écologique à Kinshasa et en RDC">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -67,6 +69,8 @@
         }
       }
     </script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <!-- Chargement global de jsQR pour le scanner -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.2/dist/jsQR.min.js"></script>
@@ -165,6 +169,12 @@
       .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
       .safe-pl { padding-left: env(safe-area-inset-left); }
       .safe-pr { padding-right: env(safe-area-inset-right); }
+
+      /* Animation keyframes for the Landing Page shimmer effect */
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
     </style>
   <script type="importmap">
 {
@@ -184,7 +194,6 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body class="transition-colors duration-500 antialiased">
     <div id="root"></div>
@@ -202,6 +211,5 @@
         });
       }
     </script>
-  <script type="module" src="/index.tsx"></script>
 </body>
 </html>

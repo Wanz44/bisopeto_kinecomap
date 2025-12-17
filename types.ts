@@ -178,6 +178,7 @@ export interface Partner {
 }
 
 export enum AppView {
+    LANDING = 'LANDING',
     ONBOARDING = 'ONBOARDING',
     DASHBOARD = 'DASHBOARD',
     MAP = 'MAP',

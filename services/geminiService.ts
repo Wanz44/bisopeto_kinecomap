@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Chat, Type, Schema } from "@google/genai";
+import { GoogleGenAI, Chat, Type } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
 You are the AI Assistant for KIN ECO-MAP, a waste management and ecology platform in Kinshasa, DRC.
@@ -12,39 +12,19 @@ If asked about app features, guide them to the Dashboard or Map.
 
 let chatSession: Chat | null = null;
 
-// Helper to get API Key safely in Vite environment
-const getApiKey = () => {
-    let key = "";
-    try {
-        // @ts-ignore
-        if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.API_KEY) {
-            // @ts-ignore
-            key = import.meta.env.API_KEY;
-        } 
-        // @ts-ignore
-        else if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-            // @ts-ignore
-            key = process.env.API_KEY;
-        }
-    } catch (e) {
-        console.warn("Error reading API Key:", e);
-    }
-    return key;
-};
-
+/* Fixed: Use process.env.API_KEY directly as per guidelines */
 const getAiClient = () => {
-    const apiKey = getApiKey();
-    // Use a safer check to avoid crashing if key is missing (app handles gracefully)
-    return new GoogleGenAI({ apiKey: apiKey || "AIza_Missing_Key_Placeholder" });
+    return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
+/* Fixed: Use gemini-3-flash-preview for text tasks */
 export const initializeChat = (): Chat | null => {
     if (chatSession) return chatSession;
     
     try {
         const ai = getAiClient();
         chatSession = ai.chats.create({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-flash-preview',
             config: {
                 systemInstruction: SYSTEM_INSTRUCTION,
             },
@@ -73,6 +53,7 @@ export const sendMessageToGemini = async (message: string): Promise<string> => {
 };
 
 // Analyse d'image pour le Marketplace (Estimation prix/poids)
+/* Fixed: Use gemini-3-flash-preview for image analysis and direct API Key usage */
 export const analyzeWasteItem = async (base64Image: string): Promise<{
     title: string;
     category: 'electronics' | 'metal' | 'plastic' | 'other';
@@ -92,7 +73,7 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
         `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-flash-preview',
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
@@ -140,6 +121,7 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
 };
 
 // Validation de la propreté d'un site
+/* Fixed: Use gemini-3-flash-preview for validation and direct API Key usage */
 export const validateCleanliness = async (base64Image: string): Promise<{
     isClean: boolean;
     confidence: number;
@@ -155,7 +137,7 @@ export const validateCleanliness = async (base64Image: string): Promise<{
         `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-flash-preview',
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },

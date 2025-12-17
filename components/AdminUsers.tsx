@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
     ArrowLeft, Search, MoreVertical, Shield, User, Truck, Filter, CheckCircle, 
@@ -6,7 +7,7 @@ import {
     Image as ImageIcon, Send, Users, TrendingUp, AlertCircle, Lock, Unlock, 
     Clock, Plus, ChevronDown, ChevronUp, Weight, Map, CheckSquare, Square, 
     Trash2, MessageSquare, Key, Receipt, Loader2, Info, Edit2, MoreHorizontal,
-    Briefcase, RefreshCcw, ShieldCheck, ShieldAlert, Check, History, Monitor, Globe, Smartphone
+    Briefcase, RefreshCcw, ShieldCheck, ShieldAlert, Check, History, Monitor, Globe, Smartphone, Copy, RotateCw
 } from 'lucide-react';
 import { UserPermission, User as AppUser, UserType } from '../types';
 import { UserAPI } from '../services/api';
@@ -58,6 +59,8 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
     // Modal State (Add & Edit)
     const [showUserModal, setShowUserModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [generatedPassword, setGeneratedPassword] = useState('');
+    
     const [userForm, setUserForm] = useState<{
         id?: string;
         firstName: string;
@@ -109,8 +112,23 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
 
     // --- Handlers ---
 
+    const generateRandomPassword = () => {
+        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+        let pass = "";
+        for(let i=0; i<10; i++) {
+            pass += chars[Math.floor(Math.random() * chars.length)];
+        }
+        setGeneratedPassword(pass);
+    };
+
+    const copyPassword = () => {
+        navigator.clipboard.writeText(generatedPassword);
+        if(onToast) onToast("Mot de passe copié !", "success");
+    };
+
     const openAddModal = () => {
         setIsEditing(false);
+        generateRandomPassword();
         setUserForm({
             firstName: '',
             lastName: '',
@@ -125,6 +143,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
 
     const openEditModal = (user: AppUser) => {
         setIsEditing(true);
+        setGeneratedPassword(''); // Pas de mot de passe en édition standard
         setUserForm({
             id: user.id,
             firstName: user.firstName,
@@ -169,9 +188,10 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                     subscription: 'standard',
                     status: 'active'
                 };
-                await UserAPI.add(newUser);
+                // Passer le mot de passe généré
+                await UserAPI.add(newUser, generatedPassword);
                 setUsers([newUser, ...users]);
-                if (onToast) onToast(`Compte créé : ${userForm.firstName}`, "success");
+                if (onToast) onToast(`Compte créé pour ${userForm.firstName}. Mot de passe : ${generatedPassword}`, "success");
             }
             setShowUserModal(false);
         } catch (e) {
@@ -923,15 +943,44 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                 <input className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-[#2962FF] outline-none" placeholder="Adresse complète" value={userForm.location} onChange={e => setUserForm({...userForm, location: e.target.value})} />
                              </div>
 
+                             {/* --- PASSWORD FIELD (Create Only) --- */}
+                             {!isEditing && (
+                                <div className="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-xs font-bold text-blue-700 dark:text-blue-300">Mot de passe provisoire</label>
+                                        <button type="button" onClick={generateRandomPassword} className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1">
+                                            <RotateCw size={10} /> Générer
+                                        </button>
+                                    </div>
+                                    <div className="relative">
+                                        <input 
+                                            type="text" 
+                                            className="w-full p-3 pr-10 border rounded-xl dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-[#2962FF] outline-none font-mono text-sm" 
+                                            placeholder="Générez un mot de passe" 
+                                            value={generatedPassword} 
+                                            readOnly
+                                        />
+                                        {generatedPassword && (
+                                            <button 
+                                                type="button" 
+                                                onClick={copyPassword}
+                                                className="absolute right-3 top-3 text-gray-400 hover:text-blue-600"
+                                                title="Copier"
+                                            >
+                                                <Copy size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 mt-1">Communiquez ce mot de passe à l'utilisateur.</p>
+                                </div>
+                             )}
+
                              {/* --- PERMISSIONS SECTION --- */}
                              {(userForm.role === UserType.ADMIN || userForm.role === UserType.COLLECTOR || userForm.role === UserType.BUSINESS) && (
                                  <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-200 dark:border-gray-600 mt-2">
                                      <h4 className="text-sm font-bold text-gray-700 dark:text-white mb-3 flex items-center gap-2">
                                          <Lock size={16} /> Permissions Spécifiques
                                      </h4>
-                                     <p className="text-xs text-gray-500 mb-3">
-                                         Cochez les droits d'accès accordés à cet utilisateur.
-                                     </p>
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                                          {ALL_PERMISSIONS.map(perm => (
                                              <label key={perm.key} className={`flex items-start gap-2 cursor-pointer p-2 rounded-lg transition-all border ${userForm.permissions.includes(perm.key) ? 'bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-900 shadow-sm' : 'border-transparent hover:bg-white dark:hover:bg-gray-800'}`}>
