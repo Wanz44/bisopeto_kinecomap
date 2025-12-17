@@ -38,6 +38,12 @@ const initializeData = () => {
     if (!localStorage.getItem(KEYS.SETTINGS)) {
         localStorage.setItem(KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
     }
+    if (!localStorage.getItem(KEYS.ADS)) {
+        localStorage.setItem(KEYS.ADS, JSON.stringify([]));
+    }
+    if (!localStorage.getItem(KEYS.PARTNERS)) {
+        localStorage.setItem(KEYS.PARTNERS, JSON.stringify([]));
+    }
     
     // Ensure Super Admin exists
     const users = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
@@ -91,14 +97,13 @@ export const SettingsAPI = {
         if (isSupabaseConfigured() && supabase) {
             const { data } = await supabase.from('system_settings').select('*').single();
             if (data) {
-                // Map snake_case DB to camelCase Types
                 return {
                     maintenanceMode: data.maintenance_mode,
                     supportEmail: data.support_email,
                     appVersion: data.app_version,
                     force2FA: data.force_2fa,
                     sessionTimeout: data.session_timeout,
-                    passwordPolicy: 'strong', // Default or fetch if added to DB
+                    passwordPolicy: 'strong',
                     marketplaceCommission: data.marketplace_commission
                 };
             }
@@ -126,7 +131,6 @@ export const SettingsAPI = {
 };
 
 export const UserAPI = {
-    // Authentification réelle via Supabase ou simulation locale
     login: async (identifier: string, password?: string): Promise<User | null> => {
         
         // 0. Super Admin Hardcoded Access (Priority)
@@ -149,29 +153,28 @@ export const UserAPI = {
                     permissions: ['manage_users', 'validate_docs', 'view_finance', 'manage_ads', 'export_data', 'system_settings', 'manage_fleet', 'manage_academy', 'manage_communications', 'manage_pos']
                 };
             } else {
-                return null; // Mot de passe incorrect pour le super admin
+                return null;
             }
         }
 
-        // 1. Tentative Supabase Auth (si configuré)
+        // 1. Supabase Auth
         if (isSupabaseConfigured() && supabase) {
             try {
                 if (identifier.includes('@')) {
-                    const { data, error } = await supabase.auth.signInWithPassword({
+                    const { data, error } = await (supabase.auth as any).signInWithPassword({
                         email: identifier,
                         password: password || ''
                     });
                     if (error) throw error;
                     
                     if (data.user) {
-                        const { data: profile, error: profileError } = await supabase
+                        const { data: profile } = await supabase
                             .from('profiles')
                             .select('*')
                             .eq('id', data.user.id)
                             .single();
                             
                         if (profile) {
-                            // Map SQL snake_case to TS camelCase
                             return {
                                 id: profile.id,
                                 firstName: profile.first_name,
@@ -186,7 +189,10 @@ export const UserAPI = {
                                 subscription: profile.subscription,
                                 companyName: profile.company_name,
                                 sector: profile.sector,
-                                permissions: profile.permissions
+                                permissions: profile.permissions,
+                                zone: profile.zone,
+                                vehicleType: profile.vehicle_type,
+                                housingType: profile.housing_type
                             } as User;
                         }
                     }
@@ -196,14 +202,10 @@ export const UserAPI = {
             }
         }
 
-        // 2. Fallback Local Storage (Simulation pour les autres utilisateurs)
-        await new Promise(r => setTimeout(r, 800)); // Latence artificielle
+        // 2. Fallback Local Storage
+        await new Promise(r => setTimeout(r, 800));
         const users = getCollection<User>(KEYS.USERS);
-        
-        const user = users.find(u => 
-            u.email === identifier || 
-            u.phone === identifier
-        );
+        const user = users.find(u => u.email === identifier || u.phone === identifier);
         return user || null;
     },
 
@@ -211,14 +213,15 @@ export const UserAPI = {
         // 1. Supabase Register
         if (isSupabaseConfigured() && supabase && user.email && password) {
             try {
-                const { data, error } = await supabase.auth.signUp({
+                const { data, error } = await (supabase.auth as any).signUp({
                     email: user.email,
                     password: password,
                     options: {
                         data: {
                             first_name: user.firstName,
                             last_name: user.lastName,
-                            type: user.type
+                            type: user.type,
+                            phone: user.phone
                         }
                     }
                 });
@@ -226,7 +229,6 @@ export const UserAPI = {
                 if (error) throw error;
                 
                 if (data.user) {
-                    // Profile created via SQL Trigger usually, but we can return the local object
                     return { ...user, id: data.user.id };
                 }
             } catch (error) {
@@ -267,7 +269,7 @@ export const UserAPI = {
     },
 
     add: async (user: User): Promise<User> => {
-        // Admin Add function (mostly local for now unless using Supabase Admin Auth API which is restricted on client)
+        // Admin Add (Local simulation for demo)
         const users = getCollection<User>(KEYS.USERS);
         const newUser = { ...user, id: `u-${Date.now()}` };
         users.unshift(newUser);
@@ -283,6 +285,9 @@ export const UserAPI = {
              if(user.phone) updates.phone = user.phone;
              if(user.address) updates.address = user.address;
              if(user.subscription) updates.subscription = user.subscription;
+             if(user.companyName) updates.company_name = user.companyName;
+             if(user.permissions) updates.permissions = user.permissions;
+             if(user.points !== undefined) updates.points = user.points;
              
              await supabase.from('profiles').update(updates).eq('id', user.id);
              return;
@@ -298,7 +303,6 @@ export const UserAPI = {
 
     delete: async (userId: string): Promise<void> => {
         if (isSupabaseConfigured() && supabase) {
-            // Note: Deleting from public.profiles might not delete from auth.users without backend func
             await supabase.from('profiles').delete().eq('id', userId);
             return;
         }
@@ -309,32 +313,18 @@ export const UserAPI = {
 
     resetPassword: async (identifier: string): Promise<boolean> => {
         if (isSupabaseConfigured() && supabase) {
-            const { error } = await supabase.auth.resetPasswordForEmail(identifier);
+            const { error } = await (supabase.auth as any).resetPasswordForEmail(identifier);
             return !error;
         }
-        await new Promise(r => setTimeout(r, 1500));
         return true; 
     },
 
     verifyOTP: async (code: string): Promise<boolean> => {
         await new Promise(r => setTimeout(r, 1000));
-        return code === '123456'; // Code magique pour la démo
+        return code === '123456';
     },
 
     sendEmail: async (to: string, subject: string, message: string): Promise<boolean> => {
-        console.log(`[Email Service] Préparation envoi à ${to}`);
-        if (isSupabaseConfigured() && supabase) {
-            try {
-                // Call Supabase Edge Function if available
-                // const { data, error } = await supabase.functions.invoke('send-email', { body: { to, subject, message } });
-                console.log("[Email Service] Simulation Supabase OK");
-                return true;
-            } catch (error) {
-                console.error("[Email Service] Erreur:", error);
-                return false;
-            }
-        }
-        await new Promise(r => setTimeout(r, 2000));
         return true;
     }
 };
@@ -342,7 +332,7 @@ export const UserAPI = {
 export const MarketplaceAPI = {
     getAll: async (): Promise<MarketplaceItem[]> => {
         if (isSupabaseConfigured() && supabase) {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('marketplace_items')
                 .select('*')
                 .order('created_at', { ascending: false });
@@ -362,19 +352,16 @@ export const MarketplaceAPI = {
             })) as MarketplaceItem[];
         }
 
-        await new Promise(r => setTimeout(r, 500));
         return getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
     },
 
     add: async (item: MarketplaceItem): Promise<MarketplaceItem> => {
         if (!navigator.onLine) {
-            console.log('[API] Hors ligne - Ajout MarketplaceItem en file d\'attente');
             OfflineManager.addToQueue('ADD_ITEM', item);
             return { ...item, id: `temp-${Date.now()}` };
         }
 
         if (isSupabaseConfigured() && supabase) {
-            // Map camelCase to snake_case
             const dbItem = {
                 seller_id: item.sellerId,
                 seller_name: item.sellerName,
@@ -386,8 +373,7 @@ export const MarketplaceAPI = {
                 image_url: item.imageUrl,
                 status: item.status
             };
-            const { data, error } = await supabase.from('marketplace_items').insert(dbItem).select().single();
-            
+            const { data } = await supabase.from('marketplace_items').insert(dbItem).select().single();
             if (data) return { ...item, id: data.id };
         }
 
@@ -436,7 +422,23 @@ export const VehicleAPI = {
         return getCollection<Vehicle>(KEYS.VEHICLES);
     },
     add: async (vehicle: Vehicle): Promise<Vehicle> => {
-        // ... (Similaire aux autres, adaptation des champs)
+        if (isSupabaseConfigured() && supabase) {
+            const dbVehicle = {
+                name: vehicle.name,
+                type: vehicle.type,
+                plate_number: vehicle.plateNumber,
+                gps_id: vehicle.gpsId,
+                status: vehicle.status,
+                battery_level: vehicle.batteryLevel,
+                signal_strength: vehicle.signalStrength,
+                lat: vehicle.lat,
+                lng: vehicle.lng,
+                driver_id: vehicle.driverId
+            };
+            const { data } = await supabase.from('vehicles').insert(dbVehicle).select().single();
+            if (data) return { ...vehicle, id: data.id };
+        }
+
         const list = getCollection<Vehicle>(KEYS.VEHICLES);
         const newItem = { ...vehicle, id: `v-${Date.now()}` };
         list.push(newItem);
@@ -544,5 +546,135 @@ export const StorageAPI = {
             console.error("Storage Error:", error);
             return null;
         }
+    }
+};
+
+export const PartnersAPI = {
+    getAll: async (): Promise<Partner[]> => {
+        if (isSupabaseConfigured() && supabase) {
+            const { data } = await supabase.from('partners').select('*');
+            if (data) return data.map((p:any) => ({
+                id: p.id,
+                name: p.name,
+                industry: p.industry,
+                contactName: p.contact_name,
+                email: p.email,
+                phone: p.phone,
+                logo: p.logo_url,
+                status: p.status,
+                activeCampaigns: p.active_campaigns,
+                totalBudget: p.total_budget
+            }));
+        }
+        return getCollection(KEYS.PARTNERS);
+    },
+    add: async (partner: Partner): Promise<Partner> => {
+        if (isSupabaseConfigured() && supabase) {
+            const dbPartner = {
+                name: partner.name,
+                industry: partner.industry,
+                contact_name: partner.contactName,
+                email: partner.email,
+                phone: partner.phone,
+                logo_url: partner.logo,
+                status: partner.status
+            };
+            const { data } = await supabase.from('partners').insert(dbPartner).select().single();
+            if (data) return { ...partner, id: data.id };
+        }
+        const list = getCollection<Partner>(KEYS.PARTNERS);
+        const newItem = { ...partner, id: `p-${Date.now()}` };
+        list.push(newItem);
+        saveCollection(KEYS.PARTNERS, list);
+        return newItem;
+    },
+    update: async (partner: Partner): Promise<void> => {
+        if (isSupabaseConfigured() && supabase) {
+            await supabase.from('partners').update({
+                name: partner.name,
+                contact_name: partner.contactName,
+                email: partner.email,
+                phone: partner.phone,
+                logo_url: partner.logo,
+                industry: partner.industry
+            }).eq('id', partner.id);
+            return;
+        }
+        const list = getCollection<Partner>(KEYS.PARTNERS);
+        const idx = list.findIndex(p => p.id === partner.id);
+        if (idx !== -1) {
+            list[idx] = partner;
+            saveCollection(KEYS.PARTNERS, list);
+        }
+    },
+    delete: async (id: string): Promise<void> => {
+        if (isSupabaseConfigured() && supabase) {
+            await supabase.from('partners').delete().eq('id', id);
+            return;
+        }
+        const list = getCollection<Partner>(KEYS.PARTNERS);
+        saveCollection(KEYS.PARTNERS, list.filter(p => p.id !== id));
+    }
+};
+
+export const AdsAPI = {
+    getAll: async (): Promise<AdCampaign[]> => {
+        if (isSupabaseConfigured() && supabase) {
+            const { data } = await supabase.from('ad_campaigns').select('*');
+            if (data) return data.map((a:any) => ({
+                id: a.id,
+                title: a.title,
+                partner: a.partner_name,
+                status: a.status,
+                views: a.views,
+                clicks: a.clicks,
+                budget: a.budget,
+                spent: a.spent,
+                startDate: a.start_date,
+                endDate: a.end_date,
+                image: a.image_url
+            }));
+        }
+        return getCollection(KEYS.ADS);
+    },
+    add: async (ad: AdCampaign): Promise<AdCampaign> => {
+        if (isSupabaseConfigured() && supabase) {
+            const dbAd = {
+                title: ad.title,
+                partner_name: ad.partner,
+                status: ad.status,
+                budget: ad.budget,
+                start_date: ad.startDate,
+                end_date: ad.endDate,
+                image_url: ad.image
+            };
+            const { data } = await supabase.from('ad_campaigns').insert(dbAd).select().single();
+            if (data) return { ...ad, id: data.id };
+        }
+        const list = getCollection<AdCampaign>(KEYS.ADS);
+        const newItem = { ...ad, id: `ad-${Date.now()}` };
+        list.push(newItem);
+        saveCollection(KEYS.ADS, list);
+        return newItem;
+    },
+    updateStatus: async (id: string, status: string): Promise<void> => {
+        if (isSupabaseConfigured() && supabase) {
+            await supabase.from('ad_campaigns').update({ status }).eq('id', id);
+            return;
+        }
+        const list = getCollection<AdCampaign>(KEYS.ADS);
+        const ad = list.find(a => a.id === id);
+        if (ad) {
+            ad.status = status as any;
+            saveCollection(KEYS.ADS, list);
+        }
+    },
+    delete: async (id: string): Promise<void> => {
+        if (isSupabaseConfigured() && supabase) {
+            await supabase.from('ad_campaigns').delete().eq('id', id);
+            return;
+        }
+        const list = getCollection<AdCampaign>(KEYS.ADS);
+        saveCollection(KEYS.ADS, list.filter(a => a.id !== id));
     }
 };

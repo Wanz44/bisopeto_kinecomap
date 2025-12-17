@@ -1,23 +1,19 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Plus, Megaphone, TrendingUp, Eye, MousePointer, Calendar, DollarSign, PauseCircle, PlayCircle, Trash2, BarChart3, Filter, ListFilter, Upload, Building2, Mail, Phone, MoreVertical, Edit2, User, X, Check, Image as ImageIcon, PieChart } from 'lucide-react';
 import { AdCampaign, Partner } from '../types';
+import { AdsAPI, PartnersAPI } from '../services/api';
 
 interface AdminAdsProps {
     onBack: () => void;
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
-// Données de démonstration - VIDÉES pour Reset
-const MOCK_ADS: AdCampaign[] = [];
-
-const MOCK_PARTNERS: Partner[] = [];
-
 export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
     const [activeTab, setActiveTab] = useState<'campaigns' | 'partners'>('campaigns');
     
     // Ads State
-    const [ads, setAds] = useState<AdCampaign[]>(MOCK_ADS);
+    const [ads, setAds] = useState<AdCampaign[]>([]);
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'ended'>('all');
     const [sortBy, setSortBy] = useState<'startDate' | 'endDate'>('startDate');
     const [dateStart, setDateStart] = useState('');
@@ -35,36 +31,49 @@ export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
     });
 
     // Partners State
-    const [partners, setPartners] = useState<Partner[]>(MOCK_PARTNERS);
+    const [partners, setPartners] = useState<Partner[]>([]);
     const [showPartnerModal, setShowPartnerModal] = useState(false);
     const [isEditingPartner, setIsEditingPartner] = useState(false);
     const [currentPartner, setCurrentPartner] = useState<Partial<Partner>>({});
     
     const partnerFileInputRef = useRef<HTMLInputElement>(null);
 
-    // --- Campaign Logic ---
-    const handleToggleStatus = (id: string) => {
-        setAds(prev => prev.map(ad => {
-            if (ad.id === id) {
-                const newStatus = ad.status === 'active' ? 'paused' : 'active';
-                if (onToast) onToast(`Campagne ${newStatus === 'active' ? 'activée' : 'mise en pause'}`, "info");
-                return { ...ad, status: newStatus };
-            }
-            return ad;
-        }));
+    // Initial Data Load
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        const p = await PartnersAPI.getAll();
+        setPartners(p);
+        const a = await AdsAPI.getAll();
+        setAds(a);
     };
 
-    const handleDeleteAd = (id: string) => {
+    // --- Campaign Logic ---
+    const handleToggleStatus = async (id: string) => {
+        const ad = ads.find(a => a.id === id);
+        if (!ad) return;
+        const newStatus = ad.status === 'active' ? 'paused' : 'active';
+        
+        await AdsAPI.updateStatus(id, newStatus);
+        
+        setAds(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+        if (onToast) onToast(`Campagne ${newStatus === 'active' ? 'activée' : 'mise en pause'}`, "info");
+    };
+
+    const handleDeleteAd = async (id: string) => {
         if (confirm('Êtes-vous sûr de vouloir supprimer cette campagne ?')) {
+            await AdsAPI.delete(id);
             setAds(prev => prev.filter(ad => ad.id !== id));
             if (onToast) onToast("Campagne supprimée", "success");
         }
     };
 
-    const handleSaveCampaign = (e: React.FormEvent) => {
+    const handleSaveCampaign = async (e: React.FormEvent) => {
         e.preventDefault();
         const campaign: AdCampaign = {
-            id: Date.now().toString(),
+            id: '',
             title: newCampaign.title || 'Nouvelle Campagne',
             partner: newCampaign.partner || 'Partenaire Inconnu',
             status: newCampaign.status || 'active',
@@ -76,7 +85,9 @@ export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
             endDate: newCampaign.endDate || new Date(Date.now() + 86400000 * 30).toLocaleDateString('fr-FR'),
             image: newCampaign.image || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=800&q=80'
         };
-        setAds([campaign, ...ads]);
+        
+        const created = await AdsAPI.add(campaign);
+        setAds([created, ...ads]);
         setShowCampaignModal(false);
         setNewCampaign({ status: 'active', budget: 1000, spent: 0, views: 0, clicks: 0 });
         if (onToast) onToast("Campagne publicitaire créée avec succès", "success");
@@ -129,15 +140,16 @@ export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
     };
 
     // --- Partner Logic ---
-    const handleSavePartner = (e: React.FormEvent) => {
+    const handleSavePartner = async (e: React.FormEvent) => {
         e.preventDefault();
         
         if (isEditingPartner && currentPartner.id) {
+            await PartnersAPI.update(currentPartner as Partner);
             setPartners(prev => prev.map(p => p.id === currentPartner.id ? { ...p, ...currentPartner } as Partner : p));
             if (onToast) onToast("Partenaire mis à jour", "success");
         } else {
             const newPartner: Partner = {
-                id: Date.now().toString(),
+                id: '',
                 name: currentPartner.name || 'Nouveau Partenaire',
                 industry: currentPartner.industry || 'Autre',
                 contactName: currentPartner.contactName || '',
@@ -148,15 +160,17 @@ export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
                 logo: currentPartner.logo || `https://ui-avatars.com/api/?name=${(currentPartner.name || 'N').substring(0,2)}&background=random&color=fff`,
                 status: 'active'
             };
-            setPartners([...partners, newPartner]);
+            const created = await PartnersAPI.add(newPartner);
+            setPartners([...partners, created]);
             if (onToast) onToast("Nouveau partenaire ajouté", "success");
         }
         setShowPartnerModal(false);
         setCurrentPartner({});
     };
 
-    const handleDeletePartner = (id: string) => {
+    const handleDeletePartner = async (id: string) => {
         if (confirm('Supprimer ce partenaire ? Cela archivera toutes ses campagnes.')) {
+            await PartnersAPI.delete(id);
             setPartners(prev => prev.filter(p => p.id !== id));
             if (onToast) onToast("Partenaire supprimé", "success");
         }

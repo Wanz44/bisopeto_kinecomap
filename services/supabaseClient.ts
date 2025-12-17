@@ -1,21 +1,10 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Récupération sécurisée des variables d'environnement
-// Cette fonction empêche le crash si import.meta.env est indéfini
-const getEnv = (key: string) => {
-    try {
-        // @ts-ignore
-        const env = (import.meta as any).env;
-        return env ? env[key] : '';
-    } catch (e) {
-        console.warn('Environment variable access warning:', e);
-        return '';
-    }
-};
-
-const supabaseUrl = getEnv('VITE_SUPABASE_URL');
-const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
+// Récupération des variables injectées par Vite via 'define' dans vite.config.ts
+// Cela correspond à votre configuration Vercel (SUPABASE_URL et SUPABASE_KEY)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_KEY;
 
 // Vérification si la configuration est présente
 export const isSupabaseConfigured = () => {
@@ -28,7 +17,7 @@ export const isSupabaseConfigured = () => {
 
 // Initialisation du client uniquement si la config est bonne
 export const supabase = isSupabaseConfigured() 
-    ? createClient(supabaseUrl, supabaseAnonKey) 
+    ? createClient(supabaseUrl!, supabaseAnonKey!) 
     : null;
 
 // Helper pour gérer les erreurs

@@ -237,22 +237,22 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
     );
 
     const renderLogin = () => (
-        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-[#050505] animate-fade-in relative">
+        <div className="flex flex-col h-full bg-[#F5F7FA] animate-fade-in relative">
             <div className="absolute top-0 right-0 w-full h-64 bg-gradient-to-b from-[#00C853]/10 to-transparent pointer-events-none"></div>
             
             {/* Header Login */}
             <div className="p-8 pb-4 relative z-10">
-                <button onClick={() => setShowLogin(false)} className="p-3 -ml-3 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors mb-6 text-gray-600 dark:text-gray-300">
+                <button onClick={() => setShowLogin(false)} className="p-3 -ml-3 hover:bg-gray-100 rounded-full transition-colors mb-6 text-gray-600">
                     <ArrowLeft size={28} />
                 </button>
                 
-                <h2 className="text-4xl font-black text-gray-800 dark:text-white mb-2 tracking-tight">Bon retour.</h2>
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Connectez-vous pour continuer.</p>
+                <h2 className="text-4xl font-black text-gray-800 mb-2 tracking-tight">Bon retour.</h2>
+                <p className="text-gray-500 font-medium">Connectez-vous pour continuer.</p>
             </div>
 
             {/* Role Tabs - Futuristic Pills */}
             <div className="px-8 py-4">
-                <div className="bg-gray-200/50 dark:bg-white/5 p-1.5 rounded-2xl flex backdrop-blur-sm">
+                <div className="bg-gray-200/50 p-1.5 rounded-2xl flex backdrop-blur-sm">
                     {[
                         { id: UserType.CITIZEN, label: 'Utilisateur' },
                         { id: UserType.COLLECTOR, label: 'Collecteur' },
@@ -261,7 +261,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
                         <button 
                             key={role.id}
                             onClick={() => setLoginRole(role.id as any)}
-                            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${loginRole === role.id ? 'bg-white dark:bg-[#2962FF] shadow-lg text-black dark:text-white transform scale-105' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${loginRole === role.id ? 'bg-white shadow-lg text-black transform scale-105' : 'text-gray-500 hover:text-gray-800'}`}
                         >
                             {role.label}
                         </button>
@@ -279,7 +279,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
 
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">
+                        <label className="text-sm font-bold text-gray-500 uppercase tracking-wider ml-1">
                             {loginRole === UserType.ADMIN ? 'Identifiant Admin' : 'Email ou Téléphone'}
                         </label>
                         <div className="relative group">
@@ -291,13 +291,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
                                 value={loginIdentifier}
                                 onChange={(e) => setLoginIdentifier(e.target.value)}
                                 placeholder={loginRole === UserType.ADMIN ? "admin@kinecomap.cd" : "Ex: +243 81..."}
-                                className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#00C853] outline-none transition-all font-medium placeholder-gray-400 dark:placeholder-gray-600 shadow-sm"
+                                className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-transparent bg-white text-gray-900 focus:border-[#00C853] outline-none transition-all font-medium placeholder-gray-400 shadow-sm"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Mot de passe</label>
+                        <label className="text-sm font-bold text-gray-500 uppercase tracking-wider ml-1">Mot de passe</label>
                         <div className="relative group">
                             <div className="absolute left-4 top-4 text-gray-400 group-focus-within:text-[#00C853] transition-colors">
                                 <Lock size={20} />
@@ -307,12 +307,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
                                 value={loginPassword}
                                 onChange={(e) => setLoginPassword(e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full pl-12 pr-12 py-4 rounded-2xl border-2 border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#00C853] outline-none transition-all font-medium placeholder-gray-400 dark:placeholder-gray-600 shadow-sm"
+                                className="w-full pl-12 pr-12 py-4 rounded-2xl border-2 border-transparent bg-white text-gray-900 focus:border-[#00C853] outline-none transition-all font-medium placeholder-gray-400 shadow-sm"
                             />
                             <button 
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
                             >
                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
@@ -326,17 +326,17 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
                 <button 
                     onClick={handleLoginSubmit}
                     disabled={isLoggingIn || !loginIdentifier || !loginPassword}
-                    className="w-full bg-[#00C853] hover:bg-[#00E676] disabled:bg-gray-300 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(0,200,83,0.39)] transition-all flex items-center justify-center gap-3 transform active:scale-95 text-lg"
+                    className="w-full bg-[#00C853] hover:bg-[#00E676] disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(0,200,83,0.39)] transition-all flex items-center justify-center gap-3 transform active:scale-95 text-lg"
                 >
                     {isLoggingIn ? <Loader2 className="animate-spin" /> : <>SE CONNECTER <ChevronRight size={24} /></>}
                 </button>
 
                 <div className="relative py-4">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-white/10"></div></div>
-                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#F5F7FA] dark:bg-[#050505] px-2 text-gray-400 font-bold">Ou continuer avec</span></div>
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#F5F7FA] px-2 text-gray-400 font-bold">Ou continuer avec</span></div>
                 </div>
 
-                <button className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-white font-bold py-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-3 shadow-sm">
+                <button className="w-full bg-white border border-gray-200 text-gray-700 font-bold py-4 rounded-2xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-3 shadow-sm">
                     <Globe size={20} className="text-blue-500" /> Compte Google
                 </button>
             </div>
@@ -346,11 +346,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
     const renderForgotPassModal = () => (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowForgotPass(false)}></div>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-6 relative z-10 shadow-xl animate-fade-in-up">
+            <div className="bg-white rounded-2xl w-full max-w-sm p-6 relative z-10 shadow-xl animate-fade-in-up">
                 <button onClick={() => setShowForgotPass(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                     <X size={20} />
                 </button>
-                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Mot de passe oublié</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Mot de passe oublié</h3>
                 <p className="text-sm text-gray-500 mb-6">Entrez votre identifiant pour recevoir un lien de réinitialisation.</p>
                 <form onSubmit={handleForgotPassSubmit} className="space-y-4">
                     <input 
@@ -358,7 +358,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
                         value={loginIdentifier}
                         onChange={(e) => setLoginIdentifier(e.target.value)}
                         placeholder="Email ou Téléphone"
-                        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#00C853]"
+                        className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 outline-none focus:ring-2 focus:ring-[#00C853]"
                         required
                     />
                     <button type="submit" disabled={isLoggingIn} className="w-full py-3 bg-[#00C853] text-white rounded-xl font-bold">
@@ -372,16 +372,16 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
     const renderRegisterStep1 = () => (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-2">Créer un compte</h2>
-                <p className="text-gray-500 dark:text-gray-400">Commençons par les bases.</p>
+                <h2 className="text-2xl font-black text-gray-800 mb-2">Créer un compte</h2>
+                <p className="text-gray-500">Commençons par les bases.</p>
             </div>
             <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                    <input type="text" placeholder="Prénom" className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium" value={formData.firstName} onChange={(e) => updateData('firstName', e.target.value)} />
-                    <input type="text" placeholder="Nom" className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium" value={formData.lastName} onChange={(e) => updateData('lastName', e.target.value)} />
+                    <input type="text" placeholder="Prénom" className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium" value={formData.firstName} onChange={(e) => updateData('firstName', e.target.value)} />
+                    <input type="text" placeholder="Nom" className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium" value={formData.lastName} onChange={(e) => updateData('lastName', e.target.value)} />
                 </div>
-                <input type="tel" placeholder="Téléphone (+243...)" className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium" value={formData.phone} onChange={(e) => updateData('phone', e.target.value)} />
-                <input type="email" placeholder="Email (Optionnel)" className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium" value={formData.email} onChange={(e) => updateData('email', e.target.value)} />
+                <input type="tel" placeholder="Téléphone (+243...)" className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium" value={formData.phone} onChange={(e) => updateData('phone', e.target.value)} />
+                <input type="email" placeholder="Email (Optionnel)" className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium" value={formData.email} onChange={(e) => updateData('email', e.target.value)} />
             </div>
             <button onClick={handleSendOTP} disabled={isVerifyingOTP} className="w-full py-4 bg-[#00C853] text-white rounded-2xl font-black text-lg shadow-lg flex items-center justify-center gap-2">
                 {isVerifyingOTP ? <Loader2 className="animate-spin" /> : <>Suivant <ChevronRight /></>}
@@ -392,8 +392,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
     const renderRegisterStep2_OTP = () => (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-2">Vérification</h2>
-                <p className="text-gray-500 dark:text-gray-400">Code envoyé au {formData.phone}</p>
+                <h2 className="text-2xl font-black text-gray-800 mb-2">Vérification</h2>
+                <p className="text-gray-500">Code envoyé au {formData.phone}</p>
             </div>
             <div className="flex justify-between gap-2">
                 {otpCode.map((digit, idx) => (
@@ -402,7 +402,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
                         id={`otp-${idx}`}
                         type="text"
                         maxLength={1}
-                        className="w-12 h-14 rounded-xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] text-center text-xl font-bold text-gray-800 dark:text-white outline-none"
+                        className="w-12 h-14 rounded-xl bg-white border-2 border-transparent focus:border-[#00C853] text-center text-xl font-bold text-gray-800 outline-none"
                         value={digit}
                         onChange={(e) => handleOtpChange(idx, e.target.value)}
                     />
@@ -420,21 +420,21 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
     const renderRegisterStep3_Password = () => (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-2">Sécurité</h2>
-                <p className="text-gray-500 dark:text-gray-400">Choisissez un mot de passe fort.</p>
+                <h2 className="text-2xl font-black text-gray-800 mb-2">Sécurité</h2>
+                <p className="text-gray-500">Choisissez un mot de passe fort.</p>
             </div>
             <div className="space-y-4">
-                <input type="password" placeholder="Mot de passe" className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium" value={registerPassword} onChange={(e) => handlePasswordInput(e.target.value)} />
+                <input type="password" placeholder="Mot de passe" className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium" value={registerPassword} onChange={(e) => handlePasswordInput(e.target.value)} />
                 
                 {/* Password Strength Indicator */}
                 <div className="flex gap-1 h-1.5 mt-2">
-                    <div className={`flex-1 rounded-full ${passwordStrength >= 1 ? 'bg-red-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                    <div className={`flex-1 rounded-full ${passwordStrength >= 2 ? 'bg-orange-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                    <div className={`flex-1 rounded-full ${passwordStrength >= 3 ? 'bg-yellow-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                    <div className={`flex-1 rounded-full ${passwordStrength >= 4 ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                    <div className={`flex-1 rounded-full ${passwordStrength >= 1 ? 'bg-red-500' : 'bg-gray-200'}`}></div>
+                    <div className={`flex-1 rounded-full ${passwordStrength >= 2 ? 'bg-orange-500' : 'bg-gray-200'}`}></div>
+                    <div className={`flex-1 rounded-full ${passwordStrength >= 3 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
+                    <div className={`flex-1 rounded-full ${passwordStrength >= 4 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
                 </div>
 
-                <input type="password" placeholder="Confirmer mot de passe" className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                <input type="password" placeholder="Confirmer mot de passe" className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
             </div>
             <button onClick={() => setRegStep(4)} disabled={!registerPassword || registerPassword !== confirmPassword} className="w-full py-4 bg-[#00C853] text-white rounded-2xl font-black text-lg shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 Suivant <ChevronRight />
@@ -445,8 +445,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
     const renderRegisterStep4_Role = () => (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-2">Vous êtes ?</h2>
-                <p className="text-gray-500 dark:text-gray-400">Sélectionnez votre type de profil.</p>
+                <h2 className="text-2xl font-black text-gray-800 mb-2">Vous êtes ?</h2>
+                <p className="text-gray-500">Sélectionnez votre type de profil.</p>
             </div>
             <div className="grid grid-cols-1 gap-4">
                 {[
@@ -457,14 +457,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
                     <button 
                         key={type.id}
                         onClick={() => updateData('type', type.id)}
-                        className={`p-6 rounded-3xl border-2 text-left transition-all ${formData.type === type.id ? 'border-[#00C853] bg-green-50 dark:bg-green-900/10' : 'border-transparent bg-white dark:bg-white/5 hover:border-gray-200 dark:hover:border-gray-700'}`}
+                        className={`p-6 rounded-3xl border-2 text-left transition-all ${formData.type === type.id ? 'border-[#00C853] bg-green-50' : 'border-transparent bg-white hover:border-gray-200'}`}
                     >
                         <div className="flex items-center gap-4">
-                            <div className={`p-3 rounded-2xl ${formData.type === type.id ? 'bg-[#00C853] text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                            <div className={`p-3 rounded-2xl ${formData.type === type.id ? 'bg-[#00C853] text-white' : 'bg-gray-100 text-gray-500'}`}>
                                 <type.icon size={24} />
                             </div>
                             <div>
-                                <h3 className="font-bold text-lg text-gray-800 dark:text-white">{type.label}</h3>
+                                <h3 className="font-bold text-lg text-gray-800">{type.label}</h3>
                                 <p className="text-sm text-gray-500">{type.desc}</p>
                             </div>
                         </div>
@@ -480,23 +480,23 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
     const renderRegisterStep5_Address = () => (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-2">Localisation</h2>
-                <p className="text-gray-500 dark:text-gray-400">Où devons-nous collecter ?</p>
+                <h2 className="text-2xl font-black text-gray-800 mb-2">Localisation</h2>
+                <p className="text-gray-500">Où devons-nous collecter ?</p>
             </div>
             <div className="space-y-4">
-                <input type="text" placeholder="Adresse complète" className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium" value={formData.address} onChange={(e) => updateData('address', e.target.value)} />
+                <input type="text" placeholder="Adresse complète" className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium" value={formData.address} onChange={(e) => updateData('address', e.target.value)} />
                 
                 {/* Additional fields based on role */}
                 {formData.type === UserType.BUSINESS && (
                     <>
-                        <input type="text" placeholder="Nom de l'entreprise" className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium" value={formData.companyName} onChange={(e) => updateData('companyName', e.target.value)} />
-                        <input type="text" placeholder="Secteur d'activité" className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium" value={formData.sector} onChange={(e) => updateData('sector', e.target.value)} />
+                        <input type="text" placeholder="Nom de l'entreprise" className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium" value={formData.companyName} onChange={(e) => updateData('companyName', e.target.value)} />
+                        <input type="text" placeholder="Secteur d'activité" className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium" value={formData.sector} onChange={(e) => updateData('sector', e.target.value)} />
                     </>
                 )}
 
                 {formData.type === UserType.CITIZEN && (
                     <select 
-                        className="w-full p-4 rounded-2xl bg-white dark:bg-white/5 border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 dark:text-white font-medium"
+                        className="w-full p-4 rounded-2xl bg-white border-2 border-transparent focus:border-[#00C853] outline-none text-gray-800 font-medium"
                         value={formData.housingType}
                         onChange={(e) => updateData('housingType', e.target.value)}
                     >
@@ -523,20 +523,20 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
         return (
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-2">Abonnement</h2>
-                    <p className="text-gray-500 dark:text-gray-400">Choisissez votre formule.</p>
+                    <h2 className="text-2xl font-black text-gray-800 mb-2">Abonnement</h2>
+                    <p className="text-gray-500">Choisissez votre formule.</p>
                 </div>
                 <div className="space-y-3">
                     {plans.map(plan => (
                         <div 
                             key={plan.id}
                             onClick={() => updateData('subscription', plan.id)}
-                            className={`p-5 rounded-3xl border-2 cursor-pointer transition-all relative ${formData.subscription === plan.id ? 'border-[#00C853] bg-green-50 dark:bg-green-900/10' : 'border-transparent bg-white dark:bg-white/5 hover:border-gray-200'}`}
+                            className={`p-5 rounded-3xl border-2 cursor-pointer transition-all relative ${formData.subscription === plan.id ? 'border-[#00C853] bg-green-50' : 'border-transparent bg-white hover:border-gray-200'}`}
                         >
                             {plan.popular && <span className="absolute top-0 right-0 bg-[#00C853] text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">Populaire</span>}
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <h3 className="font-bold text-gray-800 dark:text-white">{plan.name}</h3>
+                                    <h3 className="font-bold text-gray-800">{plan.name}</h3>
                                     <p className="text-xs text-gray-500">{plan.features.join(' • ')}</p>
                                 </div>
                                 <div className="text-xl font-black text-[#2962FF]">{plan.price}</div>
@@ -566,8 +566,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
 
     if (showLogin) {
         return (
-             <div className="h-screen bg-white dark:bg-[#050505] flex flex-col md:items-center md:justify-center transition-colors duration-500">
-                <div className="w-full h-full md:max-w-md md:h-[90vh] md:max-h-[850px] md:shadow-2xl md:rounded-[2.5rem] overflow-hidden relative flex flex-col bg-[#F5F7FA] dark:bg-[#050505] border border-transparent md:dark:border-white/10">
+             <div className="h-screen bg-white flex flex-col md:items-center md:justify-center transition-colors duration-500">
+                <div className="w-full h-full md:max-w-md md:h-[90vh] md:max-h-[850px] md:shadow-2xl md:rounded-[2.5rem] overflow-hidden relative flex flex-col bg-[#F5F7FA] border border-transparent">
                     {renderLogin()}
                 </div>
                 {showForgotPass && renderForgotPassModal()}
@@ -576,17 +576,17 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, appLogo = '.
     }
 
     return (
-        <div className="h-screen bg-white dark:bg-[#050505] flex flex-col md:items-center md:justify-center transition-colors duration-500">
-            <div className="w-full h-full md:max-w-md md:h-[90vh] md:max-h-[850px] md:shadow-2xl md:rounded-[2.5rem] overflow-hidden relative flex flex-col bg-[#F5F7FA] dark:bg-[#050505] border border-transparent md:dark:border-white/10">
+        <div className="h-screen bg-white flex flex-col md:items-center md:justify-center transition-colors duration-500">
+            <div className="w-full h-full md:max-w-md md:h-[90vh] md:max-h-[850px] md:shadow-2xl md:rounded-[2.5rem] overflow-hidden relative flex flex-col bg-[#F5F7FA] border border-transparent">
                 {step > 1 && (
                     <div className="p-6 flex items-center shrink-0">
                         <button onClick={() => {
                             if (regStep > 1) setRegStep(prev => prev - 1);
                             else handleBack();
-                        }} className="p-3 bg-white dark:bg-white/5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors shadow-sm">
-                            <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
+                        }} className="p-3 bg-white rounded-full hover:bg-gray-100 transition-colors shadow-sm">
+                            <ArrowLeft size={20} className="text-gray-600" />
                         </button>
-                        <div className="ml-4 flex-1 h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div className="ml-4 flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                             <div className="h-full bg-[#00C853] transition-all duration-500 ease-out shadow-[0_0_10px_#00C853]" style={{ width: `${((regStep) / 6) * 100}%` }}></div>
                         </div>
                     </div>

@@ -14,9 +14,11 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
     },
     define: {
-      // Expose la clé API de manière sécurisée.
+      // Expose les clés API de manière sécurisée.
       // Si la variable n'existe pas (ex: lors du build sans env var), on met une chaine vide pour éviter le crash.
       'process.env.API_KEY': JSON.stringify(env.API_KEY || ''),
+      'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || ''),
+      'process.env.SUPABASE_KEY': JSON.stringify(env.SUPABASE_KEY || ''),
     }
   };
 });
