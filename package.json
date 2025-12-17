@@ -2,15 +2,16 @@
 {
   "name": "kin-eco-map",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.4",
   "type": "module",
   "scripts": {
+    "preinstall": "rm -rf package-lock.json",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "0.2.1",
+    "@google/genai": "^0.2.1",
     "@supabase/supabase-js": "^2.39.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.294.0",

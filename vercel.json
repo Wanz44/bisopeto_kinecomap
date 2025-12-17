@@ -1,6 +1,6 @@
 
 {
-  "installCommand": "npm install --no-package-lock",
+  "installCommand": "rm -rf package-lock.json node_modules && npm install",
   "buildCommand": "npm run build",
   "framework": "vite",
   "rewrites": [
