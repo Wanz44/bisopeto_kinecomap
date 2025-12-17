@@ -34,8 +34,8 @@ const getApiKey = () => {
 
 const getAiClient = () => {
     const apiKey = getApiKey();
-    // Fallback to prevent crash if key is missing during dev (Client-side safety)
-    return new GoogleGenAI({ apiKey: apiKey || "AIza_DUMMY_KEY_FOR_DEV" });
+    // Use a safer check to avoid crashing if key is missing (app handles gracefully)
+    return new GoogleGenAI({ apiKey: apiKey || "AIza_Missing_Key_Placeholder" });
 };
 
 export const initializeChat = (): Chat | null => {
@@ -60,15 +60,14 @@ export const sendMessageToGemini = async (message: string): Promise<string> => {
     try {
         const chat = initializeChat();
         if (!chat) {
-            return "Service d'assistance indisponible pour le moment (Clé API manquante).";
+            return "Service d'assistance indisponible (Clé API manquante).";
         }
         
         const response = await chat.sendMessage({ message });
-        return response.text || "Désolé, je n'ai pas pu traiter votre demande pour le moment.";
+        return response.text || "Désolé, je n'ai pas pu traiter votre demande.";
     } catch (error) {
         console.error("Gemini API Error:", error);
-        // Force reset chat session on error to recover in next attempt
-        chatSession = null; 
+        chatSession = null; // Reset session on error
         return "Une erreur est survenue avec Biso Peto AI. Vérifiez votre connexion.";
     }
 };
@@ -83,7 +82,6 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
 }> => {
     try {
         const ai = getAiClient();
-        // Clean base64 string if needed
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
         const prompt = `
@@ -106,11 +104,11 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        title: { type: Type.STRING, description: "Nom de l'objet (ex: Bouteilles Plastique, Vieux Fer...)" },
-                        category: { type: Type.STRING, description: "electronics, metal, plastic, or other" },
-                        weight: { type: Type.NUMBER, description: "Poids estimé en kg" },
-                        price: { type: Type.NUMBER, description: "Prix estimé en Francs Congolais (FC)" },
-                        description: { type: Type.STRING, description: "Brève description de l'état en français" },
+                        title: { type: Type.STRING, description: "Nom de l'objet" },
+                        category: { type: Type.STRING, description: "Catégorie" },
+                        weight: { type: Type.NUMBER, description: "Poids estimé (kg)" },
+                        price: { type: Type.NUMBER, description: "Prix estimé (FC)" },
+                        description: { type: Type.STRING, description: "Description de l'état" },
                     },
                     required: ["title", "category", "weight", "price", "description"],
                 }
@@ -122,7 +120,6 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
         
         const data = JSON.parse(textResponse);
         
-        // Safety check for category
         const validCategories = ['electronics', 'metal', 'plastic', 'other'];
         if (!validCategories.includes(data.category)) {
             data.category = 'other';
@@ -137,15 +134,15 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
             category: "other",
             weight: 0,
             price: 0,
-            description: "Impossible d'analyser l'image automatiquement. Veuillez remplir manuellement."
+            description: "Impossible d'analyser l'image automatiquement."
         };
     }
 };
 
-// Validation de la propreté d'un site (Preuve de travail)
+// Validation de la propreté d'un site
 export const validateCleanliness = async (base64Image: string): Promise<{
     isClean: boolean;
-    confidence: number; // 0 à 1
+    confidence: number;
     comment: string;
 }> => {
     try {
@@ -153,9 +150,8 @@ export const validateCleanliness = async (base64Image: string): Promise<{
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
         const prompt = `
-            Tu es un auditeur de propreté urbaine à Kinshasa. Analyse cette photo qui vient d'être prise par un éboueur après son passage.
-            Est-ce que la poubelle est vide ? Est-ce que la zone autour est propre (pas de déchets au sol) ?
-            Sois strict.
+            Auditeur de propreté Kinshasa. Analyse cette photo après passage éboueur.
+            La zone est-elle propre ?
         `;
 
         const response = await ai.models.generateContent({
@@ -171,9 +167,9 @@ export const validateCleanliness = async (base64Image: string): Promise<{
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        isClean: { type: Type.BOOLEAN, description: "True si c'est propre/vide, False sinon" },
-                        confidence: { type: Type.NUMBER, description: "Degré de certitude entre 0.0 et 1.0" },
-                        comment: { type: Type.STRING, description: "Une phrase courte en français expliquant le verdict" },
+                        isClean: { type: Type.BOOLEAN },
+                        confidence: { type: Type.NUMBER },
+                        comment: { type: Type.STRING },
                     },
                     required: ["isClean", "confidence", "comment"],
                 }
@@ -187,7 +183,6 @@ export const validateCleanliness = async (base64Image: string): Promise<{
 
     } catch (error) {
         console.error("Gemini Validation Error:", error);
-        // Fallback optimiste pour ne pas bloquer le travailleur en cas d'erreur API
-        return { isClean: true, confidence: 0.5, comment: "Validation IA hors ligne. Vérification manuelle requise plus tard." };
+        return { isClean: true, confidence: 0.5, comment: "Validation IA hors ligne." };
     }
 };
