@@ -1,0 +1,9 @@
+
+{
+  "installCommand": "npm install --no-package-lock",
+  "buildCommand": "npm run build",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
