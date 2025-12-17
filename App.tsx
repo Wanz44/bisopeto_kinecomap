@@ -20,10 +20,8 @@ import { AdminAcademy } from './components/AdminAcademy';
 import { AdminPermissions } from './components/AdminPermissions';
 import { CollectorJobs } from './components/CollectorJobs';
 import { SplashScreen } from './components/SplashScreen';
-import { User, AppView, UserType, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings } from './types';
-import { SettingsAPI, UserAPI } from './services/api';
-import { OfflineManager } from './services/offlineManager';
-import { AlertTriangle, Lock } from 'lucide-react';
+import { User, AppView, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings } from './types';
+import { SettingsAPI } from './services/api';
 
 const DEFAULT_PLANS: SubscriptionPlan[] = [
     { id: 'standard', name: 'Standard', priceUSD: 10, schedule: 'Mardi & Samedi', features: ['2 jours / semaine', 'Mardi & Samedi', 'Suivi basique'] },
@@ -71,10 +69,8 @@ function App() {
         marketplaceCommission: 0.05
     });
 
-    const [plans, setPlans] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
-    const [exchangeRate, setExchangeRate] = useState(2800);
-    const [appLogo, setAppLogo] = useState('./logo.png');
-    const [notifications, setNotifications] = useState<NotificationItem[]>(DEFAULT_NOTIFICATIONS);
+    const [plans] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
+    const [appLogo] = useState('./logo.png');
 
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; visible: boolean }>({
         message: '', type: 'success', visible: false
@@ -141,8 +137,10 @@ function App() {
                             setHistory([AppView.LANDING]);
                         }}
                         onComplete={(data) => {
-                            const newUser = { ...data, id: 'u'+Date.now(), points: 0, collections: 0, badges: 0 } as User;
-                            setUser(newUser);
+                            // On utilise directement l'objet User renvoyé par l'API
+                            const authenticatedUser = data as User;
+                            setUser(authenticatedUser);
+                            localStorage.setItem('kinecomap_user', JSON.stringify(authenticatedUser));
                             setHistory([AppView.DASHBOARD]);
                         }} 
                         appLogo={appLogo} 

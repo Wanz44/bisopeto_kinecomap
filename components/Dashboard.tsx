@@ -52,7 +52,10 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     MoreHorizontal,
-    Minus
+    Minus,
+    /* Added missing icon imports */
+    ClipboardList,
+    ShoppingBag
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
@@ -252,7 +255,7 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                                     <Clock size={12} /> Mercredi, 14:00
                                 </p>
                             </div>
-                            <span className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-[10px] uppercase font-black px-3 py-1.5 rounded-lg tracking-wider">Prévu</span>
+                            <span className="bg-gray-100 dark:bg-gray-700 dark:text-gray-300 text-gray-500 text-[10px] uppercase font-black px-3 py-1.5 rounded-lg tracking-wider">Prévu</span>
                         </div>
                     </div>
                 </div>
@@ -340,6 +343,76 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     );
 };
 
+// --- COLLECTOR DASHBOARD ---
+/* Fixed: Implemented CollectorDashboard component to fix error */
+const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
+    return (
+        <div className="p-5 md:p-8 space-y-6 animate-fade-in pb-24 md:pb-8">
+            <DashboardSearchBar />
+
+            {/* Welcome Card */}
+            <div className="bg-gradient-to-br from-[#2962FF] to-[#3D5AFE] rounded-[2rem] p-6 md:p-10 text-white shadow-2xl shadow-blue-500/20 relative overflow-hidden group">
+                <div className="absolute top-[-50%] right-[-20%] w-[300px] h-[300px] bg-white/10 rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
+                <div className="relative z-10">
+                    <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight">Mbote, {user.firstName}! 🚛</h1>
+                    <p className="opacity-90 mb-6 text-sm md:text-lg font-medium max-w-lg leading-relaxed">
+                        Prêt pour une nouvelle tournée ? Vous avez <span className="font-bold text-white bg-white/20 px-2 py-0.5 rounded-lg">4 missions</span> en attente aujourd'hui.
+                    </p>
+                    <button 
+                        onClick={() => onChangeView(AppView.COLLECTOR_JOBS)}
+                        className="bg-white text-[#2962FF] px-6 py-3 rounded-xl font-bold transition-all hover:bg-gray-100 shadow-lg active:scale-95 flex items-center gap-2"
+                    >
+                        <ClipboardList size={20} /> Voir mes tâches
+                    </button>
+                </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                {[
+                    { icon: Trash2, label: 'Collectes', value: user.collections, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { icon: Weight, label: 'Volume (kg)', value: '0', color: 'text-green-500', bg: 'bg-green-500/10' },
+                    { icon: Star, label: 'Points', value: user.points, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                    { icon: MapPin, label: 'Zone', value: user.zone || 'N/A', color: 'text-purple-500', bg: 'bg-purple-500/10' }
+                ].map((stat, idx) => (
+                    <div key={idx} className="bg-white/60 dark:bg-[#161b22]/60 backdrop-blur-xl p-5 rounded-[1.5rem] shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center text-center hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
+                        <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-inner`}>
+                            <stat.icon size={24} />
+                        </div>
+                        <span className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">{stat.value}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-1">{stat.label}</span>
+                    </div>
+                ))}
+            </div>
+
+            {/* Quick Actions */}
+            <div>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 px-2">Actions de Terrain</h3>
+                <div className="grid grid-cols-3 gap-3 md:gap-4">
+                    <button onClick={() => onChangeView(AppView.COLLECTOR_JOBS)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg transition-all duration-300 group">
+                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
+                            <ClipboardList size={24} />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Missions</span>
+                    </button>
+                    <button onClick={() => onChangeView(AppView.MARKETPLACE)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg transition-all duration-300 group">
+                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-green-600 dark:text-green-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
+                            <ShoppingBag size={24} />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Achats</span>
+                    </button>
+                    <button onClick={() => onChangeView(AppView.PROFILE)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg transition-all duration-300 group">
+                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
+                            <UserIcon size={24} />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Mon Profil</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- ADMIN DASHBOARD ---
 const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     // Simplified State - RESET TO ZERO
@@ -405,7 +478,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-[#2962FF]">
                                 <DollarSign size={20} />
                             </div>
-                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1 bg-gray-500/10 px-2 py-1 rounded-lg">
+                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1 bg-gray-500/10 dark:bg-gray-500/20 px-2 py-1 rounded-lg">
                                 <Minus size={12} /> 0%
                             </span>
                         </div>
@@ -422,7 +495,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             <div className="p-2.5 bg-green-50 dark:bg-green-900/20 rounded-xl text-[#00C853]">
                                 <Users size={20} />
                             </div>
-                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1 bg-gray-500/10 px-2 py-1 rounded-lg">
+                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1 bg-gray-500/10 dark:bg-gray-500/20 px-2 py-1 rounded-lg">
                                 0 ajd
                             </span>
                         </div>
@@ -439,7 +512,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-purple-500">
                                 <Truck size={20} />
                             </div>
-                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1 bg-gray-500/10 px-2 py-1 rounded-lg">
+                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1 bg-gray-500/10 dark:bg-gray-500/20 px-2 py-1 rounded-lg">
                                 <AlertTriangle size={12} /> 0 Maint.
                             </span>
                         </div>
@@ -459,7 +532,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             <div className="p-2.5 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl text-cyan-500">
                                 <Server size={20} />
                             </div>
-                            <span className="text-xs font-bold text-cyan-500 flex items-center gap-1 bg-cyan-500/10 px-2 py-1 rounded-lg animate-pulse">
+                            <span className="text-xs font-bold text-cyan-500 flex items-center gap-1 bg-cyan-500/10 dark:bg-cyan-500/20 px-2 py-1 rounded-lg animate-pulse">
                                 0ms
                             </span>
                         </div>
@@ -611,99 +684,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- COLLECTOR DASHBOARD ---
-const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
-    return (
-        <div className="p-5 md:p-8 space-y-6 animate-fade-in pb-24 md:pb-8">
-             <DashboardSearchBar />
-
-             {/* Status Card */}
-             <div className="bg-[#2962FF] rounded-[2rem] p-8 text-white shadow-2xl shadow-blue-500/30 flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
-                <div className="absolute top-[-50%] right-[-10%] w-[300px] h-[300px] bg-white/10 rounded-full blur-[80px] pointer-events-none"></div>
-                <div className="mb-4 md:mb-0 relative z-10 w-full">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_#4ade80]"></span>
-                            <span className="text-sm font-bold uppercase tracking-wider opacity-90">En Service</span>
-                        </div>
-                        <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-bold">
-                            {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </div>
-                    </div>
-                    <h1 className="text-3xl font-black tracking-tight mb-1">Zone: {user.zone || 'Gombe-Nord'}</h1>
-                    <p className="opacity-80 font-medium text-sm">Véhicule: {user.vehicleType || 'Camion Benne 04'}</p>
-                </div>
-                
-                <div className="flex gap-3 w-full md:w-auto relative z-10 mt-4 md:mt-0">
-                    <button className="flex-1 md:flex-none bg-white/20 backdrop-blur-md border border-white/30 py-3 px-6 rounded-xl font-bold hover:bg-white/30 transition-colors flex items-center justify-center gap-2">
-                        <Clock size={18} /> Pause
-                    </button>
-                    <button className="flex-1 md:flex-none bg-red-500 py-3 px-6 rounded-xl font-bold shadow-lg hover:bg-red-600 transition-colors shadow-red-600/30 flex items-center justify-center gap-2">
-                        <Zap size={18} /> Fin
-                    </button>
-                </div>
-            </div>
-
-            {/* Daily Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div className="text-gray-500 text-xs font-bold uppercase mb-1">Missions</div>
-                    <div className="text-2xl font-black text-gray-800 dark:text-white">12<span className="text-gray-400 text-sm font-normal">/15</span></div>
-                    <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
-                        <div className="h-full bg-blue-500 w-[80%]"></div>
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div className="text-gray-500 text-xs font-bold uppercase mb-1">Poids (kg)</div>
-                    <div className="text-2xl font-black text-gray-800 dark:text-white">850</div>
-                    <div className="text-xs text-green-500 font-bold mt-1">+12% vs Hier</div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div className="text-gray-500 text-xs font-bold uppercase mb-1">Distance</div>
-                    <div className="text-2xl font-black text-gray-800 dark:text-white">42<span className="text-sm font-normal">km</span></div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div className="text-gray-500 text-xs font-bold uppercase mb-1">Signalements</div>
-                    <div className="text-2xl font-black text-gray-800 dark:text-white">3</div>
-                    <div className="text-xs text-orange-500 font-bold mt-1">À vérifier</div>
-                </div>
-            </div>
-
-            {/* Tasks / Route Preview */}
-            <div className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-lg text-gray-800 dark:text-white flex items-center gap-2">
-                        <MapPin size={20} className="text-[#00C853]" /> Prochaines Collectes
-                    </h3>
-                    <button onClick={() => onChangeView(AppView.COLLECTOR_JOBS)} className="text-blue-600 font-bold text-xs uppercase hover:underline">Voir tout</button>
-                </div>
-                <div className="space-y-3">
-                    {[
-                        { time: '14:30', name: 'Résidence Kinois', address: 'Av. de la Paix 12', status: 'next' },
-                        { time: '15:00', name: 'Marché Liberté', address: 'Entrée Sud', status: 'pending' },
-                        { time: '15:45', name: 'Hôtel Fleuve', address: 'Gombe', status: 'pending' },
-                    ].map((job, idx) => (
-                        <div key={idx} className={`flex items-center gap-4 p-4 rounded-xl border ${job.status === 'next' ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/30' : 'bg-gray-50 dark:bg-gray-700/30 border-transparent'}`}>
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-bold text-xs ${job.status === 'next' ? 'bg-[#2962FF] text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-500'}`}>
-                                {job.time}
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-bold text-gray-800 dark:text-white text-sm">{job.name}</h4>
-                                <p className="text-xs text-gray-500">{job.address}</p>
-                            </div>
-                            {job.status === 'next' && (
-                                <button className="p-2 bg-white dark:bg-gray-800 rounded-lg text-blue-600 shadow-sm">
-                                    <Navigation size={18} />
-                                </button>
-                            )}
-                        </div>
-                    ))}
                 </div>
             </div>
         </div>

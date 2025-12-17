@@ -30,7 +30,6 @@ const DEFAULT_SETTINGS: SystemSettings = {
 const SUPER_ADMIN_EMAIL = 'adonailutonadio70@gmail.com';
 const SUPER_ADMIN_PASS = 'Bisopeto@243';
 
-// Initialisation des données locales (Seed)
 const initializeData = () => {
     if (!localStorage.getItem(KEYS.MARKETPLACE)) {
         localStorage.setItem(KEYS.MARKETPLACE, JSON.stringify([]));
@@ -45,7 +44,6 @@ const initializeData = () => {
         localStorage.setItem(KEYS.PARTNERS, JSON.stringify([]));
     }
     
-    // Ensure Super Admin exists
     const users = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
     const adminExists = users.some((u: User) => u.email === SUPER_ADMIN_EMAIL);
     
@@ -64,8 +62,6 @@ const initializeData = () => {
             subscription: 'premium',
             permissions: ['manage_users', 'validate_docs', 'view_finance', 'manage_ads', 'export_data', 'system_settings', 'manage_fleet', 'manage_academy', 'manage_communications', 'manage_pos']
         };
-        
-        // Remove old admin if exists to clean up
         const cleanedUsers = users.filter((u: User) => u.email !== 'admin@kinecomap.cd');
         cleanedUsers.unshift(defaultAdmin);
         localStorage.setItem(KEYS.USERS, JSON.stringify(cleanedUsers));
@@ -77,20 +73,15 @@ const initializeData = () => {
 
 initializeData();
 
-// --- Generic Helpers ---
 const getCollection = <T>(key: string): T[] => {
     try {
         return JSON.parse(localStorage.getItem(key) || '[]');
-    } catch {
-        return [];
-    }
+    } catch { return []; }
 };
 
 const saveCollection = <T>(key: string, data: T[]) => {
     localStorage.setItem(key, JSON.stringify(data));
 };
-
-// --- API SERVICES (HYBRID ARCHITECTURE) ---
 
 export const SettingsAPI = {
     get: async (): Promise<SystemSettings> => {
@@ -111,9 +102,7 @@ export const SettingsAPI = {
         try {
             const stored = JSON.parse(localStorage.getItem(KEYS.SETTINGS) || JSON.stringify(DEFAULT_SETTINGS));
             return { ...DEFAULT_SETTINGS, ...stored };
-        } catch {
-            return DEFAULT_SETTINGS;
-        }
+        } catch { return DEFAULT_SETTINGS; }
     },
     update: async (settings: SystemSettings): Promise<void> => {
         if (isSupabaseConfigured() && supabase) {
@@ -132,114 +121,87 @@ export const SettingsAPI = {
 
 export const UserAPI = {
     login: async (identifier: string, password?: string): Promise<User | null> => {
-        
-        // 0. Super Admin Hardcoded Access (Priority)
-        if (identifier === SUPER_ADMIN_EMAIL) {
-            if (password === SUPER_ADMIN_PASS) {
-                const users = getCollection<User>(KEYS.USERS);
-                const admin = users.find(u => u.email === identifier);
-                return admin || {
-                    id: 'admin-super-virtual',
-                    firstName: 'Adonai',
-                    lastName: 'Lutonadio',
-                    email: SUPER_ADMIN_EMAIL,
-                    phone: '+243000000000',
-                    type: UserType.ADMIN,
-                    address: 'QG Kinshasa',
-                    points: 999,
-                    collections: 0,
-                    badges: 5,
-                    subscription: 'premium',
-                    permissions: ['manage_users', 'validate_docs', 'view_finance', 'manage_ads', 'export_data', 'system_settings', 'manage_fleet', 'manage_academy', 'manage_communications', 'manage_pos']
-                };
-            } else {
-                return null;
-            }
+        if (identifier === SUPER_ADMIN_EMAIL && password === SUPER_ADMIN_PASS) {
+            const users = getCollection<User>(KEYS.USERS);
+            return users.find(u => u.email === identifier) || null;
         }
 
-        // 1. Supabase Auth
         if (isSupabaseConfigured() && supabase) {
             try {
                 if (identifier.includes('@')) {
-                    const { data, error } = await (supabase.auth as any).signInWithPassword({
+                    const { data, error } = await supabase.auth.signInWithPassword({
                         email: identifier,
                         password: password || ''
                     });
                     if (error) throw error;
                     
                     if (data.user) {
-                        const { data: profile } = await supabase
-                            .from('profiles')
-                            .select('*')
-                            .eq('id', data.user.id)
-                            .single();
-                            
-                        if (profile) {
-                            return {
-                                id: profile.id,
-                                firstName: profile.first_name,
-                                lastName: profile.last_name,
-                                email: profile.email,
-                                phone: profile.phone,
-                                type: profile.type,
-                                address: profile.address,
-                                points: profile.points,
-                                collections: profile.collections,
-                                badges: profile.badges,
-                                subscription: profile.subscription,
-                                companyName: profile.company_name,
-                                sector: profile.sector,
-                                permissions: profile.permissions,
-                                zone: profile.zone,
-                                vehicleType: profile.vehicle_type,
-                                housingType: profile.housing_type
-                            } as User;
-                        }
+                        const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+                        if (profile) return {
+                            id: profile.id,
+                            firstName: profile.first_name,
+                            lastName: profile.last_name,
+                            email: profile.email,
+                            phone: profile.phone,
+                            type: profile.type,
+                            address: profile.address,
+                            points: profile.points,
+                            collections: profile.collections,
+                            badges: profile.badges,
+                            subscription: profile.subscription,
+                            permissions: profile.permissions
+                        } as User;
                     }
                 }
-            } catch (error) {
-                console.error("Supabase Login Error:", error);
-            }
+            } catch (error) { console.error("Supabase Login Error:", error); }
         }
 
-        // 2. Fallback Local Storage
         await new Promise(r => setTimeout(r, 800));
         const users = getCollection<User>(KEYS.USERS);
-        const user = users.find(u => u.email === identifier || u.phone === identifier);
-        return user || null;
+        return users.find(u => u.email === identifier || u.phone === identifier) || null;
     },
 
     register: async (user: User, password?: string): Promise<User> => {
-        // 1. Supabase Register
         if (isSupabaseConfigured() && supabase && user.email && password) {
-            try {
-                const { data, error } = await (supabase.auth as any).signUp({
-                    email: user.email,
-                    password: password,
-                    options: {
-                        data: {
-                            first_name: user.firstName,
-                            last_name: user.lastName,
-                            type: user.type,
-                            phone: user.phone
-                        }
+            // 1. Inscription Auth
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: user.email,
+                password: password,
+                options: {
+                    data: {
+                        first_name: user.firstName,
+                        last_name: user.lastName
                     }
-                });
-                
-                if (error) throw error;
-                
-                if (data.user) {
-                    return { ...user, id: data.user.id };
                 }
-            } catch (error) {
-                console.error("Supabase Register Error:", error);
-                throw error;
-            }
+            });
+            
+            if (authError) throw authError;
+            if (!authData.user) throw new Error("Erreur de création d'utilisateur");
+
+            // 2. Création du profil public
+            const profileData = {
+                id: authData.user.id,
+                first_name: user.firstName,
+                last_name: user.lastName,
+                email: user.email,
+                phone: user.phone,
+                type: user.type,
+                address: user.address,
+                points: 0,
+                collections: 0,
+                badges: 0,
+                subscription: 'standard'
+            };
+
+            const { error: profileError } = await supabase.from('profiles').insert(profileData);
+            if (profileError) throw profileError;
+
+            return { ...user, id: authData.user.id };
         }
 
-        // 2. Local Storage
+        // Fallback Local Storage
         const users = getCollection<User>(KEYS.USERS);
-        const newUser = { ...user, id: `u-${Date.now()}` };
+        const newUser = { ...user, id: `u-${Date.now()}`, points: 0, collections: 0, badges: 0 };
         users.unshift(newUser);
         saveCollection(KEYS.USERS, users);
         return newUser;
@@ -260,8 +222,6 @@ export const UserAPI = {
                 collections: p.collections,
                 badges: p.badges,
                 subscription: p.subscription,
-                companyName: p.company_name,
-                sector: p.sector,
                 permissions: p.permissions
             })) as User[];
         }
@@ -269,34 +229,7 @@ export const UserAPI = {
     },
 
     add: async (user: User, password?: string): Promise<User> => {
-        // 1. Supabase (Simulated for Admin Add without logging out)
-        // In a real app, use Supabase Admin API (Service Role) via Edge Function
-        if (isSupabaseConfigured() && supabase) {
-             // For this demo, we just insert into profiles assuming user will be created/invited separately
-             // or we simulate the add for immediate listing.
-             const dbProfile = {
-                first_name: user.firstName,
-                last_name: user.lastName,
-                email: user.email,
-                phone: user.phone,
-                type: user.type,
-                address: user.address,
-                points: 0,
-                collections: 0,
-                badges: 0,
-                subscription: user.subscription,
-                permissions: user.permissions
-             };
-             const { data } = await supabase.from('profiles').insert(dbProfile).select().single();
-             if (data) return { ...user, id: data.id };
-        }
-
-        // 2. Local Storage
-        const users = getCollection<User>(KEYS.USERS);
-        const newUser = { ...user, id: `u-${Date.now()}` };
-        users.unshift(newUser);
-        saveCollection(KEYS.USERS, users);
-        return newUser;
+        return UserAPI.register(user, password);
     },
 
     update: async (user: Partial<User> & { id: string }): Promise<void> => {
@@ -307,7 +240,6 @@ export const UserAPI = {
              if(user.phone) updates.phone = user.phone;
              if(user.address) updates.address = user.address;
              if(user.subscription) updates.subscription = user.subscription;
-             if(user.companyName) updates.company_name = user.companyName;
              if(user.permissions) updates.permissions = user.permissions;
              if(user.points !== undefined) updates.points = user.points;
              
@@ -329,26 +261,22 @@ export const UserAPI = {
             return;
         }
         const users = getCollection<User>(KEYS.USERS);
-        const newUsers = users.filter(u => u.id !== userId);
-        saveCollection(KEYS.USERS, newUsers);
+        saveCollection(KEYS.USERS, users.filter(u => u.id !== userId));
     },
 
     resetPassword: async (identifier: string): Promise<boolean> => {
         if (isSupabaseConfigured() && supabase) {
-            const { error } = await (supabase.auth as any).resetPasswordForEmail(identifier);
+            const { error } = await supabase.auth.resetPasswordForEmail(identifier);
             return !error;
         }
-        // Simulation pour Local Storage
         return true; 
     },
 
     confirmPasswordReset: async (identifier: string, newPassword: string): Promise<boolean> => {
         if (isSupabaseConfigured() && supabase) {
-            const { error } = await (supabase.auth as any).updateUser({ password: newPassword });
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
             return !error;
         }
-        // Simulation pour Local Storage
-        await new Promise(r => setTimeout(r, 1500));
         return true;
     },
 
@@ -365,11 +293,7 @@ export const UserAPI = {
 export const MarketplaceAPI = {
     getAll: async (): Promise<MarketplaceItem[]> => {
         if (isSupabaseConfigured() && supabase) {
-            const { data } = await supabase
-                .from('marketplace_items')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
+            const { data } = await supabase.from('marketplace_items').select('*').order('created_at', { ascending: false });
             if (data) return data.map((i: any) => ({
                 id: i.id,
                 sellerId: i.seller_id,
@@ -384,16 +308,9 @@ export const MarketplaceAPI = {
                 date: new Date(i.created_at).toLocaleDateString('fr-FR')
             })) as MarketplaceItem[];
         }
-
         return getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
     },
-
     add: async (item: MarketplaceItem): Promise<MarketplaceItem> => {
-        if (!navigator.onLine) {
-            OfflineManager.addToQueue('ADD_ITEM', item);
-            return { ...item, id: `temp-${Date.now()}` };
-        }
-
         if (isSupabaseConfigured() && supabase) {
             const dbItem = {
                 seller_id: item.sellerId,
@@ -409,20 +326,17 @@ export const MarketplaceAPI = {
             const { data } = await supabase.from('marketplace_items').insert(dbItem).select().single();
             if (data) return { ...item, id: data.id };
         }
-
         const items = getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
         const newItem = { ...item, id: `item-${Date.now()}` };
         items.unshift(newItem);
         saveCollection(KEYS.MARKETPLACE, items);
         return newItem;
     },
-
     update: async (item: MarketplaceItem): Promise<void> => {
         if (isSupabaseConfigured() && supabase) {
             await supabase.from('marketplace_items').update({ status: item.status }).eq('id', item.id);
             return;
         }
-
         const items = getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
         const index = items.findIndex(i => i.id === item.id);
         if (index !== -1) {
@@ -471,7 +385,6 @@ export const VehicleAPI = {
             const { data } = await supabase.from('vehicles').insert(dbVehicle).select().single();
             if (data) return { ...vehicle, id: data.id };
         }
-
         const list = getCollection<Vehicle>(KEYS.VEHICLES);
         const newItem = { ...vehicle, id: `v-${Date.now()}` };
         list.push(newItem);
@@ -502,21 +415,7 @@ export const VehicleAPI = {
             return;
         }
         const list = getCollection<Vehicle>(KEYS.VEHICLES);
-        const newList = list.filter(v => v.id !== id);
-        saveCollection(KEYS.VEHICLES, newList);
-    },
-    updatePosition: async (id: string, lat: number, lng: number): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('vehicles').update({ lat, lng, last_update: new Date().toISOString() }).eq('id', id);
-            return;
-        }
-        const list = getCollection<Vehicle>(KEYS.VEHICLES);
-        const v = list.find(item => item.id === id);
-        if (v) {
-            v.lat = lat;
-            v.lng = lng;
-            saveCollection(KEYS.VEHICLES, list);
-        }
+        saveCollection(KEYS.VEHICLES, list.filter(v => v.id !== id));
     }
 };
 
@@ -564,15 +463,10 @@ export const StorageAPI = {
                 reader.readAsDataURL(file);
             });
         }
-
         try {
             const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
             const { data, error } = await supabase.storage.from(bucket).upload(fileName, file);
-            if (error) {
-                console.error("Supabase Storage Upload Error:", error);
-                throw error;
-            }
-            
+            if (error) throw error;
             const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
             return publicUrlData.publicUrl;
         } catch (error) {
