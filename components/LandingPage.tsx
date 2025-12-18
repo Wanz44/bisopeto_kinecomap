@@ -1,10 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   ChevronRight, ArrowRight, Home, Building2, Truck, GraduationCap, 
   Target, Eye, CheckCircle2, Leaf, Mail, Phone, MapPin, 
   Clock, Send, Rocket, Menu, X, Globe, Star, PieChart,
-  Sparkles, Smartphone, Loader2, ChevronUp, MessageSquare
+  Sparkles, Smartphone, Loader2, Info, MessageSquare, ShieldCheck,
+  Zap, Award, Users, Trash2, Download, MousePointer2, BarChart3,
+  // Added missing Recycle icon used on line 290
+  Recycle
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -15,33 +17,23 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [formState, setFormState] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    subject: '',
-    message: ''
-  });
+  const [formState, setFormState] = useState({ name: '', email: '', message: '' });
   const [isSending, setIsSending] = useState(false);
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [isNewsletterSending, setIsNewsletterSending] = useState(false);
 
-  // Scroll Listener for Header & Back to top
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 100);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>, id: string) => {
-    e.preventDefault();
+  const handleSmoothScroll = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const headerOffset = 80;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.scrollY - headerOffset;
+      const offset = 80;
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = element.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = elementPosition - offset;
 
       window.scrollTo({
         top: offsetPosition,
@@ -51,256 +43,422 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin }) =>
     }
   };
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newsletterEmail || !newsletterEmail.includes('@')) {
-        alert("Veuillez entrer une adresse email valide.");
-        return;
-    }
-    setIsNewsletterSending(true);
-    setTimeout(() => {
-        alert("Merci pour votre inscription à la newsletter !");
-        setNewsletterEmail('');
-        setIsNewsletterSending(false);
-    }, 1200);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formState.name || !formState.email || !formState.message) {
-        alert("Veuillez remplir les champs obligatoires (*)");
-        return;
-    }
     setIsSending(true);
-    // Simulation d'envoi
     setTimeout(() => {
       setIsSending(false);
+      setFormState({ name: '', email: '', message: '' });
       alert("Merci ! Votre message a été envoyé à l'équipe BISO PETO.");
-      setFormState({ name: '', email: '', phone: '', subject: '', message: '' });
     }, 1500);
   };
 
-  const navLinks = [
-    { label: 'À propos', id: 'about' },
-    { label: 'Modules', id: 'modules' },
-    { label: 'Objectifs', id: 'objectives' },
-    { label: 'Contact', id: 'contact' },
-  ];
-
   return (
-    <div className="w-full h-full overflow-y-auto bg-white dark:bg-[#050505] text-gray-800 dark:text-gray-200 scroll-smooth selection:bg-[#00C853] selection:text-white font-sans no-scrollbar">
+    <div className="w-full h-full overflow-y-auto bg-white dark:bg-[#050505] text-gray-800 dark:text-gray-200 no-scrollbar selection:bg-primary selection:text-white">
       
-      {/* Header */}
-      <header className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
-        isScrolled ? 'bg-white/95 dark:bg-[#050505]/95 backdrop-blur-md shadow-md py-3' : 'bg-transparent py-5'
+      {/* Navigation */}
+      <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${
+        isScrolled 
+        ? 'bg-white/80 dark:bg-black/80 backdrop-blur-xl shadow-lg py-3' 
+        : 'bg-transparent py-6'
       }`}>
-        <div className="container mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-10 h-10 bg-gradient-to-br from-[#00C853] to-[#2962FF] rounded-xl flex items-center justify-center p-0.5 shadow-lg group-hover:rotate-12 transition-transform">
-              <div className="bg-white dark:bg-black w-full h-full rounded-[10px] flex items-center justify-center overflow-hidden">
-                <img src="logobisopeto.png" alt="Logo" className="w-7 h-7 object-contain" />
-              </div>
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center p-2 shadow-xl group-hover:rotate-12 transition-transform">
+              <img src="logobisopeto.png" alt="BISO PETO" className="w-full h-full object-contain brightness-0 invert" />
             </div>
-            <div className="flex flex-col leading-none">
-              <span className={`font-black text-xl tracking-tighter ${isScrolled ? 'text-gray-900 dark:text-white' : 'text-white md:text-gray-900 md:dark:text-white'}`}>BISO PETO</span>
-              <span className="font-bold text-[10px] tracking-widest text-[#2962FF]">KIN ECO-MAP</span>
+            <div className="flex flex-col">
+              <span className="font-black text-2xl tracking-tighter text-primary dark:text-white leading-none">BISO PETO</span>
+              <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.2em]">KIN ECO-MAP</span>
             </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map(link => (
-              <a 
-                key={link.id} 
-                href={`#${link.id}`} 
-                onClick={(e) => handleSmoothScroll(e, link.id)}
-                className={`text-sm font-bold transition-colors hover:text-[#00C853] ${isScrolled ? 'text-gray-600 dark:text-gray-300' : 'text-white md:text-gray-600 md:dark:text-gray-300'}`}
+          <div className="hidden lg:flex items-center gap-10">
+            {['about', 'modules', 'objectives', 'contact'].map((item) => (
+              <button 
+                key={item}
+                onClick={() => handleSmoothScroll(item)}
+                className="text-sm font-black uppercase tracking-widest text-gray-500 hover:text-primary transition-colors"
               >
-                {link.label}
-              </a>
+                {item === 'about' ? 'À Propos' : item === 'objectives' ? 'Objectifs' : item}
+              </button>
             ))}
-            <button 
-              onClick={onLogin}
-              className="bg-[#00C853] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-green-500/20 hover:scale-105 active:scale-95 transition-all"
-            >
-              Se Connecter
-            </button>
-          </nav>
-
-          <button className="md:hidden p-2 text-[#00C853]" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
-        </div>
-
-        {isMenuOpen && (
-          <div className="absolute top-full left-0 right-0 bg-white dark:bg-[#111827] border-t border-gray-100 dark:border-gray-800 shadow-2xl animate-fade-in flex flex-col p-6 space-y-4 md:hidden">
-            {navLinks.map(link => (
-              <a key={link.id} href={`#${link.id}`} onClick={(e) => handleSmoothScroll(e, link.id)} className="text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-[#00C853]">{link.label}</a>
-            ))}
-            <button onClick={onLogin} className="w-full bg-[#00C853] text-white py-4 rounded-2xl font-black text-lg shadow-lg">Se Connecter</button>
           </div>
-        )}
-      </header>
+
+          <div className="flex items-center gap-4">
+            <button onClick={onLogin} className="hidden sm:block text-sm font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-primary">Connexion</button>
+            <button 
+              onClick={onStart}
+              className="bg-primary hover:bg-primary-light text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-green-500/20 active:scale-95 transition-all"
+            >
+              Lancer l'App
+            </button>
+            <button className="lg:hidden p-2 text-primary" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-[110] bg-white dark:bg-gray-950 flex flex-col p-8 animate-fade-in lg:hidden">
+          <div className="flex justify-between items-center mb-12">
+            <span className="font-black text-2xl text-primary">MENU</span>
+            <button onClick={() => setIsMenuOpen(false)}><X size={32}/></button>
+          </div>
+          <div className="flex flex-col gap-8">
+            {['about', 'modules', 'objectives', 'contact'].map((item) => (
+              <button key={item} onClick={() => handleSmoothScroll(item)} className="text-4xl font-black uppercase tracking-tighter text-left hover:text-primary transition-colors">
+                {item === 'about' ? 'À Propos' : item}
+              </button>
+            ))}
+          </div>
+          <button onClick={onLogin} className="mt-auto w-full py-6 bg-gray-100 dark:bg-gray-800 rounded-3xl font-black uppercase tracking-widest">Se Connecter</button>
+        </div>
+      )}
 
       {/* Hero Section */}
-      <section className="relative pt-32 md:pt-48 pb-20 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-br from-[#00C853]/5 to-[#2962FF]/5 dark:from-[#00C853]/10 dark:to-[#2962FF]/10 -z-10"></div>
-        <div className="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="relative pt-40 pb-24 md:pt-64 md:pb-40 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full -z-10 overflow-hidden">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[60%] bg-primary/10 blur-[120px] rounded-full"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[70%] bg-secondary/10 blur-[150px] rounded-full"></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest mb-6">
-              <Sparkles size={14} /> Innovation RDC
+            <div className="inline-flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-primary-light px-4 py-2 rounded-full mb-8 border border-green-100 dark:border-green-800">
+              <Sparkles size={16} className="animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Votre ville plus propre, votre avenir plus vert</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-black text-gray-900 dark:text-white tracking-tighter leading-none mb-6">KIN ECO-MAP</h1>
-            <p className="text-xl md:text-2xl font-bold text-[#00C853] mb-4">Votre ville plus propre, votre avenir plus vert</p>
-            <p className="text-lg text-gray-500 dark:text-gray-400 mb-10 max-w-xl leading-relaxed font-medium">Une plateforme numérique innovante pour transformer la gestion des déchets, l'assainissement urbain et promouvoir l'écologie citoyenne à Kinshasa.</p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button onClick={onStart} className="bg-[#00C853] text-white px-8 py-4 rounded-2xl font-black text-lg shadow-xl shadow-green-500/30 flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all"><Rocket size={20} /> Commencer</button>
-              <button onClick={(e) => handleSmoothScroll(e, 'contact')} className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-2 border-gray-100 dark:border-gray-700 px-8 py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm"><Mail size={20} /> Nous contacter</button>
+            <h1 className="text-6xl md:text-8xl font-black text-gray-900 dark:text-white tracking-tighter leading-[0.9] mb-8 uppercase">
+              KIN <br/> <span className="text-primary italic">ECO-MAP</span>
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-500 dark:text-gray-400 font-medium leading-relaxed max-w-xl mb-12">
+              Une plateforme numérique innovante pour transformer la gestion des déchets, l'assainissement urbain et promouvoir l'écologie citoyenne à Kinshasa.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-5">
+              <button onClick={onStart} className="bg-primary text-white px-10 py-5 rounded-3xl font-black text-lg uppercase tracking-widest shadow-[0_20px_50px_rgba(46,125,50,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3">
+                Ouvrir l'App <MousePointer2 size={24} />
+              </button>
+              <button onClick={() => handleSmoothScroll('contact')} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-2 border-gray-100 dark:border-gray-700 px-10 py-5 rounded-3xl font-black text-lg uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center justify-center gap-3">
+                Nous contacter <Mail size={24} />
+              </button>
             </div>
-            <div className="mt-16 grid grid-cols-3 gap-8 pt-10 border-t border-gray-100 dark:border-gray-800">
-              <div><span className="block text-3xl font-black text-gray-900 dark:text-white">5000+</span><span className="text-xs uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">Utilisateurs</span></div>
-              <div><span className="block text-3xl font-black text-gray-900 dark:text-white">120+</span><span className="text-xs uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">Quartiers</span></div>
-              <div><span className="block text-3xl font-black text-gray-900 dark:text-white">85%</span><span className="text-xs uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">Satisfaction</span></div>
+
+            <div className="mt-16 flex items-center gap-8 grayscale opacity-50">
+              <div className="flex flex-col">
+                <span className="text-2xl font-black">5000+</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Utilisateurs</span>
+              </div>
+              <div className="w-px h-8 bg-gray-200"></div>
+              <div className="flex flex-col">
+                <span className="text-2xl font-black">120+</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Quartiers</span>
+              </div>
+              <div className="w-px h-8 bg-gray-200"></div>
+              <div className="flex flex-col">
+                <span className="text-2xl font-black">85%</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Satisfaction</span>
+              </div>
             </div>
           </div>
-          <div className="relative hidden lg:block animate-fade-in">
-            <div className="relative z-10 rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white dark:border-gray-800">
-              <img src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80" alt="Kinshasa Green" className="w-full h-auto scale-105 hover:scale-100 transition-transform duration-700" />
+
+          <div className="relative animate-fade-in hidden lg:block">
+            <div className="relative z-10 w-full aspect-square rounded-[4rem] overflow-hidden shadow-2xl border-[12px] border-white dark:border-gray-800 rotate-3">
+              <img src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1000&q=80" alt="KIN ECO-MAP" className="w-full h-full object-cover" />
+            </div>
+            <div className="absolute -bottom-10 -right-10 z-20 bg-white dark:bg-gray-900 p-8 rounded-[2.5rem] shadow-2xl animate-float border border-gray-50 dark:border-gray-800">
+               <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 bg-green-50 dark:bg-green-900/30 text-primary rounded-2xl"><Award size={24}/></div>
+                  <div>
+                    <p className="text-xs font-black text-gray-400 uppercase">Impact Environnemental</p>
+                    <p className="text-lg font-black dark:text-white leading-none mt-1">Leader en RDC</p>
+                  </div>
+               </div>
+               <div className="flex gap-2">
+                  <div className="h-1.5 flex-1 bg-green-100 rounded-full overflow-hidden"><div className="h-full bg-primary w-[85%]"></div></div>
+               </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-24 bg-gray-50 dark:bg-gray-900/50">
-        <div className="container mx-auto px-6 text-center max-w-3xl mb-20">
-          <h2 className="text-4xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">À propos de KIN ECO-MAP</h2>
-          <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed">Une initiative portée par <span className="text-[#00C853] font-bold">BISO PETO Group SARL</span> pour transformer radicalement la gestion des déchets à Kinshasa.</p>
-        </div>
-        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12">
-            <div className="bg-white dark:bg-gray-800 p-10 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all">
-              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 text-[#2962FF] rounded-2xl flex items-center justify-center mb-6"><Target size={32} /></div>
-              <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-4">Notre Mission</h3>
-              <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-medium">KIN ECO-MAP est une plateforme numérique complète qui centralise la gestion intelligente des déchets, combinant cartographie interactive, éducation environnementale et engagement communautaire.</p>
+      <section id="about" className="py-32 bg-gray-50 dark:bg-gray-900/30">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div className="order-2 lg:order-1 grid grid-cols-1 gap-6">
+                <div className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 bg-primary/10 text-primary rounded-2xl"><Target size={32} /></div>
+                    <h4 className="text-xl font-black uppercase tracking-tight">Notre Mission</h4>
+                  </div>
+                  <p className="text-base text-gray-500 leading-relaxed font-medium">
+                    KIN ECO-MAP est une plateforme numérique complète qui centralise la gestion intelligente des déchets, combinant cartographie interactive, éducation environnementale et engagement communautaire.
+                  </p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 bg-secondary/10 text-secondary rounded-2xl"><Eye size={32} /></div>
+                    <h4 className="text-xl font-black uppercase tracking-tight">Notre Vision</h4>
+                  </div>
+                  <p className="text-base text-gray-500 leading-relaxed font-medium">
+                    Créer des villes africaines plus propres, plus vertes et plus durables grâce à l'innovation technologique et à la mobilisation citoyenne.
+                  </p>
+                </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-10 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all">
-              <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 text-[#00C853] rounded-2xl flex items-center justify-center mb-6"><Eye size={32} /></div>
-              <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-4">Notre Vision</h3>
-              <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-medium">Créer des villes africaines plus propres, plus vertes et plus durables grâce à l'innovation technologique et à la mobilisation citoyenne massive.</p>
+
+            <div className="order-1 lg:order-2 space-y-8 animate-fade-in-up">
+              <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">À propos de KIN ECO-MAP</h2>
+              <div className="w-20 h-2 bg-primary rounded-full"></div>
+              <p className="text-xl text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                Une initiative portée par **BISO PETO Group SARL** pour transformer radicalement la gestion des déchets à Kinshasa.
+              </p>
+              <div className="space-y-4">
+                {[
+                  "Digitalisation complète de la chaîne de collecte",
+                  "Sensibilisation écologique interactive",
+                  "Données en temps réel pour une ville intelligente"
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="p-1 bg-green-100 text-primary rounded-full"><CheckCircle2 size={18} /></div>
+                    <span className="font-bold text-gray-600 dark:text-gray-300">{item}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-4">
+                <div className="inline-flex items-center gap-2 bg-primary text-white px-6 py-2 rounded-2xl font-black text-xs uppercase tracking-widest">
+                  <Leaf size={16} /> Éco-innovation made in Congo
+                </div>
+              </div>
             </div>
+          </div>
         </div>
       </section>
 
       {/* Modules Section */}
-      <section id="modules" className="py-24 bg-white dark:bg-[#050505]">
-        <div className="container mx-auto px-6 text-center max-w-3xl mb-20">
-          <h2 className="text-4xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">Nos Modules</h2>
-          <p className="text-lg text-gray-500 dark:text-gray-400 font-medium">Des solutions adaptées à chaque acteur de la ville</p>
+      <section id="modules" className="py-32">
+        <div className="max-w-7xl mx-auto px-6 text-center mb-20">
+          <h2 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-6">Nos Modules</h2>
+          <p className="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto font-medium">Des fonctionnalités complètes pour une gestion optimale des déchets à Kinshasa.</p>
         </div>
-        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { icon: Home, title: 'Éco-Citoyen', color: 'text-[#00C853]', bg: 'bg-green-50 dark:bg-green-900/20', features: ['Profil digital', 'Carte interactive', 'Paiement Mobile'] },
-              { icon: Building2, title: 'Éco-Entreprise', color: 'text-[#2962FF]', bg: 'bg-blue-50 dark:bg-blue-900/20', features: ['Dashboard analytique', 'Certification', 'Reporting'] },
-              { icon: Truck, title: 'Logistique', color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20', features: ['Planification IA', 'Télémétrie', 'Rapports'] },
-              { icon: GraduationCap, title: 'Éducation', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20', features: ['Cours Vidéo', 'Quiz & Badges', 'Certification'] },
-            ].map((module, idx) => (
-              <div key={idx} className="bg-gray-50 dark:bg-gray-800 p-8 rounded-[2.5rem] border border-transparent hover:border-gray-200 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-750 hover:shadow-xl transition-all group">
-                <div className={`w-14 h-14 ${module.bg} ${module.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}><module.icon size={28} /></div>
-                <h3 className="text-xl font-black text-gray-900 dark:text-white mb-3">{module.title}</h3>
-                <ul className="space-y-3 mb-8">
-                  {module.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-400"><CheckCircle2 size={14} className={module.color} /> {f}</li>
+
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+           {[
+             { id: '1', title: 'Éco-Citoyen', icon: Home, color: 'bg-green-50 text-primary', desc: 'Gérez vos abonnements, suivez les collectes et participez à la propreté urbaine.', features: ['Profil citoyen digital', 'Carte interactive', 'Paiement sécurisé'] },
+             { id: '2', title: 'Éco-Entreprise', icon: Building2, color: 'bg-blue-50 text-secondary', desc: 'Optimisez votre impact environnemental et votre gestion des déchets.', features: ['Tableau de bord analytique', 'Certification RSE', 'Reporting environnemental'] },
+             { id: '3', title: 'Collecte & Logistique', icon: Truck, color: 'bg-orange-50 text-orange-600', desc: 'Optimisez vos opérations de collecte avec notre outil de gestion terrain.', features: ['Planification intelligente', 'Suivi GPS temps réel', 'Gestion des incidents'] },
+             { id: '4', title: 'Éducation & Formation', icon: GraduationCap, color: 'bg-purple-50 text-purple-600', desc: 'Sensibilisez et formez vos équipes aux bonnes pratiques environnementales.', features: ['Cours vidéo interactifs', 'Quiz et certifications', 'Programmes scolaires'] },
+           ].map((mod) => (
+             <div key={mod.id} className="group p-8 rounded-[3rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:shadow-2xl transition-all hover:-translate-y-2 flex flex-col">
+                <div className={`w-16 h-16 ${mod.color} rounded-2xl flex items-center justify-center mb-8 group-hover:rotate-12 transition-transform`}>
+                  <mod.icon size={32}/>
+                </div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-4">{mod.title}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6">{mod.desc}</p>
+                <div className="space-y-2 mb-8">
+                  {mod.features.map((f, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-[10px] font-black uppercase text-gray-400">
+                      <div className="w-1 h-1 bg-primary rounded-full"></div> {f}
+                    </div>
                   ))}
-                </ul>
-                <button onClick={onStart} className={`flex items-center gap-2 text-sm font-black uppercase tracking-wider ${module.color}`}>S'inscrire <ArrowRight size={16} /></button>
-              </div>
-            ))}
+                </div>
+                <button onClick={onStart} className="mt-auto text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">Démarrer <ArrowRight size={14}/></button>
+             </div>
+           ))}
         </div>
       </section>
 
-      {/* Objectives Section */}
-      <section id="objectives" className="py-24 bg-gray-900 text-white relative overflow-hidden">
-        <div className="container mx-auto px-6 relative z-10 text-center max-w-3xl mb-20">
-          <h2 className="text-4xl font-black mb-4 tracking-tight">Nos Objectifs</h2>
-          <p className="text-lg text-gray-400 font-medium">Les ambitions qui guident notre action quotidienne</p>
+      {/* Objectives / Impact */}
+      <section id="objectives" className="py-32 bg-primary text-white relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+          <div className="grid grid-cols-10 gap-10">
+            {Array.from({length: 100}).map((_, i) => <Star key={i} size={20}/>)}
+          </div>
         </div>
-        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { label: 'Responsabilité', value: 85, icon: Leaf, color: 'bg-[#00C853]' },
-              { label: 'Digitalisation', value: 70, icon: Smartphone, color: 'bg-[#2962FF]' },
-              { label: 'Éducation', value: 65, icon: GraduationCap, color: 'bg-purple-500' },
-              { label: 'Performance', value: 60, icon: PieChart, color: 'bg-orange-500' },
-            ].map((obj, i) => (
-              <div key={i} className="bg-white/5 backdrop-blur-md p-8 rounded-[2rem] border border-white/10">
-                <div className="flex justify-between items-start mb-8"><div className="p-3 bg-white/10 rounded-xl"><obj.icon size={24} /></div><span className="text-2xl font-black opacity-40">{obj.value}%</span></div>
-                <h4 className="font-bold text-lg mb-4">{obj.label}</h4>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className={`h-full ${obj.color} transition-all duration-1000`} style={{ width: `${obj.value}%` }}></div></div>
-              </div>
-            ))}
+        
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col lg:flex-row justify-between items-end gap-12 mb-24">
+            <div className="max-w-2xl">
+              <h2 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none mb-8">Nos Objectifs</h2>
+              <p className="text-xl opacity-80 font-medium">Les ambitions qui guident notre action quotidienne pour un Kinshasa durable.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+             {[
+               { title: 'Responsabilité écologique', desc: 'Sensibiliser et impliquer citoyens et entreprises.', percent: 85, icon: Recycle },
+               { title: 'Digitalisation', desc: 'Moderniser la chaîne complète grâce au numérique.', percent: 70, icon: Smartphone },
+               { title: 'Éducation environnementale', desc: 'Développer une culture durable par les savoirs.', percent: 65, icon: GraduationCap },
+               { title: 'Performance urbaine', desc: 'Améliorer la qualité de vie des Kinois.', percent: 60, icon: BarChart3 },
+             ].map((obj, i) => (
+               <div key={i} className="p-8 rounded-[3rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-colors flex flex-col h-full">
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
+                    <obj.icon size={24} />
+                  </div>
+                  <h4 className="text-xl font-black mb-4 uppercase tracking-tight leading-tight">{obj.title}</h4>
+                  <p className="text-sm opacity-70 leading-relaxed font-medium mb-8">{obj.desc}</p>
+                  
+                  <div className="mt-auto">
+                    <div className="flex justify-between text-[10px] font-black uppercase mb-2">
+                      <span>Progrès</span>
+                      <span>{obj.percent}%</span>
+                    </div>
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-white transition-all duration-1000" style={{ width: `${obj.percent}%` }}></div>
+                    </div>
+                  </div>
+               </div>
+             ))}
+          </div>
         </div>
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-24 bg-white dark:bg-[#050505]">
-        <div className="container mx-auto px-6 text-center max-w-3xl mb-20">
-          <h2 className="text-4xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">Contactez-nous</h2>
-          <p className="text-lg text-gray-500 dark:text-gray-400 font-medium">Parlons de votre projet et de vos besoins</p>
-        </div>
-        <div className="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-12">
-            <div className="space-y-6">
-              <div className="bg-gray-50 dark:bg-gray-800 p-8 rounded-[2rem] flex gap-6"><MapPin size={24} className="text-blue-600" /><div><h4 className="font-black text-lg dark:text-white">Adresse</h4><p className="text-gray-500 dark:text-gray-400 text-sm">N°63, Av. Colonel MONDJIBA, Kinshasa</p></div></div>
-              <div className="bg-gray-50 dark:bg-gray-800 p-8 rounded-[2rem] flex gap-6"><Phone size={24} className="text-green-600" /><div><h4 className="font-black text-lg dark:text-white">Téléphone</h4><p className="text-gray-500 dark:text-gray-400 text-sm">+243 85 229 1755</p></div></div>
-            </div>
-            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-[3rem] p-10 border border-gray-100 dark:border-gray-700 shadow-2xl">
-              <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-8 flex items-center gap-3"><MessageSquare size={28} className="text-[#2962FF]" /> Envoyer un message</h3>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <input required placeholder="Nom complet *" className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-[#00C853] border border-transparent dark:text-white focus:border-[#00C853]" value={formState.name} onChange={e => setFormState({...formState, name: e.target.value})} />
-                  <input required type="email" placeholder="Email *" className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-[#00C853] border border-transparent dark:text-white focus:border-[#00C853]" value={formState.email} onChange={e => setFormState({...formState, email: e.target.value})} />
+      <section id="contact" className="py-32 bg-gray-50 dark:bg-gray-950">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="bg-white dark:bg-gray-900 rounded-[4rem] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+             <div className="p-12 lg:p-20 space-y-12">
+                <div>
+                  <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">Contactez-nous</h2>
+                  <p className="text-gray-500 font-medium">Parlons de votre projet, de vos besoins ou d'un signalement urgent.</p>
                 </div>
-                <textarea required rows={4} placeholder="Votre message *" className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-[#00C853] border border-transparent dark:text-white focus:border-[#00C853] resize-none" value={formState.message} onChange={e => setFormState({...formState, message: e.target.value})} />
-                <button disabled={isSending} type="submit" className="w-full py-5 bg-[#00C853] text-white rounded-2xl font-black text-lg shadow-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all">{isSending ? <Loader2 className="animate-spin" /> : <Send size={20} />} {isSending ? 'Envoi...' : 'Envoyer'}</button>
-              </form>
-            </div>
+
+                <div className="space-y-6">
+                   <div className="flex items-center gap-6 group cursor-pointer">
+                      <div className="w-14 h-14 bg-gray-50 dark:bg-gray-800 text-primary rounded-2xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all"><Mail size={24}/></div>
+                      <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Emails</p>
+                        <p className="text-base font-black dark:text-white">contact@bisopeto.com</p>
+                        <p className="text-xs text-gray-400 font-bold">support@kin-ecomap.com</p>
+                      </div>
+                   </div>
+                   <div className="flex items-center gap-6 group cursor-pointer">
+                      <div className="w-14 h-14 bg-gray-50 dark:bg-gray-800 text-secondary rounded-2xl flex items-center justify-center group-hover:bg-secondary group-hover:text-white transition-all"><Phone size={24}/></div>
+                      <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Téléphones</p>
+                        <p className="text-base font-black dark:text-white">+243 85 229 1755</p>
+                        <p className="text-xs text-gray-400 font-bold">+243 81 234 5678</p>
+                      </div>
+                   </div>
+                   <div className="flex items-center gap-6 group cursor-pointer">
+                      <div className="w-14 h-14 bg-gray-50 dark:bg-gray-800 text-red-500 rounded-2xl flex items-center justify-center group-hover:bg-red-50 group-hover:text-white transition-all"><MapPin size={24}/></div>
+                      <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Siège Social</p>
+                        <p className="text-base font-black dark:text-white">N°63, Av. Colonel MONDJIBA</p>
+                        <p className="text-xs text-gray-400 font-bold">Kinshasa, Gombe - RDC</p>
+                      </div>
+                   </div>
+                   <div className="flex items-center gap-6 group cursor-pointer">
+                      <div className="w-14 h-14 bg-gray-50 dark:bg-gray-800 text-orange-500 rounded-2xl flex items-center justify-center group-hover:bg-orange-50 group-hover:text-white transition-all"><Clock size={24}/></div>
+                      <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Heures d'ouverture</p>
+                        <p className="text-base font-black dark:text-white">Lun - Ven: 8h - 18h</p>
+                        <p className="text-xs text-gray-400 font-bold">Sam: 9h - 13h</p>
+                      </div>
+                   </div>
+                </div>
+             </div>
+
+             <div className="bg-gray-900 p-12 lg:p-20">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Nom complet *</label>
+                      <input 
+                        required
+                        className="w-full bg-gray-800 border-none text-white p-5 rounded-2xl focus:ring-2 ring-primary outline-none font-bold" 
+                        placeholder="Jean-Pierre Kabeya"
+                        value={formState.name}
+                        onChange={e => setFormState({...formState, name: e.target.value})}
+                      />
+                   </div>
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Email professionnel *</label>
+                      <input 
+                        required
+                        type="email"
+                        className="w-full bg-gray-800 border-none text-white p-5 rounded-2xl focus:ring-2 ring-primary outline-none font-bold" 
+                        placeholder="kabeya@entreprise.cd"
+                        value={formState.email}
+                        onChange={e => setFormState({...formState, email: e.target.value})}
+                      />
+                   </div>
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Message *</label>
+                      <textarea 
+                        required
+                        rows={4}
+                        className="w-full bg-gray-800 border-none text-white p-5 rounded-2xl focus:ring-2 ring-primary outline-none font-bold resize-none" 
+                        placeholder="Expliquez-nous votre besoin..."
+                        value={formState.message}
+                        onChange={e => setFormState({...formState, message: e.target.value})}
+                      />
+                   </div>
+                   <button 
+                    disabled={isSending}
+                    className="w-full py-5 bg-primary hover:bg-primary-light text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-2xl shadow-green-500/20 flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+                   >
+                     {isSending ? <Loader2 className="animate-spin" size={24}/> : <><Send size={20}/> Envoyer le message</>}
+                   </button>
+                </form>
+             </div>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-black text-white pt-20 pb-10">
-        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
-            <div className="space-y-6">
-              <div className="flex items-center gap-3"><img src="./logobisopeto.png" alt="Logo" className="w-12 h-12" /><h3 className="font-black text-2xl text-[#00C853]">BISO PETO</h3></div>
-              <p className="text-gray-500 font-medium">Leader dans la digitalisation de la gestion des déchets à Kinshasa.</p>
+      <footer className="bg-gray-900 text-white pt-20 pb-12 overflow-hidden relative">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
+            <div className="col-span-1 lg:col-span-2 space-y-8">
+               <div className="flex items-center gap-4">
+                  <img src="logobisopeto.png" className="w-16 h-16 brightness-0 invert" alt="Logo"/>
+                  <div>
+                    <h3 className="text-3xl font-black tracking-tighter">BISO PETO</h3>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">KIN ECO-MAP</p>
+                  </div>
+               </div>
+               <p className="text-gray-400 font-medium leading-relaxed max-w-sm">
+                 Leader dans la digitalisation de la gestion des déchets et la promotion de l'écologie urbaine en République Démocratique du Congo.
+               </p>
+               <div className="bg-white/5 border border-white/10 p-4 rounded-2xl space-y-1">
+                  <p className="text-[9px] font-black uppercase text-gray-500 tracking-widest">Identifiants légaux</p>
+                  <p className="text-[10px] font-bold text-gray-300 uppercase">CD/KNM/RCCM/25-B-01937</p>
+                  <p className="text-[10px] font-bold text-gray-300 uppercase">Id.Nat.01-S9502-N76752K | A2537519K</p>
+               </div>
             </div>
+
             <div>
-              <h4 className="font-black text-lg mb-8 uppercase text-white/50">Navigation</h4>
-              <ul className="space-y-3">
-                {navLinks.map(link => (
-                  <li key={link.id}>
-                    <button 
-                      onClick={(e) => handleSmoothScroll(e, link.id)} 
-                      className="text-gray-400 hover:text-[#00C853] transition-colors font-bold text-sm"
-                    >
-                      {link.label}
-                    </button>
-                  </li>
-                ))}
+              <h4 className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-10">Navigation</h4>
+              <ul className="space-y-4 font-black uppercase text-[10px] tracking-widest text-gray-400">
+                <li className="hover:text-white cursor-pointer" onClick={() => handleSmoothScroll('about')}>À Propos</li>
+                <li className="hover:text-white cursor-pointer" onClick={() => handleSmoothScroll('modules')}>Modules</li>
+                <li className="hover:text-white cursor-pointer" onClick={() => handleSmoothScroll('objectives')}>Objectifs</li>
+                <li className="hover:text-white cursor-pointer" onClick={() => handleSmoothScroll('contact')}>Contact</li>
               </ul>
             </div>
-            <div><h4 className="font-black text-lg mb-8 uppercase text-white/50">Newsletter</h4>
-              <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
-                <input type="email" placeholder="Votre email" className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex-1 text-sm outline-none focus:border-[#00C853] transition-colors" value={newsletterEmail} onChange={e => setNewsletterEmail(e.target.value)} />
-                <button className="bg-[#00C853] p-3 rounded-xl hover:bg-green-600 transition-colors">{isNewsletterSending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}</button>
-              </form>
+
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-10">Communauté</h4>
+              <ul className="space-y-4 font-black uppercase text-[10px] tracking-widest text-gray-400">
+                <li className="hover:text-white cursor-pointer">Éco-Citoyen</li>
+                <li className="hover:text-white cursor-pointer">Éco-Entreprise</li>
+                <li className="hover:text-white cursor-pointer">Marketplace</li>
+                <li className="hover:text-white cursor-pointer">Eco Academy</li>
+              </ul>
             </div>
+          </div>
+
+          <div className="pt-12 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">© 2025 BISO PETO Group SARL - KIN ECO-MAP. Tous droits réservés.</p>
+            <div className="flex items-center gap-6">
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white cursor-pointer">Confidentialité</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white cursor-pointer">Mentions Légales</span>
+            </div>
+          </div>
         </div>
       </footer>
-
-      {/* Back to Top */}
-      {isScrolled && (
-        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="fixed bottom-10 right-10 z-[110] bg-[#00C853] text-white p-4 rounded-2xl shadow-2xl hover:scale-110 active:scale-95 transition-all">
-          <ChevronUp size={24} />
-        </button>
-      )}
     </div>
   );
 };

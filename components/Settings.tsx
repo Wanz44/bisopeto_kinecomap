@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Globe, Lock, Moon, Sun, Shield, HelpCircle, ChevronRight, LogOut, Smartphone, Mail, Save, X, Eye, EyeOff, Check, ChevronDown, ChevronUp, MessageCircle, Phone, FileText, Monitor, Laptop, Wifi, Battery, Zap, Database, Map as MapIcon, RefreshCw, AlertTriangle, Download, Trash2, Fingerprint } from 'lucide-react';
+import { ArrowLeft, Bell, Globe, Lock, Moon, Sun, Shield, HelpCircle, ChevronRight, LogOut, Smartphone, Mail, Save, X, Eye, EyeOff, Check, ChevronDown, ChevronUp, MessageCircle, Phone, FileText, Monitor, Laptop, Wifi, Battery, Zap, Database, Map as MapIcon, RefreshCw, AlertTriangle, Download, Trash2, Fingerprint, Palette, Terminal, Sparkles } from 'lucide-react';
 import { Theme, User, Language, UserType } from '../types';
 import { SettingsAPI } from '../services/api';
 
@@ -15,387 +15,130 @@ interface SettingsProps {
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
-// Mock Active Sessions
-const INITIAL_SESSIONS = [
-    { id: 1, device: 'iPhone 13 Pro', location: 'Kinshasa, Gombe', active: true, type: 'mobile' },
-    { id: 2, device: 'Chrome on Windows', location: 'Kinshasa, Lingwala', active: false, lastActive: '2h ago', type: 'desktop' },
-];
-
 export const Settings: React.FC<SettingsProps> = ({ user, theme, onToggleTheme, onBack, onLogout, currentLanguage, onLanguageChange, onToast }) => {
-    // --- General State ---
-    const [notifications, setNotifications] = useState({
-        push: true,
-        email: true,
-        sms: false,
-        marketing: false,
-        security: true
+    const [activeSubView, setActiveSubView] = useState<'main' | 'security' | 'branding' | 'waste_config'>('main');
+    const [branding, setBranding] = useState({
+        slogan: "Agir localement, impacter durablement.",
+        primaryColor: "#2E7D32",
+        appName: "KIN ECO MAP"
     });
     
-    // --- Collector Specific State ---
-    const [collectorSettings, setCollectorSettings] = useState({
-        dataSaver: false,
-        highAccuracyGPS: true,
-        syncFrequency: 'realtime', // realtime, 5min, 15min
-        mapProvider: 'osm'
-    });
-
-    // --- Security State ---
-    const [securitySettings, setSecuritySettings] = useState({
-        twoFactor: false,
-        biometric: true
-    });
-
-    const [sessions, setSessions] = useState(INITIAL_SESSIONS);
-    const [activeSubView, setActiveSubView] = useState<'main' | 'security' | 'notifications' | 'data'>('main');
+    // Config des types de déchets détectables par l'IA
+    const [wasteTypes, setWasteTypes] = useState([
+        { id: '1', label: 'Plastique', active: true },
+        { id: '2', label: 'Organique', active: true },
+        { id: '3', label: 'Gravats', active: true },
+        { id: '4', label: 'Électronique', active: true },
+        { id: '5', label: 'Verre', active: false },
+    ]);
 
     const handleSave = () => {
-        if (onToast) onToast("Préférences enregistrées", "success");
+        if (onToast) onToast("Configurations système mises à jour", "success");
+        setActiveSubView('main');
     };
 
-    const toggleNotification = (key: keyof typeof notifications) => {
-        setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
-        handleSave();
-    };
-
-    const handleRevokeSession = (id: number) => {
-        setSessions(prev => prev.filter(s => s.id !== id));
-        if (onToast) onToast("Session déconnectée avec succès", "success");
-    };
-
-    // --- Render Components ---
-
-    const SectionHeader = ({ title }: { title: string }) => (
-        <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-1 mt-6">
-            {title}
-        </h3>
-    );
-
-    const SettingItem = ({ 
-        icon: Icon, 
-        label, 
-        subLabel,
-        value, 
-        onClick, 
-        toggle,
-        onToggle,
-        danger = false,
-        rightElement
-    }: { 
-        icon: any, 
-        label: string, 
-        subLabel?: string,
-        value?: string | React.ReactNode, 
-        onClick?: () => void,
-        toggle?: boolean,
-        onToggle?: () => void,
-        danger?: boolean,
-        rightElement?: React.ReactNode
-    }) => (
-        <div 
-            onClick={!toggle && !onToggle ? onClick : undefined}
-            className={`flex items-center justify-between p-4 bg-white dark:bg-gray-800 border-b border-gray-50 dark:border-gray-700 last:border-none first:rounded-t-2xl last:rounded-b-2xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${danger ? 'text-red-500' : 'text-gray-800 dark:text-white'}`}
-        >
-            <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${danger ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                    <Icon size={18} />
-                </div>
+    const SettingItem = ({ icon: Icon, label, subLabel, onClick, toggle, onToggle, danger = false }: any) => (
+        <div onClick={!toggle && !onToggle ? onClick : undefined} className={`flex items-center justify-between p-5 bg-white dark:bg-gray-800 border-b dark:border-gray-700 last:border-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${danger ? 'text-red-500' : 'text-gray-800 dark:text-white'}`}>
+            <div className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${danger ? 'bg-red-50 text-red-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}><Icon size={20} /></div>
                 <div>
-                    <span className="font-semibold text-sm block">{label}</span>
-                    {subLabel && <span className="text-xs text-gray-400 block mt-0.5">{subLabel}</span>}
+                    <span className="font-black text-sm block uppercase tracking-tight">{label}</span>
+                    {subLabel && <span className="text-[10px] text-gray-400 block font-bold uppercase tracking-widest">{subLabel}</span>}
                 </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-                {value && <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">{value}</span>}
-                {rightElement}
-                
-                {(toggle !== undefined || onToggle) ? (
-                    <div 
-                        onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
-                        className={`w-11 h-6 rounded-full flex items-center transition-colors px-1 cursor-pointer ${toggle ? 'bg-[#00C853]' : 'bg-gray-300 dark:bg-gray-600'}`}
-                    >
-                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${toggle ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                    </div>
-                ) : (
-                    !danger && !rightElement && <ChevronRight size={18} className="text-gray-400" />
-                )}
-            </div>
+            {toggle !== undefined ? (
+                <button onClick={(e) => { e.stopPropagation(); onToggle?.(); }} className={`w-12 h-7 rounded-full flex items-center px-1 transition-all ${toggle ? 'bg-[#00C853]' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${toggle ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                </button>
+            ) : <ChevronRight size={18} className="text-gray-300" />}
         </div>
     );
 
-    // --- SUB-VIEWS ---
-
-    const renderSecurityView = () => (
-        <div className="animate-fade-in">
-            <div className="mb-4 flex items-center gap-2 text-gray-500 cursor-pointer" onClick={() => setActiveSubView('main')}>
-                <ArrowLeft size={16} /> Retour
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Sécurité & Connexion</h2>
-
-            <SectionHeader title="Authentification" />
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <SettingItem 
-                    icon={Lock} 
-                    label="Changer mot de passe" 
-                    subLabel="Dernière modif. il y a 3 mois"
-                    onClick={() => { if(onToast) onToast("Email de réinitialisation envoyé", "info"); }}
-                />
-                <SettingItem 
-                    icon={Shield} 
-                    label="Double Facteur (2FA)" 
-                    subLabel="Sécuriser via SMS/App"
-                    toggle={securitySettings.twoFactor}
-                    onToggle={() => setSecuritySettings(prev => ({...prev, twoFactor: !prev.twoFactor}))}
-                />
-                <SettingItem 
-                    icon={Fingerprint} 
-                    label="Biométrie" 
-                    subLabel="FaceID / Empreinte"
-                    toggle={securitySettings.biometric}
-                    onToggle={() => setSecuritySettings(prev => ({...prev, biometric: !prev.biometric}))}
-                />
-            </div>
-
-            <SectionHeader title="Appareils Connectés" />
-            <div className="space-y-3">
-                {sessions.map(session => (
-                    <div key={session.id} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 flex justify-between items-center animate-fade-in">
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${session.active ? 'bg-green-100 text-green-600 dark:bg-green-900/30' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'}`}>
-                                {session.type === 'mobile' ? <Smartphone size={20} /> : <Laptop size={20} />}
-                            </div>
-                            <div>
-                                <p className="font-bold text-gray-800 dark:text-white text-sm">{session.device}</p>
-                                <p className="text-xs text-gray-500 flex items-center gap-1">
-                                    {session.location} • {session.active ? <span className="text-green-500 font-bold">Actif maintenant</span> : session.lastActive}
-                                </p>
+    if (activeSubView === 'branding') {
+        return (
+            <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 animate-fade-in">
+                <div className="bg-white dark:bg-gray-900 p-6 border-b dark:border-gray-800 flex items-center gap-4">
+                    <button onClick={() => setActiveSubView('main')} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft/></button>
+                    <h2 className="text-xl font-black uppercase tracking-tighter dark:text-white">Identité Visuelle</h2>
+                </div>
+                <div className="p-8 space-y-6">
+                    <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] shadow-sm border dark:border-gray-800 space-y-6">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom de l'application</label>
+                            <input className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl font-black text-sm outline-none border-none dark:text-white" value={branding.appName} onChange={e => setBranding({...branding, appName: e.target.value})} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Slogan Officiel</label>
+                            <input className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl font-bold text-sm outline-none border-none dark:text-white" value={branding.slogan} onChange={e => setBranding({...branding, slogan: e.target.value})} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Couleur Primaire</label>
+                            <div className="flex gap-4">
+                                <input type="color" className="w-20 h-14 rounded-2xl cursor-pointer bg-transparent border-none" value={branding.primaryColor} onChange={e => setBranding({...branding, primaryColor: e.target.value})} />
+                                <input className="flex-1 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl font-mono text-sm outline-none border-none dark:text-white" value={branding.primaryColor} onChange={e => setBranding({...branding, primaryColor: e.target.value})} />
                             </div>
                         </div>
-                        {!session.active && (
-                            <button 
-                                onClick={() => handleRevokeSession(session.id)}
-                                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        )}
+                        <button onClick={handleSave} className="w-full py-5 bg-[#2962FF] text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2"><Save size={20}/> Appliquer les changements</button>
                     </div>
-                ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    }
 
-    const renderNotificationsView = () => (
-        <div className="animate-fade-in">
-            <div className="mb-4 flex items-center gap-2 text-gray-500 cursor-pointer" onClick={() => setActiveSubView('main')}>
-                <ArrowLeft size={16} /> Retour
+    if (activeSubView === 'waste_config') {
+        return (
+            <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 animate-fade-in">
+                <div className="bg-white dark:bg-gray-900 p-6 border-b dark:border-gray-800 flex items-center gap-4">
+                    <button onClick={() => setActiveSubView('main')} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft/></button>
+                    <h2 className="text-xl font-black uppercase tracking-tighter dark:text-white">Configuration IA</h2>
+                </div>
+                <div className="p-8">
+                    <div className="bg-white dark:bg-gray-900 rounded-[3rem] shadow-sm border dark:border-gray-800 overflow-hidden">
+                        <div className="p-8 border-b dark:border-gray-800"><p className="text-xs font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Déterminez les catégories de déchets que Biso Peto AI peut identifier lors des signalements citoyens.</p></div>
+                        {wasteTypes.map(type => (
+                            <SettingItem key={type.id} icon={Sparkles} label={type.label} toggle={type.active} onToggle={() => setWasteTypes(prev => prev.map(t => t.id === type.id ? {...t, active: !t.active} : t))} />
+                        ))}
+                        <button className="w-full p-6 text-blue-600 font-black uppercase text-xs tracking-widest hover:bg-gray-50 transition-colors">+ Ajouter une catégorie</button>
+                    </div>
+                </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Préférences de Notification</h2>
-
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <SettingItem 
-                    icon={Bell} 
-                    label="Notifications Push" 
-                    subLabel="Alertes sur cet appareil"
-                    toggle={notifications.push} 
-                    onToggle={() => toggleNotification('push')}
-                />
-                <SettingItem 
-                    icon={Mail} 
-                    label="Notifications Email" 
-                    subLabel="Récapitulatifs et factures"
-                    toggle={notifications.email} 
-                    onToggle={() => toggleNotification('email')}
-                />
-                <SettingItem 
-                    icon={MessageCircle} 
-                    label="Notifications SMS" 
-                    subLabel="Alertes urgentes uniquement"
-                    toggle={notifications.sms} 
-                    onToggle={() => toggleNotification('sms')}
-                />
-            </div>
-
-            <SectionHeader title="Types de messages" />
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <SettingItem 
-                    icon={Shield} 
-                    label="Sécurité & Compte" 
-                    subLabel="Connexions, changements de mot de passe"
-                    toggle={notifications.security} 
-                    onToggle={() => toggleNotification('security')}
-                />
-                <SettingItem 
-                    icon={Zap} 
-                    label="Offres & Marketing" 
-                    subLabel="Promotions partenaires"
-                    toggle={notifications.marketing} 
-                    onToggle={() => toggleNotification('marketing')}
-                />
-            </div>
-        </div>
-    );
-
-    // --- MAIN VIEW ---
-
-    if (activeSubView === 'security') return renderSecurityView();
-    if (activeSubView === 'notifications') return renderNotificationsView();
+        );
+    }
 
     return (
-        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-900 transition-colors duration-300 relative">
-            {/* Header */}
-            <div className="bg-white dark:bg-gray-800 p-4 shadow-sm flex items-center sticky top-0 z-10 border-b border-gray-100 dark:border-gray-700">
-                <button onClick={onBack} className="mr-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-                    <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
-                </button>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Paramètres</h2>
+        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-900 transition-colors duration-300">
+            <div className="bg-white dark:bg-gray-800 p-6 shadow-sm border-b border-gray-100 dark:border-gray-700 sticky top-0 z-40">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all">
+                        <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
+                    </button>
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter uppercase">Réglages</h2>
+                </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 pb-20">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 pb-24 no-scrollbar">
                 
-                {/* Account Summary Card */}
-                <div className="bg-gradient-to-r from-[#2962FF] to-[#3D5AFE] rounded-3xl p-6 text-white shadow-lg mb-6 flex items-center gap-4">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center font-bold text-2xl shadow-inner border border-white/10">
-                        {user.firstName[0]}
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="font-bold text-lg">{user.firstName} {user.lastName}</h3>
-                        <p className="text-white/80 text-sm capitalize">{user.type}</p>
-                    </div>
-                    <button className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
-                        <ChevronRight size={20} />
-                    </button>
+                <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-sm border dark:border-gray-800 overflow-hidden">
+                    <h3 className="px-8 pt-8 pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Compte & Sécurité</h3>
+                    <SettingItem icon={Lock} label="Sécurité Admin" subLabel="2FA & Sessions actives" onClick={() => setActiveSubView('branding')} />
+                    <SettingItem icon={Globe} label="Langue App" subLabel={currentLanguage === 'fr' ? 'Français' : 'English'} onClick={() => onLanguageChange(currentLanguage === 'fr' ? 'en' : 'fr')} />
                 </div>
 
-                {/* --- RÔLE : COLLECTEUR (Spécifique) --- */}
-                {user.type === UserType.COLLECTOR && (
-                    <>
-                        <SectionHeader title="Outils Professionnels" />
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                            <SettingItem 
-                                icon={Wifi} 
-                                label="Mode Économie de Données" 
-                                subLabel="Ne pas charger les images lourdes"
-                                toggle={collectorSettings.dataSaver}
-                                onToggle={() => setCollectorSettings(prev => ({...prev, dataSaver: !prev.dataSaver}))}
-                            />
-                            <SettingItem 
-                                icon={MapIcon} 
-                                label="Fournisseur de Carte" 
-                                value={collectorSettings.mapProvider === 'osm' ? 'OpenStreet' : 'Satellite'}
-                                rightElement={
-                                    <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                                        <button onClick={() => setCollectorSettings(prev => ({...prev, mapProvider: 'osm'}))} className={`p-1 rounded ${collectorSettings.mapProvider === 'osm' ? 'bg-white shadow' : ''}`}><MapIcon size={14}/></button>
-                                        <button onClick={() => setCollectorSettings(prev => ({...prev, mapProvider: 'sat'}))} className={`p-1 rounded ${collectorSettings.mapProvider === 'sat' ? 'bg-white shadow' : ''}`}><Globe size={14}/></button>
-                                    </div>
-                                }
-                            />
-                            <SettingItem 
-                                icon={RefreshCw} 
-                                label="Fréquence Sync GPS" 
-                                value="Temps réel"
-                            />
-                        </div>
-                    </>
-                )}
-
-                {/* --- RÔLE : ADMIN (Spécifique) --- */}
                 {user.type === UserType.ADMIN && (
-                    <>
-                        <SectionHeader title="Administration Système" />
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                            <SettingItem 
-                                icon={Monitor} 
-                                label="Logs Console" 
-                                subLabel="Pour débogage avancé"
-                                toggle={false}
-                            />
-                            <SettingItem 
-                                icon={Database} 
-                                label="Cache Local" 
-                                value="14 MB"
-                                rightElement={
-                                    <button 
-                                        onClick={() => { if(onToast) onToast("Cache local vidé.", "success"); }}
-                                        className="text-xs text-red-500 font-bold hover:underline"
-                                    >
-                                        Vider
-                                    </button>
-                                }
-                            />
-                        </div>
-                    </>
+                    <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-sm border dark:border-gray-800 overflow-hidden">
+                        <h3 className="px-8 pt-8 pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Pilotage Système</h3>
+                        <SettingItem icon={Palette} label="Personnalisation" subLabel="Logo, Slogan, Couleurs" onClick={() => setActiveSubView('branding')} />
+                        <SettingItem icon={Sparkles} label="Moteur d'Analyse" subLabel="Types de déchets IA" onClick={() => setActiveSubView('waste_config')} />
+                        <SettingItem icon={Terminal} label="API & Intégrations" subLabel="Gestion des clés d'accès" />
+                    </div>
                 )}
 
-                <SectionHeader title="Général" />
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    <SettingItem 
-                        icon={Globe} 
-                        label="Langue" 
-                        value={currentLanguage === 'fr' ? 'Français' : 'English'} 
-                        onClick={() => {
-                            onLanguageChange(currentLanguage === 'fr' ? 'en' : 'fr');
-                            handleSave();
-                        }}
-                    />
-                    {/* Enhanced Theme Toggle */}
-                    <div className="p-4 flex items-center justify-between bg-white dark:bg-gray-800 border-b border-gray-50 dark:border-gray-700 last:border-none hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer" onClick={onToggleTheme}>
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                                {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-                            </div>
-                            <div>
-                                <span className="font-semibold text-sm text-gray-800 dark:text-white">Apparence</span>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    {theme === 'dark' ? 'Mode Sombre' : 'Mode Clair'}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
-                            <button className={`p-1.5 rounded-md transition-all ${theme === 'light' ? 'bg-white shadow-sm text-yellow-500' : 'text-gray-400'}`}>
-                                <Sun size={14} />
-                            </button>
-                            <button className={`p-1.5 rounded-md transition-all ${theme === 'dark' ? 'bg-gray-600 shadow-sm text-blue-300' : 'text-gray-400'}`}>
-                                <Moon size={14} />
-                            </button>
-                        </div>
-                    </div>
+                <div className="bg-red-50 dark:bg-red-900/10 rounded-[2.5rem] border border-red-100 dark:border-red-900/30 overflow-hidden">
+                    <SettingItem icon={LogOut} label="Déconnexion" danger onClick={onLogout} />
                 </div>
 
-                <SectionHeader title="Compte & Données" />
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    <SettingItem 
-                        icon={Bell} 
-                        label="Notifications" 
-                        onClick={() => setActiveSubView('notifications')}
-                    />
-                    <SettingItem 
-                        icon={Shield} 
-                        label="Sécurité & Connexion" 
-                        onClick={() => setActiveSubView('security')}
-                    />
-                    {user.type === UserType.CITIZEN && (
-                        <SettingItem 
-                            icon={Download} 
-                            label="Exporter mes données" 
-                            subLabel="Format JSON (RGPD)"
-                            onClick={() => { if(onToast) onToast("Export des données lancé. Vous recevrez un email.", "info"); }}
-                        />
-                    )}
-                </div>
-
-                <div className="mt-8">
-                     <button 
-                        onClick={onLogout}
-                        className="w-full bg-red-50 dark:bg-red-900/20 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors shadow-sm"
-                     >
-                        <LogOut size={20} />
-                        Déconnexion
-                     </button>
-                     <div className="text-center mt-6">
-                        <p className="text-xs font-bold text-gray-400">KIN ECO-MAP v1.0.3</p>
-                        <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-1">ID: {user.id}</p>
-                     </div>
+                <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Biso Peto Engine v1.4.0 • Build DRC</p>
                 </div>
             </div>
         </div>

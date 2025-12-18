@@ -18,10 +18,12 @@ import { AdminSubscriptions } from './components/AdminSubscriptions';
 import { AdminVehicles } from './components/AdminVehicles';
 import { AdminAcademy } from './components/AdminAcademy';
 import { AdminPermissions } from './components/AdminPermissions';
+import { AdminReports } from './components/AdminReports';
+import { AdminMarketplace } from './components/AdminMarketplace';
 import { CollectorJobs } from './components/CollectorJobs';
 import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
-import { User, AppView, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings } from './types';
+import { User, AppView, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings, UserType } from './types';
 import { SettingsAPI, UserAPI } from './services/api';
 
 const DEFAULT_PLANS: SubscriptionPlan[] = [
@@ -40,7 +42,6 @@ function App() {
         } catch (e) { return null; }
     });
 
-    const historySupported = useRef(true);
     const [history, setHistory] = useState<AppView[]>(() => {
         return user ? [AppView.DASHBOARD] : [AppView.LANDING];
     });
@@ -54,15 +55,16 @@ function App() {
     const [systemSettings, setSystemSettings] = useState<SystemSettings>({
         maintenanceMode: false,
         supportEmail: 'support@kinecomap.cd',
-        appVersion: '1.0.4',
+        appVersion: '1.4.0',
         force2FA: false,
         sessionTimeout: 60,
         passwordPolicy: 'strong',
-        marketplaceCommission: 0.05
+        marketplaceCommission: 0.05,
+        exchangeRate: 2800
     });
 
     const [notifications, setNotifications] = useState<NotificationItem[]>([
-        { id: '1', title: 'Bienvenue', message: 'Bienvenue sur BISO PETO !', type: 'info', time: 'À l\'instant', read: false, targetUserId: 'ALL' }
+        { id: '1', title: 'Système Biso Peto', message: 'Bienvenue sur votre Control Tower.', type: 'info', time: 'À l\'instant', read: false, targetUserId: 'ALL' }
     ]);
 
     const [exchangeRate, setExchangeRate] = useState(2800);
@@ -73,9 +75,8 @@ function App() {
         const loadInitData = async () => {
             try {
                 const settings = await SettingsAPI.get();
-                setSystemSettings(settings);
+                if (settings) setSystemSettings(settings);
             } finally {
-                // Splash screen court si user déjà là, plus long si premier chargement
                 const delay = user ? 1000 : 2500;
                 setTimeout(() => setLoading(false), delay);
             }
@@ -109,7 +110,7 @@ function App() {
         setUser(null);
         setHistory([AppView.LANDING]);
         localStorage.removeItem('kinecomap_user');
-        handleShowToast("Déconnexion réussie", "info");
+        handleShowToast("Session terminée", "info");
     };
 
     const handleNotify = (targetId: string | 'ADMIN' | 'ALL', title: string, message: string, type: 'info' | 'success' | 'warning' | 'alert') => {
@@ -140,11 +141,16 @@ function App() {
             case AppView.PROFILE: return <Profile user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} onManageSubscription={() => navigateTo(AppView.SUBSCRIPTION)} onSettings={() => navigateTo(AppView.SETTINGS)} onUpdateProfile={p => setUser({ ...user, ...p })} onToast={handleShowToast} />;
             case AppView.SUBSCRIPTION: return <Subscription user={user} onBack={goBack} onUpdatePlan={(p) => { setUser({...user, subscription: p}); goBack(); }} plans={plans} exchangeRate={exchangeRate} onToast={handleShowToast} />;
             case AppView.PLANNING: return <Planning onBack={goBack} />;
-            case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, read: true})))} />;
+            case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, read: true})))} isAdmin={user.type === UserType.ADMIN} onSendNotification={(n) => handleNotify(n.targetUserId || 'ALL', n.title || '', n.message || '', n.type)} />;
             case AppView.SETTINGS: return <Settings user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} currentLanguage={language} onLanguageChange={setLanguage} onToast={handleShowToast} />;
             case AppView.COLLECTOR_JOBS: return <CollectorJobs user={user} onBack={goBack} onNotify={handleNotify} onToast={handleShowToast} />;
             case AppView.ADMIN_USERS: return <AdminUsers onBack={goBack} currentUser={user} onNotify={handleNotify} onToast={handleShowToast} />;
             case AppView.ADMIN_VEHICLES: return <AdminVehicles onBack={goBack} onToast={handleShowToast} />;
+            case AppView.ADMIN_ACADEMY: return <AdminAcademy onBack={goBack} onToast={handleShowToast} />;
+            case AppView.ADMIN_REPORTS: return <AdminReports onBack={goBack} onToast={handleShowToast} onNotify={handleNotify} />;
+            case AppView.ADMIN_MARKETPLACE: return <AdminMarketplace onBack={goBack} onToast={handleShowToast} />;
+            case AppView.ADMIN_SUBSCRIPTIONS: return <AdminSubscriptions onBack={goBack} plans={plans} exchangeRate={exchangeRate} onUpdatePlan={(p) => setPlans(plans.map(pl => pl.id === p.id ? p : pl))} onUpdateExchangeRate={setExchangeRate} currentLogo={appLogo} onUpdateLogo={setAppLogo} systemSettings={systemSettings} onUpdateSystemSettings={(s) => setSystemSettings(s)} onToast={handleShowToast} />;
+            case AppView.ADMIN_PERMISSIONS: return <AdminPermissions onBack={goBack} onToast={handleShowToast} />;
             default: return <Dashboard user={user} onChangeView={navigateTo} onToast={handleShowToast} />;
         }
     };

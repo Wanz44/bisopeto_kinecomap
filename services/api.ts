@@ -23,7 +23,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
     force2FA: false,
     sessionTimeout: 60,
     passwordPolicy: 'strong',
-    marketplaceCommission: 0.05
+    marketplaceCommission: 0.05,
+    exchangeRate: 2800
 };
 
 const initializeData = () => {
@@ -78,11 +79,11 @@ export const ReportsAPI = {
         saveCollection(KEYS.REPORTS, reports);
         return newReport;
     },
-    update: async (report: WasteReport): Promise<void> => {
+    update: async (report: Partial<WasteReport> & { id: string }): Promise<void> => {
         const reports = getCollection<WasteReport>(KEYS.REPORTS);
         const idx = reports.findIndex(r => r.id === report.id);
         if (idx !== -1) {
-            reports[idx] = report;
+            reports[idx] = { ...reports[idx], ...report };
             saveCollection(KEYS.REPORTS, reports);
         }
     }
@@ -150,15 +151,6 @@ export const MarketplaceAPI = {
         const items = getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
         const idx = items.findIndex(i => i.id === item.id);
         if (idx !== -1) { items[idx] = item; saveCollection(KEYS.MARKETPLACE, items); }
-    }
-};
-
-export const JobAPI = {
-    getAll: async () => getCollection<any>(KEYS.JOBS),
-    updateStatus: async (id: string, status: string, proof?: string) => {
-        const list = getCollection<any>(KEYS.JOBS);
-        const job = list.find((j:any) => j.id == id);
-        if (job) { job.status = status; if(proof) job.proofImage = proof; saveCollection(KEYS.JOBS, list); }
     }
 };
 

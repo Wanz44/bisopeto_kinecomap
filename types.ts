@@ -7,9 +7,7 @@ export enum UserType {
 }
 
 export type UserStatus = 'pending' | 'active' | 'suspended';
-
 export type Theme = 'light' | 'dark';
-
 export type Language = 'fr' | 'en';
 
 export type UserPermission = 
@@ -42,23 +40,92 @@ export interface User {
     sector?: string;
     vehicleType?: string;
     zone?: string;
+    commune?: string; // Ajout pour filtres admin
     housingType?: string;
     permissions?: UserPermission[];
-    // Métriques Business
     totalTonnage?: number;
     co2Saved?: number;
     recyclingRate?: number;
 }
 
-export interface Collector {
-    id: number;
-    name: string;
+export interface WasteReport {
+    id: string;
+    reporterId: string;
     lat: number;
     lng: number;
-    status: 'active' | 'inactive';
-    vehicle: string;
+    imageUrl: string;
+    wasteType: string;
+    urgency: 'low' | 'medium' | 'high';
+    status: 'pending' | 'assigned' | 'resolved' | 'rejected';
+    assignedTo?: string; // ID du collecteur
+    date: string;
+    comment: string;
+    commune?: string;
 }
 
+export enum AppView {
+    LANDING = 'LANDING',
+    ONBOARDING = 'ONBOARDING',
+    DASHBOARD = 'DASHBOARD',
+    MAP = 'MAP',
+    ACADEMY = 'ACADEMY',
+    MARKETPLACE = 'MARKETPLACE',
+    PROFILE = 'PROFILE',
+    NOTIFICATIONS = 'NOTIFICATIONS',
+    SUBSCRIPTION = 'SUBSCRIPTION',
+    PLANNING = 'PLANNING',
+    SETTINGS = 'SETTINGS',
+    REPORTING = 'REPORTING',
+    ADMIN_USERS = 'ADMIN_USERS',
+    ADMIN_ADS = 'ADMIN_ADS',
+    ADMIN_SUBSCRIPTIONS = 'ADMIN_SUBSCRIPTIONS',
+    ADMIN_VEHICLES = 'ADMIN_VEHICLES',
+    ADMIN_ACADEMY = 'ADMIN_ACADEMY',
+    ADMIN_PERMISSIONS = 'ADMIN_PERMISSIONS',
+    ADMIN_REPORTS = 'ADMIN_REPORTS',
+    ADMIN_MARKETPLACE = 'ADMIN_MARKETPLACE',
+    COLLECTOR_JOBS = 'COLLECTOR_JOBS'
+}
+
+export interface SubscriptionPlan {
+    id: 'standard' | 'plus' | 'premium' | 'special';
+    name: string;
+    priceUSD: number;
+    schedule: string;
+    features: string[];
+    popular?: boolean;
+    isVariable?: boolean;
+}
+
+export interface SystemSettings {
+    maintenanceMode: boolean;
+    supportEmail: string;
+    appVersion: string;
+    force2FA: boolean;
+    sessionTimeout: number;
+    passwordPolicy: string;
+    marketplaceCommission: number;
+    exchangeRate: number;
+}
+
+// Fixed: Added missing properties to Vehicle interface
+export interface Vehicle {
+    id: string;
+    name: string;
+    type: 'moto' | 'tricycle' | 'pickup' | 'camion' | 'chariot';
+    plateNumber: string;
+    status: 'active' | 'maintenance' | 'stopped';
+    batteryLevel: number;
+    lat: number;
+    lng: number;
+    driverId?: string;
+    signalStrength: number;
+    gpsId?: string;
+    lastUpdate?: string;
+    heading?: number;
+}
+
+// Fixed: Added missing types used in various components
 export interface ChatMessage {
     id: string;
     sender: 'user' | 'ai';
@@ -80,68 +147,9 @@ export interface Course {
     progress: number;
     icon: string;
     color: string;
-    videoUrl?: string; 
-    status?: 'draft' | 'published';
-    author?: string;
+    videoUrl?: string;
+    status?: 'draft' | 'published' | 'archived';
     quiz?: QuizQuestion[];
-}
-
-export interface Badge {
-    id: string;
-    title: string;
-    description: string;
-    icon: string;
-    earned: boolean;
-}
-
-export interface NotificationItem {
-    id: string;
-    title: string;
-    message: string;
-    type: 'info' | 'success' | 'warning' | 'alert';
-    time: string;
-    read: boolean;
-    targetUserId?: string | 'ADMIN' | 'ALL'; 
-}
-
-// Added missing SubscriptionPlan interface to resolve export errors
-export interface SubscriptionPlan {
-    id: 'standard' | 'plus' | 'premium' | 'special';
-    name: string;
-    priceUSD: number;
-    schedule: string;
-    features: string[];
-    popular?: boolean;
-    isVariable?: boolean;
-}
-
-// Added missing SystemSettings interface to resolve export errors
-export interface SystemSettings {
-    maintenanceMode: boolean;
-    supportEmail: string;
-    appVersion: string;
-    force2FA: boolean;
-    sessionTimeout: number;
-    passwordPolicy: string;
-    marketplaceCommission: number;
-}
-
-export type VehicleType = 'moto' | 'tricycle' | 'pickup' | 'camion' | 'chariot';
-
-export interface Vehicle {
-    id: string;
-    name: string;
-    type: VehicleType;
-    plateNumber: string;
-    gpsId: string;
-    status: 'active' | 'maintenance' | 'stopped';
-    batteryLevel: number;
-    signalStrength: number;
-    lat: number;
-    lng: number;
-    heading: number; 
-    driverId?: string;
-    lastUpdate: string;
 }
 
 export interface MarketplaceItem {
@@ -151,8 +159,8 @@ export interface MarketplaceItem {
     title: string;
     category: 'electronics' | 'metal' | 'plastic' | 'other';
     description: string;
-    weight: number; 
-    price: number; 
+    weight: number;
+    price: number;
     imageUrl: string;
     date: string;
     status: 'available' | 'pending_delivery' | 'sold';
@@ -179,45 +187,26 @@ export interface Partner {
     contactName: string;
     email: string;
     phone: string;
-    website?: string;
     activeCampaigns: number;
     totalBudget: number;
     logo: string;
     status: 'active' | 'inactive';
 }
 
-export interface WasteReport {
+export interface NotificationItem {
     id: string;
-    reporterId: string;
-    lat: number;
-    lng: number;
-    imageUrl: string;
-    wasteType: string;
-    urgency: 'low' | 'medium' | 'high';
-    status: 'pending' | 'assigned' | 'resolved';
-    date: string;
-    comment: string;
+    title: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'alert';
+    time: string;
+    read: boolean;
+    targetUserId: string;
 }
 
-export enum AppView {
-    LANDING = 'LANDING',
-    ONBOARDING = 'ONBOARDING',
-    DASHBOARD = 'DASHBOARD',
-    MAP = 'MAP',
-    ACADEMY = 'ACADEMY',
-    MARKETPLACE = 'MARKETPLACE',
-    BADGES = 'BADGES',
-    PROFILE = 'PROFILE',
-    NOTIFICATIONS = 'NOTIFICATIONS',
-    SUBSCRIPTION = 'SUBSCRIPTION',
-    PLANNING = 'PLANNING',
-    SETTINGS = 'SETTINGS',
-    REPORTING = 'REPORTING',
-    ADMIN_USERS = 'ADMIN_USERS',
-    ADMIN_ADS = 'ADMIN_ADS',
-    ADMIN_SUBSCRIPTIONS = 'ADMIN_SUBSCRIPTIONS',
-    ADMIN_VEHICLES = 'ADMIN_VEHICLES',
-    ADMIN_ACADEMY = 'ADMIN_ACADEMY',
-    ADMIN_PERMISSIONS = 'ADMIN_PERMISSIONS',
-    COLLECTOR_JOBS = 'COLLECTOR_JOBS'
+export interface Collector {
+    id: string;
+    name: string;
+    phone: string;
+    zone: string;
+    status: 'active' | 'inactive';
 }
