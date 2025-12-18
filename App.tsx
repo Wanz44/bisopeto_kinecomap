@@ -25,6 +25,7 @@ import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
 import { User, AppView, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings, UserType } from './types';
 import { SettingsAPI, UserAPI } from './services/api';
+import { NotificationService } from './services/notificationService';
 
 const DEFAULT_PLANS: SubscriptionPlan[] = [
     { id: 'standard', name: 'Standard', priceUSD: 10, schedule: 'Mardi & Samedi', features: ['2 jours / semaine', 'Mardi & Samedi', 'Suivi basique'] },
@@ -119,6 +120,12 @@ function App() {
             title, message, type, time: 'À l\'instant', read: false, targetUserId: targetId
         };
         setNotifications([newNotif, ...notifications]);
+
+        // Déclencher une notification Push réelle si l'utilisateur est concerné
+        // (Simulé ici : on pousse la notification si c'est pour ALL ou si l'ID correspond)
+        if (targetId === 'ALL' || targetId === user?.id || (targetId === 'ADMIN' && user?.type === UserType.ADMIN)) {
+            NotificationService.sendPush(title, message);
+        }
     };
 
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; visible: boolean }>({
