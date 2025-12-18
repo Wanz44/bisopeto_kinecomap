@@ -6,6 +6,8 @@ export enum UserType {
     ADMIN = 'admin'
 }
 
+export type UserStatus = 'pending' | 'active' | 'suspended';
+
 export type Theme = 'light' | 'dark';
 
 export type Language = 'fr' | 'en';
@@ -29,7 +31,7 @@ export interface SystemSettings {
     force2FA: boolean;
     sessionTimeout: number;
     passwordPolicy: 'standard' | 'strong' | 'strict';
-    marketplaceCommission: number; // Pourcentage (ex: 0.05 pour 5%)
+    marketplaceCommission: number;
 }
 
 export interface SubscriptionPlan {
@@ -49,6 +51,7 @@ export interface User {
     phone: string;
     email?: string;
     type: UserType;
+    status: UserStatus;
     address: string;
     points: number;
     collections: number;
@@ -130,7 +133,7 @@ export interface Vehicle {
     signalStrength: number;
     lat: number;
     lng: number;
-    heading: number; // Direction en degrés (0-360)
+    heading: number; 
     driverId?: string;
     lastUpdate: string;
 }
@@ -142,8 +145,8 @@ export interface MarketplaceItem {
     title: string;
     category: 'electronics' | 'metal' | 'plastic' | 'other';
     description: string;
-    weight: number; // kg
-    price: number; // FC
+    weight: number; 
+    price: number; 
     imageUrl: string;
     date: string;
     status: 'available' | 'pending_delivery' | 'sold';
@@ -177,6 +180,19 @@ export interface Partner {
     status: 'active' | 'inactive';
 }
 
+export interface WasteReport {
+    id: string;
+    reporterId: string;
+    lat: number;
+    lng: number;
+    imageUrl: string;
+    wasteType: string;
+    urgency: 'low' | 'medium' | 'high';
+    status: 'pending' | 'assigned' | 'resolved';
+    date: string;
+    comment: string;
+}
+
 export enum AppView {
     LANDING = 'LANDING',
     ONBOARDING = 'ONBOARDING',
@@ -190,6 +206,7 @@ export enum AppView {
     SUBSCRIPTION = 'SUBSCRIPTION',
     PLANNING = 'PLANNING',
     SETTINGS = 'SETTINGS',
+    REPORTING = 'REPORTING',
     ADMIN_USERS = 'ADMIN_USERS',
     ADMIN_ADS = 'ADMIN_ADS',
     ADMIN_SUBSCRIPTIONS = 'ADMIN_SUBSCRIPTIONS',

@@ -1,9 +1,8 @@
 
-import { User, MarketplaceItem, Vehicle, Collector, Course, AdCampaign, Partner, UserType, SystemSettings } from '../types';
+import { User, MarketplaceItem, Vehicle, Collector, Course, AdCampaign, Partner, UserType, SystemSettings, WasteReport } from '../types';
 import { OfflineManager } from './offlineManager';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
-// Clés de stockage LocalStorage (Fallback)
 const KEYS = {
     USERS: 'kinecomap_users',
     MARKETPLACE: 'kinecomap_marketplace',
@@ -13,69 +12,56 @@ const KEYS = {
     COURSES: 'kinecomap_courses',
     ADS: 'kinecomap_ads',
     PARTNERS: 'kinecomap_partners',
-    SETTINGS: 'kinecomap_system_settings'
+    SETTINGS: 'kinecomap_system_settings',
+    REPORTS: 'kinecomap_waste_reports'
 };
 
 const DEFAULT_SETTINGS: SystemSettings = {
     maintenanceMode: false,
     supportEmail: 'support@kinecomap.cd',
-    appVersion: '1.0.3',
+    appVersion: '1.0.4',
     force2FA: false,
     sessionTimeout: 60,
     passwordPolicy: 'strong',
     marketplaceCommission: 0.05
 };
 
-// Credentials Super Admin
-const SUPER_ADMIN_EMAIL = 'adonailutonadio70@gmail.com';
-const SUPER_ADMIN_PASS = 'Bisopeto@243';
-
 const initializeData = () => {
-    if (!localStorage.getItem(KEYS.MARKETPLACE)) {
-        localStorage.setItem(KEYS.MARKETPLACE, JSON.stringify([]));
-    }
-    if (!localStorage.getItem(KEYS.SETTINGS)) {
-        localStorage.setItem(KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
-    }
-    if (!localStorage.getItem(KEYS.ADS)) {
-        localStorage.setItem(KEYS.ADS, JSON.stringify([]));
-    }
-    if (!localStorage.getItem(KEYS.PARTNERS)) {
-        localStorage.setItem(KEYS.PARTNERS, JSON.stringify([]));
-    }
-    
-    const users = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
-    const adminExists = users.some((u: User) => u.email === SUPER_ADMIN_EMAIL);
-    
-    if (!adminExists || !localStorage.getItem(KEYS.USERS)) {
-        const defaultAdmin: User = {
-            id: 'admin-super-01',
-            firstName: 'Adonai',
-            lastName: 'Lutonadio',
-            email: SUPER_ADMIN_EMAIL,
-            phone: '+243000000000',
-            type: UserType.ADMIN,
-            address: 'QG Kinshasa',
-            points: 999,
-            collections: 0,
-            badges: 5,
-            subscription: 'premium',
-            permissions: ['manage_users', 'validate_docs', 'view_finance', 'manage_ads', 'export_data', 'system_settings', 'manage_fleet', 'manage_academy', 'manage_communications', 'manage_pos']
-        };
-        const cleanedUsers = users.filter((u: User) => u.email !== 'admin@kinecomap.cd');
-        cleanedUsers.unshift(defaultAdmin);
-        localStorage.setItem(KEYS.USERS, JSON.stringify(cleanedUsers));
-    }
-
-    if (!localStorage.getItem(KEYS.VEHICLES)) localStorage.setItem(KEYS.VEHICLES, JSON.stringify([]));
-    if (!localStorage.getItem(KEYS.JOBS)) localStorage.setItem(KEYS.JOBS, JSON.stringify([])); 
+    try {
+        if (!localStorage.getItem(KEYS.REPORTS)) localStorage.setItem(KEYS.REPORTS, JSON.stringify([]));
+        if (!localStorage.getItem(KEYS.MARKETPLACE)) localStorage.setItem(KEYS.MARKETPLACE, JSON.stringify([]));
+        if (!localStorage.getItem(KEYS.SETTINGS)) localStorage.setItem(KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
+        
+        const usersStr = localStorage.getItem(KEYS.USERS);
+        const users = usersStr ? JSON.parse(usersStr) : [];
+        if (!users.some((u: User) => u.email === 'adonailutonadio70@gmail.com')) {
+            const defaultAdmin: User = {
+                id: 'admin-super-01',
+                firstName: 'Adonai',
+                lastName: 'Lutonadio',
+                email: 'adonailutonadio70@gmail.com',
+                phone: '+243000000000',
+                type: UserType.ADMIN,
+                status: 'active',
+                address: 'QG Kinshasa',
+                points: 999,
+                collections: 0,
+                badges: 5,
+                subscription: 'premium',
+                permissions: ['manage_users', 'validate_docs', 'view_finance', 'manage_ads', 'export_data', 'system_settings', 'manage_fleet', 'manage_academy', 'manage_communications', 'manage_pos']
+            };
+            users.push(defaultAdmin);
+            localStorage.setItem(KEYS.USERS, JSON.stringify(users));
+        }
+    } catch (e) { console.error(e); }
 };
 
 initializeData();
 
 const getCollection = <T>(key: string): T[] => {
     try {
-        return JSON.parse(localStorage.getItem(key) || '[]');
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : [];
     } catch { return []; }
 };
 
@@ -83,525 +69,139 @@ const saveCollection = <T>(key: string, data: T[]) => {
     localStorage.setItem(key, JSON.stringify(data));
 };
 
+export const ReportsAPI = {
+    getAll: async (): Promise<WasteReport[]> => getCollection<WasteReport>(KEYS.REPORTS),
+    add: async (report: WasteReport): Promise<WasteReport> => {
+        const reports = getCollection<WasteReport>(KEYS.REPORTS);
+        const newReport = { ...report, id: `rep-${Date.now()}` };
+        reports.unshift(newReport);
+        saveCollection(KEYS.REPORTS, reports);
+        return newReport;
+    },
+    update: async (report: WasteReport): Promise<void> => {
+        const reports = getCollection<WasteReport>(KEYS.REPORTS);
+        const idx = reports.findIndex(r => r.id === report.id);
+        if (idx !== -1) {
+            reports[idx] = report;
+            saveCollection(KEYS.REPORTS, reports);
+        }
+    }
+};
+
 export const SettingsAPI = {
     get: async (): Promise<SystemSettings> => {
-        if (isSupabaseConfigured() && supabase) {
-            const { data } = await supabase.from('system_settings').select('*').single();
-            if (data) {
-                return {
-                    maintenanceMode: data.maintenance_mode,
-                    supportEmail: data.support_email,
-                    appVersion: data.app_version,
-                    force2FA: data.force_2fa,
-                    sessionTimeout: data.session_timeout,
-                    passwordPolicy: 'strong',
-                    marketplaceCommission: data.marketplace_commission
-                };
-            }
-        }
-        try {
-            const stored = JSON.parse(localStorage.getItem(KEYS.SETTINGS) || JSON.stringify(DEFAULT_SETTINGS));
-            return { ...DEFAULT_SETTINGS, ...stored };
-        } catch { return DEFAULT_SETTINGS; }
+        const stored = JSON.parse(localStorage.getItem(KEYS.SETTINGS) || JSON.stringify(DEFAULT_SETTINGS));
+        return { ...DEFAULT_SETTINGS, ...stored };
     },
-    update: async (settings: SystemSettings): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('system_settings').update({
-                maintenance_mode: settings.maintenanceMode,
-                support_email: settings.supportEmail,
-                force_2fa: settings.force2FA,
-                session_timeout: settings.sessionTimeout,
-                marketplace_commission: settings.marketplaceCommission
-            }).eq('id', 1);
-            return;
-        }
-        localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
-    }
+    update: async (settings: SystemSettings) => localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings))
 };
 
 export const UserAPI = {
     login: async (identifier: string, password?: string): Promise<User | null> => {
-        if (identifier === SUPER_ADMIN_EMAIL && password === SUPER_ADMIN_PASS) {
-            const users = getCollection<User>(KEYS.USERS);
-            return users.find(u => u.email === identifier) || null;
-        }
-
-        if (isSupabaseConfigured() && supabase) {
-            try {
-                if (identifier.includes('@')) {
-                    const { data, error } = await supabase.auth.signInWithPassword({
-                        email: identifier,
-                        password: password || ''
-                    });
-                    if (error) throw error;
-                    
-                    if (data.user) {
-                        const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
-                        if (profile) return {
-                            id: profile.id,
-                            firstName: profile.first_name,
-                            lastName: profile.last_name,
-                            email: profile.email,
-                            phone: profile.phone,
-                            type: profile.type,
-                            address: profile.address,
-                            points: profile.points,
-                            collections: profile.collections,
-                            badges: profile.badges,
-                            subscription: profile.subscription,
-                            permissions: profile.permissions
-                        } as User;
-                    }
-                }
-            } catch (error) { console.error("Supabase Login Error:", error); }
-        }
-
-        await new Promise(r => setTimeout(r, 800));
         const users = getCollection<User>(KEYS.USERS);
-        return users.find(u => u.email === identifier || u.phone === identifier) || null;
+        return users.find(u => (u.email === identifier || u.phone === identifier)) || null;
     },
-
     register: async (user: User, password?: string): Promise<User> => {
-        if (isSupabaseConfigured() && supabase && user.email && password) {
-            // 1. Inscription Auth
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: user.email,
-                password: password,
-                options: {
-                    data: {
-                        first_name: user.firstName,
-                        last_name: user.lastName
-                    }
-                }
-            });
-            
-            if (authError) throw authError;
-            if (!authData.user) throw new Error("Erreur de création d'utilisateur");
-
-            // 2. Création du profil public
-            const profileData = {
-                id: authData.user.id,
-                first_name: user.firstName,
-                last_name: user.lastName,
-                email: user.email,
-                phone: user.phone,
-                type: user.type,
-                address: user.address,
-                points: 0,
-                collections: 0,
-                badges: 0,
-                subscription: 'standard'
-            };
-
-            const { error: profileError } = await supabase.from('profiles').insert(profileData);
-            if (profileError) throw profileError;
-
-            return { ...user, id: authData.user.id };
-        }
-
-        // Fallback Local Storage
         const users = getCollection<User>(KEYS.USERS);
         const newUser = { ...user, id: `u-${Date.now()}`, points: 0, collections: 0, badges: 0 };
         users.unshift(newUser);
         saveCollection(KEYS.USERS, users);
         return newUser;
     },
-
-    getAll: async (): Promise<User[]> => {
-        if (isSupabaseConfigured() && supabase) {
-            const { data } = await supabase.from('profiles').select('*');
-            if (data) return data.map((p: any) => ({
-                id: p.id,
-                firstName: p.first_name,
-                lastName: p.last_name,
-                email: p.email,
-                phone: p.phone,
-                type: p.type,
-                address: p.address,
-                points: p.points,
-                collections: p.collections,
-                badges: p.badges,
-                subscription: p.subscription,
-                permissions: p.permissions
-            })) as User[];
-        }
-        return getCollection<User>(KEYS.USERS);
-    },
-
-    add: async (user: User, password?: string): Promise<User> => {
-        return UserAPI.register(user, password);
-    },
-
-    update: async (user: Partial<User> & { id: string }): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-             const updates: any = {};
-             if(user.firstName) updates.first_name = user.firstName;
-             if(user.lastName) updates.last_name = user.lastName;
-             if(user.phone) updates.phone = user.phone;
-             if(user.address) updates.address = user.address;
-             if(user.subscription) updates.subscription = user.subscription;
-             if(user.permissions) updates.permissions = user.permissions;
-             if(user.points !== undefined) updates.points = user.points;
-             
-             await supabase.from('profiles').update(updates).eq('id', user.id);
-             return;
-        }
-        
+    getAll: async () => getCollection<User>(KEYS.USERS),
+    update: async (user: Partial<User> & { id: string }) => {
         const users = getCollection<User>(KEYS.USERS);
-        const index = users.findIndex(u => u.id === user.id);
-        if (index !== -1) {
-            users[index] = { ...users[index], ...user };
+        const idx = users.findIndex(u => u.id === user.id);
+        if (idx !== -1) {
+            users[idx] = { ...users[idx], ...user };
             saveCollection(KEYS.USERS, users);
         }
     },
-
-    delete: async (userId: string): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('profiles').delete().eq('id', userId);
-            return;
-        }
-        const users = getCollection<User>(KEYS.USERS);
-        saveCollection(KEYS.USERS, users.filter(u => u.id !== userId));
-    },
-
-    resetPassword: async (identifier: string): Promise<boolean> => {
-        if (isSupabaseConfigured() && supabase) {
-            const { error } = await supabase.auth.resetPasswordForEmail(identifier);
-            return !error;
-        }
-        return true; 
-    },
-
-    confirmPasswordReset: async (identifier: string, newPassword: string): Promise<boolean> => {
-        if (isSupabaseConfigured() && supabase) {
-            const { error } = await supabase.auth.updateUser({ password: newPassword });
-            return !error;
-        }
-        return true;
-    },
-
-    verifyOTP: async (code: string): Promise<boolean> => {
-        await new Promise(r => setTimeout(r, 1000));
-        return code === '123456';
-    },
-
-    sendEmail: async (to: string, subject: string, message: string): Promise<boolean> => {
-        return true;
-    }
-};
-
-export const MarketplaceAPI = {
-    getAll: async (): Promise<MarketplaceItem[]> => {
-        if (isSupabaseConfigured() && supabase) {
-            const { data } = await supabase.from('marketplace_items').select('*').order('created_at', { ascending: false });
-            if (data) return data.map((i: any) => ({
-                id: i.id,
-                sellerId: i.seller_id,
-                sellerName: i.seller_name,
-                title: i.title,
-                category: i.category,
-                description: i.description,
-                weight: i.weight,
-                price: i.price,
-                imageUrl: i.image_url,
-                status: i.status,
-                date: new Date(i.created_at).toLocaleDateString('fr-FR')
-            })) as MarketplaceItem[];
-        }
-        return getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
-    },
-    add: async (item: MarketplaceItem): Promise<MarketplaceItem> => {
-        if (isSupabaseConfigured() && supabase) {
-            const dbItem = {
-                seller_id: item.sellerId,
-                seller_name: item.sellerName,
-                title: item.title,
-                category: item.category,
-                description: item.description,
-                weight: item.weight,
-                price: item.price,
-                image_url: item.imageUrl,
-                status: item.status
-            };
-            const { data } = await supabase.from('marketplace_items').insert(dbItem).select().single();
-            if (data) return { ...item, id: data.id };
-        }
-        const items = getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
-        const newItem = { ...item, id: `item-${Date.now()}` };
-        items.unshift(newItem);
-        saveCollection(KEYS.MARKETPLACE, items);
-        return newItem;
-    },
-    update: async (item: MarketplaceItem): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('marketplace_items').update({ status: item.status }).eq('id', item.id);
-            return;
-        }
-        const items = getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
-        const index = items.findIndex(i => i.id === item.id);
-        if (index !== -1) {
-            items[index] = item;
-            saveCollection(KEYS.MARKETPLACE, items);
-        }
-    }
+    delete: async (id: string) => saveCollection(KEYS.USERS, getCollection<User>(KEYS.USERS).filter(u => u.id !== id))
 };
 
 export const VehicleAPI = {
-    getAll: async (): Promise<Vehicle[]> => {
-        if (isSupabaseConfigured() && supabase) {
-            const { data } = await supabase.from('vehicles').select('*');
-            if (data) return data.map((v: any) => ({
-                id: v.id,
-                name: v.name,
-                type: v.type,
-                plateNumber: v.plate_number,
-                gpsId: v.gps_id,
-                status: v.status,
-                batteryLevel: v.battery_level,
-                signalStrength: v.signal_strength,
-                lat: v.lat,
-                lng: v.lng,
-                heading: v.heading,
-                driverId: v.driver_id,
-                lastUpdate: v.last_update
-            })) as Vehicle[];
-        }
-        return getCollection<Vehicle>(KEYS.VEHICLES);
-    },
-    add: async (vehicle: Vehicle): Promise<Vehicle> => {
-        if (isSupabaseConfigured() && supabase) {
-            const dbVehicle = {
-                name: vehicle.name,
-                type: vehicle.type,
-                plate_number: vehicle.plateNumber,
-                gps_id: vehicle.gpsId,
-                status: vehicle.status,
-                battery_level: vehicle.batteryLevel,
-                signal_strength: vehicle.signalStrength,
-                lat: vehicle.lat,
-                lng: vehicle.lng,
-                driver_id: vehicle.driverId
-            };
-            const { data } = await supabase.from('vehicles').insert(dbVehicle).select().single();
-            if (data) return { ...vehicle, id: data.id };
-        }
+    getAll: async () => getCollection<Vehicle>(KEYS.VEHICLES),
+    add: async (v: Vehicle) => {
         const list = getCollection<Vehicle>(KEYS.VEHICLES);
-        const newItem = { ...vehicle, id: `v-${Date.now()}` };
-        list.push(newItem);
+        const nv = { ...v, id: `v-${Date.now()}` };
+        list.push(nv);
         saveCollection(KEYS.VEHICLES, list);
-        return newItem;
+        return nv;
     },
-    update: async (vehicle: Vehicle): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('vehicles').update({
-                lat: vehicle.lat,
-                lng: vehicle.lng,
-                heading: vehicle.heading,
-                status: vehicle.status,
-                battery_level: vehicle.batteryLevel
-            }).eq('id', vehicle.id);
-            return;
-        }
+    update: async (v: Vehicle) => {
         const list = getCollection<Vehicle>(KEYS.VEHICLES);
-        const index = list.findIndex(v => v.id === vehicle.id);
-        if (index !== -1) {
-            list[index] = vehicle;
-            saveCollection(KEYS.VEHICLES, list);
-        }
+        const idx = list.findIndex(item => item.id === v.id);
+        if (idx !== -1) { list[idx] = v; saveCollection(KEYS.VEHICLES, list); }
     },
-    delete: async (id: string): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('vehicles').delete().eq('id', id);
-            return;
-        }
-        const list = getCollection<Vehicle>(KEYS.VEHICLES);
-        saveCollection(KEYS.VEHICLES, list.filter(v => v.id !== id));
+    delete: async (id: string) => saveCollection(KEYS.VEHICLES, getCollection<Vehicle>(KEYS.VEHICLES).filter(v => v.id !== id))
+};
+
+export const MarketplaceAPI = {
+    getAll: async () => getCollection<MarketplaceItem>(KEYS.MARKETPLACE),
+    add: async (item: MarketplaceItem) => {
+        const items = getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
+        const ni = { ...item, id: `item-${Date.now()}` };
+        items.unshift(ni);
+        saveCollection(KEYS.MARKETPLACE, items);
+        return ni;
+    },
+    update: async (item: MarketplaceItem) => {
+        const items = getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
+        const idx = items.findIndex(i => i.id === item.id);
+        if (idx !== -1) { items[idx] = item; saveCollection(KEYS.MARKETPLACE, items); }
     }
 };
 
 export const JobAPI = {
-    getAll: async (): Promise<any[]> => {
-        if (isSupabaseConfigured() && supabase) {
-            const { data } = await supabase.from('jobs').select('*');
-            if (data) return data.map((j:any) => ({
-                id: j.id,
-                address: j.address,
-                wasteType: j.waste_type,
-                status: j.status,
-                time: new Date(j.created_at).toLocaleTimeString(),
-                date: j.date,
-                isUrgent: j.is_urgent,
-                qrCode: j.qr_code,
-                proofImage: j.proof_image
-            }));
-        }
-        return getCollection(KEYS.JOBS);
-    },
-    updateStatus: async (jobId: number | string, status: string, proofImage?: string): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            const updates: any = { status };
-            if(proofImage) updates.proof_image = proofImage;
-            await supabase.from('jobs').update(updates).eq('id', jobId);
-            return;
-        }
+    getAll: async () => getCollection<any>(KEYS.JOBS),
+    updateStatus: async (id: string, status: string, proof?: string) => {
         const list = getCollection<any>(KEYS.JOBS);
-        const job = list.find(j => j.id == jobId);
-        if (job) {
-            job.status = status;
-            if (proofImage) job.proofImage = proofImage;
-            saveCollection(KEYS.JOBS, list);
-        }
+        const job = list.find((j:any) => j.id == id);
+        if (job) { job.status = status; if(proof) job.proofImage = proof; saveCollection(KEYS.JOBS, list); }
     }
 };
 
 export const StorageAPI = {
-    uploadImage: async (file: File, bucket: 'profiles' | 'marketplace' = 'marketplace'): Promise<string | null> => {
-        if (!isSupabaseConfigured() || !supabase) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(file);
-            });
-        }
-        try {
-            const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-            const { data, error } = await supabase.storage.from(bucket).upload(fileName, file);
-            if (error) throw error;
-            const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
-            return publicUrlData.publicUrl;
-        } catch (error) {
-            console.error("Storage Error:", error);
-            return null;
-        }
+    uploadImage: async (file: File): Promise<string | null> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+        });
     }
 };
 
 export const PartnersAPI = {
-    getAll: async (): Promise<Partner[]> => {
-        if (isSupabaseConfigured() && supabase) {
-            const { data } = await supabase.from('partners').select('*');
-            if (data) return data.map((p:any) => ({
-                id: p.id,
-                name: p.name,
-                industry: p.industry,
-                contactName: p.contact_name,
-                email: p.email,
-                phone: p.phone,
-                logo: p.logo_url,
-                status: p.status,
-                activeCampaigns: p.active_campaigns,
-                totalBudget: p.total_budget
-            }));
-        }
-        return getCollection(KEYS.PARTNERS);
-    },
-    add: async (partner: Partner): Promise<Partner> => {
-        if (isSupabaseConfigured() && supabase) {
-            const dbPartner = {
-                name: partner.name,
-                industry: partner.industry,
-                contact_name: partner.contactName,
-                email: partner.email,
-                phone: partner.phone,
-                logo_url: partner.logo,
-                status: partner.status
-            };
-            const { data } = await supabase.from('partners').insert(dbPartner).select().single();
-            if (data) return { ...partner, id: data.id };
-        }
+    getAll: async () => getCollection<Partner>(KEYS.PARTNERS),
+    add: async (p: Partner) => {
         const list = getCollection<Partner>(KEYS.PARTNERS);
-        const newItem = { ...partner, id: `p-${Date.now()}` };
-        list.push(newItem);
+        const np = { ...p, id: `p-${Date.now()}` };
+        list.push(np);
         saveCollection(KEYS.PARTNERS, list);
-        return newItem;
+        return np;
     },
-    update: async (partner: Partner): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('partners').update({
-                name: partner.name,
-                contact_name: partner.contactName,
-                email: partner.email,
-                phone: partner.phone,
-                logo_url: partner.logo,
-                industry: partner.industry
-            }).eq('id', partner.id);
-            return;
-        }
+    update: async (p: Partner) => {
         const list = getCollection<Partner>(KEYS.PARTNERS);
-        const idx = list.findIndex(p => p.id === partner.id);
-        if (idx !== -1) {
-            list[idx] = partner;
-            saveCollection(KEYS.PARTNERS, list);
-        }
+        const idx = list.findIndex(item => item.id === p.id);
+        if (idx !== -1) { list[idx] = p; saveCollection(KEYS.PARTNERS, list); }
     },
-    delete: async (id: string): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('partners').delete().eq('id', id);
-            return;
-        }
-        const list = getCollection<Partner>(KEYS.PARTNERS);
-        saveCollection(KEYS.PARTNERS, list.filter(p => p.id !== id));
-    }
+    delete: async (id: string) => saveCollection(KEYS.PARTNERS, getCollection<Partner>(KEYS.PARTNERS).filter(item => item.id !== id))
 };
 
 export const AdsAPI = {
-    getAll: async (): Promise<AdCampaign[]> => {
-        if (isSupabaseConfigured() && supabase) {
-            const { data } = await supabase.from('ad_campaigns').select('*');
-            if (data) return data.map((a:any) => ({
-                id: a.id,
-                title: a.title,
-                partner: a.partner_name,
-                status: a.status,
-                views: a.views,
-                clicks: a.clicks,
-                budget: a.budget,
-                spent: a.spent,
-                startDate: a.start_date,
-                endDate: a.end_date,
-                image: a.image_url
-            }));
-        }
-        return getCollection(KEYS.ADS);
-    },
-    add: async (ad: AdCampaign): Promise<AdCampaign> => {
-        if (isSupabaseConfigured() && supabase) {
-            const dbAd = {
-                title: ad.title,
-                partner_name: ad.partner,
-                status: ad.status,
-                budget: ad.budget,
-                start_date: ad.startDate,
-                end_date: ad.endDate,
-                image_url: ad.image
-            };
-            const { data } = await supabase.from('ad_campaigns').insert(dbAd).select().single();
-            if (data) return { ...ad, id: data.id };
-        }
+    getAll: async () => getCollection<AdCampaign>(KEYS.ADS),
+    add: async (a: AdCampaign) => {
         const list = getCollection<AdCampaign>(KEYS.ADS);
-        const newItem = { ...ad, id: `ad-${Date.now()}` };
-        list.push(newItem);
+        const na = { ...a, id: `ad-${Date.now()}` };
+        list.push(na);
         saveCollection(KEYS.ADS, list);
-        return newItem;
+        return na;
     },
-    updateStatus: async (id: string, status: string): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('ad_campaigns').update({ status }).eq('id', id);
-            return;
-        }
+    updateStatus: async (id: string, status: string) => {
         const list = getCollection<AdCampaign>(KEYS.ADS);
-        const ad = list.find(a => a.id === id);
-        if (ad) {
-            ad.status = status as any;
-            saveCollection(KEYS.ADS, list);
-        }
+        const ad = list.find(item => item.id === id);
+        if (ad) { ad.status = status as any; saveCollection(KEYS.ADS, list); }
     },
-    delete: async (id: string): Promise<void> => {
-        if (isSupabaseConfigured() && supabase) {
-            await supabase.from('ad_campaigns').delete().eq('id', id);
-            return;
-        }
-        const list = getCollection<AdCampaign>(KEYS.ADS);
-        saveCollection(KEYS.ADS, list.filter(a => a.id !== id));
-    }
+    delete: async (id: string) => saveCollection(KEYS.ADS, getCollection<AdCampaign>(KEYS.ADS).filter(item => item.id !== id))
 };

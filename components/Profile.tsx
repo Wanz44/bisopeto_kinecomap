@@ -44,7 +44,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
 
             setIsUploading(true);
             try {
-                const publicUrl = await StorageAPI.uploadImage(file, 'profiles');
+                // Fixed: StorageAPI.uploadImage only accepts one argument (file)
+                const publicUrl = await StorageAPI.uploadImage(file);
                 if (publicUrl) {
                     setProfileImage(publicUrl);
                     if (onToast) onToast("Photo de profil mise à jour", "success");

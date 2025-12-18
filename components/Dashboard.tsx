@@ -53,9 +53,11 @@ import {
     ArrowDownRight,
     MoreHorizontal,
     Minus,
-    /* Added missing icon imports */
     ClipboardList,
-    ShoppingBag
+    ShoppingBag,
+    Factory,
+    PhoneCall,
+    ShieldCheck
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
@@ -79,7 +81,6 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Reusable Search Bar Component
 const DashboardSearchBar = () => (
     <div className="relative mb-6 group z-20">
         <div className="absolute inset-0 bg-gradient-to-r from-[#00C853]/20 to-[#2962FF]/20 rounded-2xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -89,7 +90,7 @@ const DashboardSearchBar = () => (
             </div>
             <input 
                 type="text" 
-                placeholder="Rechercher partout (Utilisateurs, Transactions, Alertes)..." 
+                placeholder="Rechercher partout (Collectes, Aide, Academy)..." 
                 className="w-full py-4 px-4 bg-transparent outline-none text-gray-800 dark:text-white font-medium placeholder-gray-400"
             />
             <button className="pr-4 text-[#2962FF] font-bold text-sm hover:bg-gray-50 dark:hover:bg-white/5 p-2 rounded-lg mr-2 transition-colors flex items-center gap-2">
@@ -105,86 +106,57 @@ interface DashboardProps {
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
+// --- PENDING ACCOUNT SCREEN ---
+const PendingDashboard: React.FC<DashboardProps> = ({ user }) => {
+    return (
+        <div className="p-5 md:p-12 min-h-screen flex flex-col items-center justify-center text-center animate-fade-in">
+            <div className="bg-white dark:bg-[#161b22] p-10 rounded-[3rem] shadow-2xl border border-gray-100 dark:border-white/5 max-w-xl">
+                <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce">
+                    <PhoneCall size={48} />
+                </div>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-4">Compte en cours de qualification</h1>
+                <p className="text-lg text-gray-500 dark:text-gray-400 mb-8 leading-relaxed font-medium">
+                    Mbote <span className="text-[#2962FF] font-bold">{user.firstName}</span> ! Pour garantir la sécurité de notre plateforme, un agent Bisopeto examine votre profil.
+                    <br/><br/>
+                    Nous vous appellerons au <span className="font-black text-gray-800 dark:text-white">{user.phone}</span> d'ici <span className="font-bold text-[#00C853]">24h maximum</span>.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center gap-3">
+                        <ShieldCheck className="text-[#00C853]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Sécurité vérifiée</span>
+                    </div>
+                    <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center gap-3">
+                        <Clock className="text-[#2962FF]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Service Express</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- CITIZEN DASHBOARD ---
 const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     const [showShareModal, setShowShareModal] = useState(false);
     const [copied, setCopied] = useState(false);
-
     const referralCode = `KIN-${user.firstName.substring(0, 3).toUpperCase()}-${user.id ? user.id.slice(-4) : '2024'}`;
-
-    const data = [
-      { name: 'Lun', uv: 0 },
-      { name: 'Mar', uv: 0 },
-      { name: 'Mer', uv: 0 },
-      { name: 'Jeu', uv: 0 },
-      { name: 'Ven', uv: 0 },
-      { name: 'Sam', uv: 0 },
-      { name: 'Dim', uv: 0 },
-    ];
-
-    const handleReferralShare = () => {
-        if (navigator.share) {
-            navigator.share({
-                title: 'Rejoins KIN ECO-MAP',
-                text: `Salut ! Utilise mon code de parrainage ${referralCode} pour gagner 50 points gratuits sur KIN ECO-MAP. Ensemble rendons Kinshasa propre ! 🚛🇨🇩`,
-                url: 'https://kinecomap.cd/invite',
-            }).catch((error) => console.log('Error sharing', error));
-        } else {
-            alert(`Lien copié : https://kinecomap.cd/invite?code=${referralCode}`);
-        }
-        setShowShareModal(false);
-    };
-
-    const copyCode = () => {
-        navigator.clipboard.writeText(referralCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
+    const data = [ { name: 'Lun', uv: 0 }, { name: 'Mar', uv: 0 }, { name: 'Mer', uv: 0 }, { name: 'Jeu', uv: 0 }, { name: 'Ven', uv: 0 }, { name: 'Sam', uv: 0 }, { name: 'Dim', uv: 0 } ];
 
     return (
         <div className="p-5 md:p-8 space-y-6 animate-fade-in pb-24 md:pb-8">
             <DashboardSearchBar />
-
-            {/* Welcome Card */}
-            <div className="bg-gradient-to-br from-[#00C853] via-[#009624] to-[#2962FF] rounded-[2rem] p-6 md:p-10 text-white shadow-2xl shadow-green-500/20 relative overflow-hidden group">
-                <div className="absolute top-[-50%] right-[-20%] w-[300px] h-[300px] bg-white/10 rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
-                
+            <div className="bg-gradient-to-br from-[#00C853] via-[#009624] to-[#2962FF] rounded-[2rem] p-6 md:p-10 text-white shadow-2xl relative overflow-hidden group">
                 <div className="relative z-10">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight">Bonjour, {user.firstName}! 👋</h1>
-                            <p className="opacity-90 mb-6 text-sm md:text-lg font-medium max-w-lg leading-relaxed">
-                                Votre prochaine collecte est prévue <span className="font-bold text-white bg-white/20 px-2 py-0.5 rounded-lg">aujourd'hui à 10:30</span>.
-                            </p>
-                        </div>
-                        <div className="hidden md:block p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
-                            <Leaf size={32} className="text-white animate-pulse-slow" />
-                        </div>
-                    </div>
-                    
-                    <div className="max-w-md bg-black/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
-                        <div className="flex justify-between items-end mb-2">
-                            <span className="text-xs font-bold uppercase tracking-wider opacity-80">Propreté Quartier</span>
-                            <span className="text-xl font-black">0%</span>
-                        </div>
-                        <div className="bg-black/20 h-3 rounded-full overflow-hidden backdrop-blur-sm">
-                            <div className="bg-white h-full rounded-full w-0 shadow-[0_0_15px_rgba(255,255,255,0.8)] relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent w-full -translate-x-full animate-[shimmer_2s_infinite]"></div>
-                            </div>
-                        </div>
-                        <div className="flex justify-end mt-3">
-                            <button 
-                                onClick={() => setShowShareModal(true)}
-                                className="flex items-center gap-2 bg-white text-[#00C853] px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-gray-100 shadow-lg active:scale-95"
-                            >
-                                <Share2 size={14} /> Partager & Parrainer
-                            </button>
-                        </div>
-                    </div>
+                    <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight">Bonjour, {user.firstName}! 👋</h1>
+                    <p className="opacity-90 mb-6 text-sm md:text-lg font-medium max-w-lg leading-relaxed">
+                        Votre prochaine collecte est prévue <span className="font-bold text-white bg-white/20 px-2 py-0.5 rounded-lg">aujourd'hui à 10:30</span>.
+                    </p>
+                    <button onClick={() => setShowShareModal(true)} className="flex items-center gap-2 bg-white text-[#00C853] px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-gray-100 shadow-lg active:scale-95">
+                        <Share2 size={14} /> Partager & Parrainer
+                    </button>
                 </div>
             </div>
 
-            {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {[
                     { icon: Trash2, label: 'Collectes', value: user.collections, color: 'text-green-500', bg: 'bg-green-500/10' },
@@ -192,8 +164,8 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                     { icon: Star, label: 'Points', value: user.points, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
                     { icon: Award, label: 'Badges', value: user.badges, color: 'text-purple-500', bg: 'bg-purple-500/10' }
                 ].map((stat, idx) => (
-                    <div key={idx} className="bg-white/60 dark:bg-[#161b22]/60 backdrop-blur-xl p-5 rounded-[1.5rem] shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center text-center hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
-                        <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-inner`}>
+                    <div key={idx} className="bg-white/60 dark:bg-[#161b22]/60 backdrop-blur-xl p-5 rounded-[1.5rem] shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center text-center group">
+                        <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                             <stat.icon size={24} />
                         </div>
                         <span className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">{stat.value}</span>
@@ -202,18 +174,16 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                 ))}
             </div>
 
-            {/* Main Content Split */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white/70 dark:bg-[#161b22]/70 backdrop-blur-xl p-6 rounded-[2rem] shadow-lg border border-white/40 dark:border-white/5">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
-                        <BarChart3 size={20} className="text-[#00C853]" />
-                        Volume collecté (kg)
+                        <BarChart3 size={20} className="text-[#00C853]" /> Volume collecté (kg)
                     </h3>
                     <div className="h-56 md:h-64 w-full">
                          <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data}>
                                 <XAxis dataKey="name" tick={{fontSize: 12, fill: '#9CA3AF', fontWeight: 600}} axisLine={false} tickLine={false} dy={10} />
-                                <Tooltip cursor={{fill: 'rgba(0, 200, 83, 0.1)', radius: 8}} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.2)', backgroundColor: 'rgba(255, 255, 255, 0.9)', color: '#000', padding: '12px' }} />
+                                <Tooltip cursor={{fill: 'rgba(0, 200, 83, 0.1)', radius: 8}} />
                                 <Bar dataKey="uv" radius={[6, 6, 6, 6]} barSize={32}>
                                     {data.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#00C853' : '#B9F6CA'} />
@@ -227,156 +197,59 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                 <div className="flex flex-col">
                     <div className="flex justify-between items-center mb-4 px-2">
                         <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                            <Calendar size={20} className="text-blue-500" />
-                            Agenda
+                            <Calendar size={20} className="text-blue-500" /> Agenda
                         </h3>
                         <button onClick={() => onChangeView(AppView.PLANNING)} className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider hover:text-[#00C853] transition-colors">Voir tout</button>
                     </div>
-                    <div className="bg-white/70 dark:bg-[#161b22]/70 backdrop-blur-xl rounded-[2rem] shadow-lg border border-white/40 dark:border-white/5 overflow-hidden flex-1 p-2 space-y-2">
-                        <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center hover:shadow-md transition-all group">
-                            <div className="w-14 h-14 rounded-2xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center mr-4 shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="bg-white/70 dark:bg-[#161b22]/70 backdrop-blur-xl rounded-[2rem] shadow-lg border border-white/40 dark:border-white/5 p-2 space-y-2">
+                        <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center group">
+                            <div className="w-14 h-14 rounded-2xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center mr-4 shrink-0">
                                 <Trash2 size={24} />
                             </div>
                             <div className="flex-1">
                                 <h4 className="font-bold text-gray-800 dark:text-white">Déchets ménagers</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-1 flex items-center gap-1">
-                                    <Clock size={12} /> Aujourd'hui, 10:30
-                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-1 flex items-center gap-1"><Clock size={12} /> Aujourd'hui, 10:30</p>
                             </div>
-                            <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] uppercase font-black px-3 py-1.5 rounded-lg tracking-wider">À venir</span>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-white/50 dark:bg-white/5 border border-transparent flex items-center hover:bg-white dark:hover:bg-white/10 transition-all group">
-                            <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mr-4 shrink-0 group-hover:scale-105 transition-transform">
-                                <Recycle size={24} />
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-bold text-gray-800 dark:text-white">Recyclables</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-1 flex items-center gap-1">
-                                    <Clock size={12} /> Mercredi, 14:00
-                                </p>
-                            </div>
-                            <span className="bg-gray-100 dark:bg-gray-700 dark:text-gray-300 text-gray-500 text-[10px] uppercase font-black px-3 py-1.5 rounded-lg tracking-wider">Prévu</span>
+                            <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] uppercase font-black px-3 py-1.5 rounded-lg">À venir</span>
                         </div>
                     </div>
                 </div>
             </div>
-
-            {/* Quick Actions */}
-            <div>
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 px-2">Actions Rapides</h3>
-                <div className="grid grid-cols-4 gap-3 md:gap-4">
-                    <button onClick={() => onChangeView(AppView.MAP)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-green-600 dark:text-green-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
-                            <MapIcon size={24} />
-                        </div>
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Carte</span>
-                    </button>
-                    <button onClick={() => onChangeView(AppView.PLANNING)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
-                            <Calendar size={24} />
-                        </div>
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Planning</span>
-                    </button>
-                    <button onClick={() => onChangeView(AppView.SUBSCRIPTION)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
-                            <CreditCard size={24} />
-                        </div>
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Payer</span>
-                    </button>
-                    <button onClick={() => onChangeView(AppView.ACADEMY)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
-                            <GraduationCap size={24} />
-                        </div>
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">École</span>
-                    </button>
-                </div>
-            </div>
-
-            {showShareModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-lg" onClick={() => setShowShareModal(false)}></div>
-                    <div className="bg-white dark:bg-[#161b22] w-full max-w-sm rounded-[2rem] p-6 relative z-10 shadow-2xl animate-scale-up border border-white/20 dark:border-white/10">
-                        <button onClick={() => setShowShareModal(false)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors">
-                            <X size={20} className="text-gray-500" />
-                        </button>
-
-                        <div className="text-center mb-8 mt-2">
-                            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                                <Users size={32} className="text-white" />
-                            </div>
-                            <h3 className="text-xl font-black text-gray-800 dark:text-white mb-2">Invitez & Gagnez</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                                Aidez votre communauté à devenir plus propre et gagnez des points éco.
-                            </p>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="bg-gray-50 dark:bg-[#0d1117] p-5 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 relative overflow-hidden group">
-                                <div className="flex items-center justify-between mb-3 relative z-10">
-                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Votre Code</span>
-                                    <span className="text-xs font-bold text-[#00C853] bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-lg">+50 pts</span>
-                                </div>
-                                <div className="flex gap-2 relative z-10">
-                                    <div className="flex-1 bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-gray-600 rounded-xl flex items-center justify-center font-mono font-bold text-gray-800 dark:text-white text-lg tracking-widest h-12 shadow-sm">
-                                        {referralCode}
-                                    </div>
-                                    <button 
-                                        onClick={copyCode}
-                                        className="bg-[#2962FF] text-white w-12 h-12 rounded-xl hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30 flex items-center justify-center"
-                                    >
-                                        {copied ? <CheckCircle size={20} /> : <Copy size={20} />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button 
-                                onClick={handleReferralShare}
-                                className="w-full py-4 bg-gradient-to-r from-[#2962FF] to-[#3D5AFE] text-white font-bold rounded-xl shadow-lg hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-2 transform active:scale-95"
-                            >
-                                <Share2 size={18} /> Envoyer à un ami
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
 
-// --- COLLECTOR DASHBOARD ---
-/* Fixed: Implemented CollectorDashboard component to fix error */
-const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
+// --- BUSINESS DASHBOARD ---
+const BusinessDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     return (
         <div className="p-5 md:p-8 space-y-6 animate-fade-in pb-24 md:pb-8">
             <DashboardSearchBar />
-
-            {/* Welcome Card */}
-            <div className="bg-gradient-to-br from-[#2962FF] to-[#3D5AFE] rounded-[2rem] p-6 md:p-10 text-white shadow-2xl shadow-blue-500/20 relative overflow-hidden group">
-                <div className="absolute top-[-50%] right-[-20%] w-[300px] h-[300px] bg-white/10 rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
+            <div className="bg-gradient-to-br from-[#2962FF] via-[#0044FF] to-[#001133] rounded-[2rem] p-6 md:p-10 text-white shadow-2xl relative overflow-hidden group">
                 <div className="relative z-10">
-                    <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight">Mbote, {user.firstName}! 🚛</h1>
+                    <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight">Mbote Entreprise! 🏢</h1>
                     <p className="opacity-90 mb-6 text-sm md:text-lg font-medium max-w-lg leading-relaxed">
-                        Prêt pour une nouvelle tournée ? Vous avez <span className="font-bold text-white bg-white/20 px-2 py-0.5 rounded-lg">4 missions</span> en attente aujourd'hui.
+                        Gestionnaire: <span className="font-bold">{user.firstName}</span>. Votre conformité environnementale est de <span className="font-bold text-green-400">92%</span>.
                     </p>
-                    <button 
-                        onClick={() => onChangeView(AppView.COLLECTOR_JOBS)}
-                        className="bg-white text-[#2962FF] px-6 py-3 rounded-xl font-bold transition-all hover:bg-gray-100 shadow-lg active:scale-95 flex items-center gap-2"
-                    >
-                        <ClipboardList size={20} /> Voir mes tâches
-                    </button>
+                    <div className="flex gap-3">
+                        <button onClick={() => onChangeView(AppView.PLANNING)} className="bg-white text-blue-700 px-6 py-3 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2">
+                            <Calendar size={18} /> Gérer Passages
+                        </button>
+                    </div>
+                </div>
+                <div className="absolute right-[-10%] bottom-[-20%] opacity-10 rotate-12">
+                    <Factory size={300} />
                 </div>
             </div>
 
-            {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {[
-                    { icon: Trash2, label: 'Collectes', value: user.collections, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                    { icon: Weight, label: 'Volume (kg)', value: '0', color: 'text-green-500', bg: 'bg-green-500/10' },
-                    { icon: Star, label: 'Points', value: user.points, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                    { icon: MapPin, label: 'Zone', value: user.zone || 'N/A', color: 'text-purple-500', bg: 'bg-purple-500/10' }
+                    { icon: Weight, label: 'Total Volume (T)', value: '1.2', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { icon: Recycle, label: 'Taux Tri', value: '78%', color: 'text-green-500', bg: 'bg-green-500/10' },
+                    { icon: CreditCard, label: 'Factures', value: '0', color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                    { icon: Award, label: 'Certif. Eco', value: 'OR', color: 'text-yellow-500', bg: 'bg-yellow-500/10' }
                 ].map((stat, idx) => (
-                    <div key={idx} className="bg-white/60 dark:bg-[#161b22]/60 backdrop-blur-xl p-5 rounded-[1.5rem] shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center text-center hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
-                        <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-inner`}>
+                    <div key={idx} className="bg-white/60 dark:bg-[#161b22]/60 backdrop-blur-xl p-5 rounded-[1.5rem] shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center text-center">
+                        <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-3`}>
                             <stat.icon size={24} />
                         </div>
                         <span className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">{stat.value}</span>
@@ -385,29 +258,56 @@ const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) =>
                 ))}
             </div>
 
-            {/* Quick Actions */}
-            <div>
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 px-2">Actions de Terrain</h3>
-                <div className="grid grid-cols-3 gap-3 md:gap-4">
-                    <button onClick={() => onChangeView(AppView.COLLECTOR_JOBS)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg transition-all duration-300 group">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
-                            <ClipboardList size={24} />
-                        </div>
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Missions</span>
-                    </button>
-                    <button onClick={() => onChangeView(AppView.MARKETPLACE)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg transition-all duration-300 group">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-green-600 dark:text-green-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
-                            <ShoppingBag size={24} />
-                        </div>
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Achats</span>
-                    </button>
-                    <button onClick={() => onChangeView(AppView.PROFILE)} className="bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/20 dark:border-white/5 flex flex-col items-center justify-center hover:bg-white dark:hover:bg-[#1f2937] hover:shadow-lg transition-all duration-300 group">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-2 group-hover:rotate-12 transition-transform shadow-inner">
-                            <UserIcon size={24} />
-                        </div>
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Mon Profil</span>
+            <div className="bg-white/70 dark:bg-[#161b22]/70 backdrop-blur-xl p-6 rounded-[2rem] shadow-lg border border-white/40 dark:border-white/5">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Prochains Enlèvements Industriels</h3>
+                <div className="space-y-4">
+                     {[1,2].map(i => (
+                         <div key={i} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
+                             <div className="flex items-center gap-4">
+                                 <Truck className="text-blue-500" />
+                                 <div>
+                                     <p className="font-bold text-gray-800 dark:text-white">Collecte Grand Volume</p>
+                                     <p className="text-xs text-gray-500">Demain à 08:00</p>
+                                 </div>
+                             </div>
+                             <span className="text-xs font-bold text-blue-600">CONFIRMÉ</span>
+                         </div>
+                     ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- COLLECTOR DASHBOARD ---
+const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
+    return (
+        <div className="p-5 md:p-8 space-y-6 animate-fade-in pb-24 md:pb-8">
+            <DashboardSearchBar />
+            <div className="bg-gradient-to-br from-[#FF6D00] to-[#E65100] rounded-[2rem] p-6 md:p-10 text-white shadow-2xl relative overflow-hidden">
+                <div className="relative z-10">
+                    <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight">Mbote, {user.firstName}! 🚛</h1>
+                    <p className="opacity-90 mb-6 text-sm md:text-lg font-medium max-w-lg">
+                        Vous avez <span className="font-bold">4 missions</span> en attente aujourd'hui dans la zone <span className="font-bold">{user.zone || 'Gombe'}</span>.
+                    </p>
+                    <button onClick={() => onChangeView(AppView.COLLECTOR_JOBS)} className="bg-white text-orange-700 px-6 py-3 rounded-xl font-bold flex items-center gap-2">
+                        <ClipboardList size={20} /> Voir mes tâches
                     </button>
                 </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                    { icon: Trash2, label: 'Collectes', value: user.collections, color: 'text-white', bg: 'bg-white/20' },
+                    { icon: Weight, label: 'Volume (kg)', value: '450', color: 'text-white', bg: 'bg-white/20' },
+                    { icon: MapPin, label: 'Arrêts', value: '12', color: 'text-white', bg: 'bg-white/20' },
+                    { icon: Activity, label: 'Efficacité', value: '98%', color: 'text-white', bg: 'bg-white/20' }
+                ].map((stat, idx) => (
+                    <div key={idx} className="bg-orange-500/90 dark:bg-orange-600/20 backdrop-blur-xl p-5 rounded-[1.5rem] text-white">
+                        <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center mb-3`}><stat.icon size={20} /></div>
+                        <span className="text-2xl font-black tracking-tight">{stat.value}</span>
+                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">{stat.label}</p>
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -415,271 +315,62 @@ const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) =>
 
 // --- ADMIN DASHBOARD ---
 const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
-    // Simplified State - RESET TO ZERO
     const [currentTime, setCurrentTime] = useState(new Date());
     const [liveData, setLiveData] = useState([
         { id: 1, type: 'alert', content: 'Système initialisé - En attente', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), user: 'System', status: 'info' },
     ]);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // RESET TO ZERO
-    const analyticsData = [
-        { name: 'Lun', revenue: 0, users: 0 },
-        { name: 'Mar', revenue: 0, users: 0 },
-        { name: 'Mer', revenue: 0, users: 0 },
-        { name: 'Jeu', revenue: 0, users: 0 },
-        { name: 'Ven', revenue: 0, users: 0 },
-        { name: 'Sam', revenue: 0, users: 0 },
-        { name: 'Dim', revenue: 0, users: 0 },
-    ];
+    useEffect(() => { const interval = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(interval); }, []);
 
     return (
-        <div className="relative min-h-screen bg-[#F5F7FA] dark:bg-[#050505] overflow-hidden">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none opacity-50"></div>
-            
-            <div className="relative z-10 p-5 md:p-8 space-y-6 pb-24 md:pb-8">
+        <div className="relative min-h-screen overflow-hidden">
+            <div className="p-5 md:p-8 space-y-6 pb-24 md:pb-8">
                 <DashboardSearchBar />
-
-                {/* HUD Header */}
                 <div className="flex justify-between items-end mb-6 border-b border-gray-200 dark:border-white/10 pb-6">
                     <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Cpu size={16} className="text-[#2962FF] animate-pulse" />
-                            <span className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Command Center</span>
-                        </div>
+                        <div className="flex items-center gap-2 mb-2"><Cpu size={16} className="text-[#2962FF] animate-pulse" /><span className="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest">Command Center</span></div>
                         <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">VUE GLOBALE</h1>
                     </div>
                     <div className="text-right hidden md:block">
-                        <div className="text-3xl font-mono font-bold text-gray-800 dark:text-white">
-                            {currentTime.toLocaleTimeString()}
-                        </div>
-                        <div className="flex items-center justify-end gap-2 text-green-500 text-xs font-bold uppercase tracking-wider mt-1">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_10px_#22c55e]"></span>
-                            </span>
-                            Système Nominal
-                        </div>
+                        <div className="text-3xl font-mono font-bold text-gray-800 dark:text-white">{currentTime.toLocaleTimeString()}</div>
+                        <div className="flex items-center justify-end gap-2 text-green-500 text-xs font-bold uppercase mt-1"><span className="relative flex h-2 w-2"><span className="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative rounded-full h-2 w-2 bg-green-500 shadow-[0_0_10px_#22c55e]"></span></span>Système Nominal</div>
                     </div>
                 </div>
 
-                {/* Stats Cards - Futuristic Style */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Revenue Card */}
-                    <div className="bg-white/80 dark:bg-[#111827]/80 backdrop-blur-xl p-5 rounded-[1.5rem] border border-white/40 dark:border-white/5 shadow-xl relative overflow-hidden group">
-                        <div className="absolute right-0 top-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
-                        <div className="flex justify-between items-start mb-4 relative z-10">
-                            <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-[#2962FF]">
-                                <DollarSign size={20} />
-                            </div>
-                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1 bg-gray-500/10 dark:bg-gray-500/20 px-2 py-1 rounded-lg">
-                                <Minus size={12} /> 0%
-                            </span>
-                        </div>
-                        <div className="relative z-10">
-                            <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Revenus (Mensuel)</p>
-                            <h2 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">$0.00</h2>
-                        </div>
+                    <div className="bg-white/80 dark:bg-[#111827]/80 p-5 rounded-[1.5rem] border dark:border-white/5 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => onChangeView(AppView.ADMIN_USERS)}>
+                        <div className="p-2.5 bg-green-50 dark:bg-green-900/20 rounded-xl text-[#00C853] w-fit mb-4"><Users size={20} /></div>
+                        <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase mb-1">Utilisateurs</p>
+                        <h2 className="text-3xl font-black text-gray-800 dark:text-white">1,240</h2>
                     </div>
-
-                    {/* Users Card */}
-                    <div className="bg-white/80 dark:bg-[#111827]/80 backdrop-blur-xl p-5 rounded-[1.5rem] border border-white/40 dark:border-white/5 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => onChangeView(AppView.ADMIN_USERS)}>
-                        <div className="absolute right-0 top-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all"></div>
-                        <div className="flex justify-between items-start mb-4 relative z-10">
-                            <div className="p-2.5 bg-green-50 dark:bg-green-900/20 rounded-xl text-[#00C853]">
-                                <Users size={20} />
-                            </div>
-                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1 bg-gray-500/10 dark:bg-gray-500/20 px-2 py-1 rounded-lg">
-                                0 ajd
-                            </span>
-                        </div>
-                        <div className="relative z-10">
-                            <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Utilisateurs Actifs</p>
-                            <h2 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">0</h2>
-                        </div>
+                    <div className="bg-white/80 dark:bg-[#111827]/80 p-5 rounded-[1.5rem] border dark:border-white/5 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => onChangeView(AppView.ADMIN_VEHICLES)}>
+                        <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-purple-500 w-fit mb-4"><Truck size={20} /></div>
+                        <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase mb-1">Flotte Active</p>
+                        <h2 className="text-3xl font-black text-gray-800 dark:text-white">35/40</h2>
                     </div>
-
-                    {/* Fleet Card */}
-                    <div className="bg-white/80 dark:bg-[#111827]/80 backdrop-blur-xl p-5 rounded-[1.5rem] border border-white/40 dark:border-white/5 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => onChangeView(AppView.ADMIN_VEHICLES)}>
-                        <div className="absolute right-0 top-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
-                        <div className="flex justify-between items-start mb-4 relative z-10">
-                            <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-purple-500">
-                                <Truck size={20} />
-                            </div>
-                            <span className="text-xs font-bold text-gray-400 flex items-center gap-1 bg-gray-500/10 dark:bg-gray-500/20 px-2 py-1 rounded-lg">
-                                <AlertTriangle size={12} /> 0 Maint.
-                            </span>
-                        </div>
-                        <div className="relative z-10">
-                            <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Flotte Active</p>
-                            <h2 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">0<span className="text-lg text-gray-400 font-medium">/35</span></h2>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
-                            <div className="bg-purple-500 h-full w-[0%] rounded-full"></div>
-                        </div>
+                    <div className="bg-white/80 dark:bg-[#111827]/80 p-5 rounded-[1.5rem] border dark:border-white/5 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => onChangeView(AppView.ADMIN_SUBSCRIPTIONS)}>
+                        <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 w-fit mb-4"><DollarSign size={20} /></div>
+                        <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase mb-1">Revenus (MTD)</p>
+                        <h2 className="text-3xl font-black text-gray-800 dark:text-white">$12.4k</h2>
                     </div>
-
-                    {/* System Health */}
-                    <div className="bg-white/80 dark:bg-[#111827]/80 backdrop-blur-xl p-5 rounded-[1.5rem] border border-white/40 dark:border-white/5 shadow-xl relative overflow-hidden group">
-                        <div className="absolute right-0 top-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all"></div>
-                        <div className="flex justify-between items-start mb-4 relative z-10">
-                            <div className="p-2.5 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl text-cyan-500">
-                                <Server size={20} />
-                            </div>
-                            <span className="text-xs font-bold text-cyan-500 flex items-center gap-1 bg-cyan-500/10 dark:bg-cyan-500/20 px-2 py-1 rounded-lg animate-pulse">
-                                0ms
-                            </span>
-                        </div>
-                        <div className="relative z-10">
-                            <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Charge Système</p>
-                            <h2 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">0%</h2>
-                        </div>
-                        <div className="flex gap-1 mt-3">
-                            {[1,2,3,4,5,6,7,8,9,10].map(i => (
-                                <div key={i} className={`flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700`}></div>
-                            ))}
-                        </div>
+                    <div className="bg-white/80 dark:bg-[#111827]/80 p-5 rounded-[1.5rem] border dark:border-white/5 shadow-xl relative overflow-hidden group">
+                        <div className="p-2.5 bg-red-50 dark:bg-red-900/20 rounded-xl text-red-500 w-fit mb-4"><AlertTriangle size={20} /></div>
+                        <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase mb-1">Incidents Ouverts</p>
+                        <h2 className="text-3xl font-black text-gray-800 dark:text-white">2</h2>
                     </div>
                 </div>
-
-                {/* Main Content Split */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Main Chart */}
-                    <div className="lg:col-span-2 bg-white/70 dark:bg-[#111827]/70 backdrop-blur-2xl p-6 rounded-[2rem] border border-white/40 dark:border-white/5 shadow-xl">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                <Activity size={20} className="text-[#2962FF]" />
-                                Performance Financière
-                            </h3>
-                            <div className="flex gap-2">
-                                <button className="px-3 py-1 bg-white dark:bg-white/10 rounded-lg text-xs font-bold text-gray-600 dark:text-white shadow-sm border border-gray-100 dark:border-white/5">Semaine</button>
-                                <button className="px-3 py-1 bg-transparent rounded-lg text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-white">Mois</button>
-                            </div>
-                        </div>
-                        <div className="h-72 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={analyticsData}>
-                                    <defs>
-                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#2962FF" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#2962FF" stopOpacity={0}/>
-                                        </linearGradient>
-                                        <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#00C853" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#00C853" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 700}} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 700}} />
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                    <Tooltip 
-                                        contentStyle={{ 
-                                            borderRadius: '16px', 
-                                            border: '1px solid rgba(255,255,255,0.1)', 
-                                            backgroundColor: 'rgba(17, 24, 39, 0.9)', 
-                                            color: '#fff',
-                                            padding: '12px'
-                                        }} 
-                                    />
-                                    <Area type="monotone" dataKey="revenue" stroke="#2962FF" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-                                    <Area type="monotone" dataKey="users" stroke="#00C853" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Quick Management Grid */}
-                    <div className="flex flex-col gap-4">
-                        <div className="bg-[#2962FF] p-6 rounded-[2rem] text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => onChangeView(AppView.ADMIN_USERS)}>
-                            <div className="absolute top-0 right-0 p-4 opacity-20">
-                                <Users size={100} />
-                            </div>
-                            <div className="relative z-10">
-                                <h3 className="text-2xl font-black mb-1">Gérer Users</h3>
-                                <p className="opacity-80 text-sm mb-4">Accès, rôles & permissions</p>
-                                <div className="bg-white/20 backdrop-blur-md w-10 h-10 rounded-full flex items-center justify-center">
-                                    <ArrowUpRight size={20} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 bg-white/70 dark:bg-[#111827]/70 backdrop-blur-2xl p-5 rounded-[2rem] border border-white/40 dark:border-white/5 shadow-xl flex flex-col justify-between">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-4">Raccourcis</h3>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button onClick={() => onChangeView(AppView.ADMIN_VEHICLES)} className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl flex flex-col items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                    <Truck size={20} className="text-purple-500 mb-2" />
-                                    <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Flotte</span>
-                                </button>
-                                <button onClick={() => onChangeView(AppView.ADMIN_SUBSCRIPTIONS)} className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl flex flex-col items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                    <CreditCard size={20} className="text-green-500 mb-2" />
-                                    <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Finance</span>
-                                </button>
-                                <button onClick={() => onChangeView(AppView.ADMIN_ADS)} className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl flex flex-col items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                    <Megaphone size={20} className="text-orange-500 mb-2" />
-                                    <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Pubs</span>
-                                </button>
-                                <button onClick={() => onChangeView(AppView.ADMIN_ACADEMY)} className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl flex flex-col items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                    <BookOpen size={20} className="text-blue-500 mb-2" />
-                                    <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Ecole</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Live Data Feed Table */}
+                
                 <div className="bg-white/70 dark:bg-[#111827]/70 backdrop-blur-2xl rounded-[2rem] border border-white/40 dark:border-white/5 shadow-xl overflow-hidden">
                     <div className="p-6 border-b border-gray-100 dark:border-white/5 flex justify-between items-center">
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                            <Activity size={20} className="text-orange-500" /> Live Operations
-                        </h3>
-                        <div className="flex gap-2">
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-xs font-bold text-green-500 uppercase tracking-wider">Temps Réel</span>
-                        </div>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2"><Activity size={20} className="text-orange-500" /> Opérations Temps Réel</h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
-                            <thead className="bg-gray-50/50 dark:bg-white/5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                <tr>
-                                    <th className="p-4 rounded-tl-2xl">Type</th>
-                                    <th className="p-4">Message</th>
-                                    <th className="p-4">Utilisateur</th>
-                                    <th className="p-4">Heure</th>
-                                    <th className="p-4 text-center rounded-tr-2xl">Statut</th>
-                                </tr>
+                            <thead className="bg-gray-50/50 dark:bg-white/5 text-[10px] uppercase font-bold text-gray-400">
+                                <tr><th className="p-4">Message</th><th className="p-4">Utilisateur</th><th className="p-4">Heure</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-white/5 text-sm">
                                 {liveData.map(item => (
-                                    <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-                                        <td className="p-4">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                                item.type === 'tx' ? 'bg-green-100 text-green-600 dark:bg-green-900/20' :
-                                                item.type === 'alert' ? 'bg-red-100 text-red-600 dark:bg-red-900/20' :
-                                                'bg-blue-100 text-blue-600 dark:bg-blue-900/20'
-                                            }`}>
-                                                {item.type === 'tx' ? <DollarSign size={14} /> : item.type === 'alert' ? <AlertTriangle size={14} /> : <UserIcon size={14} />}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 font-semibold text-gray-800 dark:text-white">{item.content}</td>
-                                        <td className="p-4 text-gray-500 dark:text-gray-400">{item.user}</td>
-                                        <td className="p-4 font-mono text-gray-400 text-xs">{item.time}</td>
-                                        <td className="p-4 text-center">
-                                            <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-bold uppercase ${
-                                                item.status === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                item.status === 'warning' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                            }`}>
-                                                {item.status}
-                                            </span>
-                                        </td>
-                                    </tr>
+                                    <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5"><td className="p-4 font-semibold text-gray-800 dark:text-white">{item.content}</td><td className="p-4 text-gray-500 dark:text-gray-400">{item.user}</td><td className="p-4 font-mono text-gray-400 text-xs">{item.time}</td></tr>
                                 ))}
                             </tbody>
                         </table>
@@ -691,12 +382,15 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
 };
 
 export const Dashboard: React.FC<DashboardProps> = (props) => {
+    // Check if user is qualified
+    if (props.user.type !== UserType.ADMIN && props.user.status === 'pending') {
+        return <PendingDashboard {...props} />;
+    }
+
     switch (props.user.type) {
-        case UserType.ADMIN:
-            return <AdminDashboard {...props} />;
-        case UserType.COLLECTOR:
-            return <CollectorDashboard {...props} />;
-        default:
-            return <CitizenDashboard {...props} />;
+        case UserType.ADMIN: return <AdminDashboard {...props} />;
+        case UserType.COLLECTOR: return <CollectorDashboard {...props} />;
+        case UserType.BUSINESS: return <BusinessDashboard {...props} />;
+        default: return <CitizenDashboard {...props} />;
     }
 };

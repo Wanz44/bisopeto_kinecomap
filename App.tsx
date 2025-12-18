@@ -19,19 +19,16 @@ import { AdminVehicles } from './components/AdminVehicles';
 import { AdminAcademy } from './components/AdminAcademy';
 import { AdminPermissions } from './components/AdminPermissions';
 import { CollectorJobs } from './components/CollectorJobs';
+import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
 import { User, AppView, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings } from './types';
-import { SettingsAPI } from './services/api';
+import { SettingsAPI, UserAPI } from './services/api';
 
 const DEFAULT_PLANS: SubscriptionPlan[] = [
     { id: 'standard', name: 'Standard', priceUSD: 10, schedule: 'Mardi & Samedi', features: ['2 jours / semaine', 'Mardi & Samedi', 'Suivi basique'] },
     { id: 'plus', name: 'Plus', priceUSD: 15, popular: true, schedule: 'Mardi, Jeudi & Samedi', features: ['3 jours / semaine', 'Mar, Jeu, Sam', 'Points doublés'] },
     { id: 'premium', name: 'Premium', priceUSD: 20, schedule: 'Lun, Mer, Ven & Dim', features: ['4 jours / semaine', 'Lun, Mer, Ven, Dim', 'Certificat Eco', 'Support VIP'] },
     { id: 'special', name: 'Spécial / Kilo', priceUSD: 0, isVariable: true, schedule: 'Sur demande', features: ['Paiement à la pesée', 'Idéal gros volumes', 'Horaires flexibles'] },
-];
-
-const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
-    { id: '1', title: 'Bienvenue', message: 'Bienvenue sur KIN ECO-MAP ! Complétez votre profil pour commencer.', type: 'info', time: 'À l\'instant', read: false, targetUserId: 'ALL' }
 ];
 
 function App() {
@@ -45,11 +42,6 @@ function App() {
 
     const historySupported = useRef(true);
     const [history, setHistory] = useState<AppView[]>(() => {
-        try {
-            if (typeof window !== 'undefined' && window.history && window.history.state && window.history.state.history) {
-                return window.history.state.history;
-            }
-        } catch (e) { historySupported.current = false; }
         return user ? [AppView.DASHBOARD] : [AppView.LANDING];
     });
 
@@ -62,15 +54,20 @@ function App() {
     const [systemSettings, setSystemSettings] = useState<SystemSettings>({
         maintenanceMode: false,
         supportEmail: 'support@kinecomap.cd',
-        appVersion: '1.0.3',
+        appVersion: '1.0.4',
         force2FA: false,
         sessionTimeout: 60,
         passwordPolicy: 'strong',
         marketplaceCommission: 0.05
     });
 
-    const [plans] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
-    const [appLogo] = useState('./logo.png');
+    const [notifications, setNotifications] = useState<NotificationItem[]>([
+        { id: '1', title: 'Bienvenue', message: 'Bienvenue sur BISO PETO !', type: 'info', time: 'À l\'instant', read: false, targetUserId: 'ALL' }
+    ]);
+
+    const [exchangeRate, setExchangeRate] = useState(2800);
+    const [plans, setPlans] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
+    const [appLogo, setAppLogo] = useState('./logo%20bisopeto.png');
 
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; visible: boolean }>({
         message: '', type: 'success', visible: false
@@ -78,20 +75,26 @@ function App() {
 
     useEffect(() => {
         const loadInitData = async () => {
-            const settings = await SettingsAPI.get();
-            setSystemSettings(settings);
-            setTimeout(() => setLoading(false), 2500);
+            try {
+                const settings = await SettingsAPI.get();
+                setSystemSettings(settings);
+            } finally {
+                // Splash screen court si user déjà là, plus long si premier chargement
+                const delay = user ? 1000 : 2500;
+                setTimeout(() => setLoading(false), delay);
+            }
         };
         loadInitData();
-    }, []);
+    }, [user]);
+
+    useEffect(() => {
+        if (theme === 'dark') document.body.classList.add('dark');
+        else document.body.classList.remove('dark');
+    }, [theme]);
 
     const navigateTo = (newView: AppView) => {
         if (newView !== view) {
-            const newStack = [...history, newView];
-            setHistory(newStack);
-            if (historySupported.current) {
-                window.history.pushState({ history: newStack }, '', `#${newView}`);
-            }
+            setHistory([...history, newView]);
         }
     };
 
@@ -113,41 +116,18 @@ function App() {
         handleShowToast("Déconnexion réussie", "info");
     };
 
+    const handleNotify = (targetId: string | 'ADMIN' | 'ALL', title: string, message: string, type: 'info' | 'success' | 'warning' | 'alert') => {
+        const newNotif: NotificationItem = {
+            id: Date.now().toString(),
+            title, message, type, time: 'À l\'instant', read: false, targetUserId: targetId
+        };
+        setNotifications([newNotif, ...notifications]);
+    };
+
     const renderContent = () => {
         if (!user) {
-            if (view === AppView.LANDING) {
-                return (
-                    <LandingPage 
-                        onStart={() => {
-                            setOnboardingStartWithLogin(false);
-                            navigateTo(AppView.ONBOARDING);
-                        }} 
-                        onLogin={() => {
-                            setOnboardingStartWithLogin(true);
-                            navigateTo(AppView.ONBOARDING);
-                        }}
-                    />
-                );
-            }
-            if (view === AppView.ONBOARDING) {
-                return (
-                    <Onboarding 
-                        initialShowLogin={onboardingStartWithLogin}
-                        onBackToLanding={() => {
-                            setHistory([AppView.LANDING]);
-                        }}
-                        onComplete={(data) => {
-                            // On utilise directement l'objet User renvoyé par l'API
-                            const authenticatedUser = data as User;
-                            setUser(authenticatedUser);
-                            localStorage.setItem('kinecomap_user', JSON.stringify(authenticatedUser));
-                            setHistory([AppView.DASHBOARD]);
-                        }} 
-                        appLogo={appLogo} 
-                        onToast={handleShowToast} 
-                    />
-                );
-            }
+            if (view === AppView.LANDING) return <LandingPage onStart={() => navigateTo(AppView.ONBOARDING)} onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} />;
+            if (view === AppView.ONBOARDING) return <Onboarding initialShowLogin={onboardingStartWithLogin} onBackToLanding={() => setHistory([AppView.LANDING])} onComplete={(data) => { setUser(data as User); localStorage.setItem('kinecomap_user', JSON.stringify(data)); setHistory([AppView.DASHBOARD]); }} appLogo={appLogo} onToast={handleShowToast} />;
             return null;
         }
 
@@ -155,24 +135,32 @@ function App() {
             case AppView.DASHBOARD: return <Dashboard user={user} onChangeView={navigateTo} onToast={handleShowToast} />;
             case AppView.MAP: return <MapView user={user} onBack={goBack} />;
             case AppView.ACADEMY: return <Academy onBack={goBack} />;
+            case AppView.REPORTING: return <Reporting user={user} onBack={goBack} onToast={handleShowToast} />;
             case AppView.MARKETPLACE: return <Marketplace user={user} onBack={goBack} systemSettings={systemSettings} onToast={handleShowToast} />;
             case AppView.PROFILE: return <Profile user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} onManageSubscription={() => navigateTo(AppView.SUBSCRIPTION)} onSettings={() => navigateTo(AppView.SETTINGS)} onUpdateProfile={p => setUser({ ...user, ...p })} onToast={handleShowToast} />;
-            default: return <Dashboard user={user} onChangeView={navigateTo} />;
+            case AppView.SUBSCRIPTION: return <Subscription user={user} onBack={goBack} onUpdatePlan={(p) => { setUser({...user, subscription: p}); goBack(); }} plans={plans} exchangeRate={exchangeRate} onToast={handleShowToast} />;
+            case AppView.PLANNING: return <Planning onBack={goBack} />;
+            case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, read: true})))} />;
+            case AppView.SETTINGS: return <Settings user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} currentLanguage={language} onLanguageChange={setLanguage} onToast={handleShowToast} />;
+            case AppView.COLLECTOR_JOBS: return <CollectorJobs user={user} onBack={goBack} onNotify={handleNotify} onToast={handleShowToast} />;
+            case AppView.ADMIN_USERS: return <AdminUsers onBack={goBack} currentUser={user} onNotify={handleNotify} onToast={handleShowToast} />;
+            case AppView.ADMIN_VEHICLES: return <AdminVehicles onBack={goBack} onToast={handleShowToast} />;
+            default: return <Dashboard user={user} onChangeView={navigateTo} onToast={handleShowToast} />;
         }
     };
 
     if (loading) return <SplashScreen appLogo={appLogo} />;
-
     if (view === AppView.LANDING || (!user && view === AppView.ONBOARDING)) return renderContent();
 
     return (
         <Layout 
             currentView={view} 
-            onChangeView={v => setHistory([v])}
+            onChangeView={navigateTo}
             onLogout={handleLogout} 
-            onRefresh={() => {}}
+            onRefresh={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 1500); }}
             isRefreshing={isRefreshing}
             user={user}
+            unreadNotifications={notifications.filter(n => !n.read).length}
             appLogo={appLogo}
             toast={toast}
             onCloseToast={() => setToast(prev => ({...prev, visible: false}))}

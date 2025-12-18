@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Camera, Upload, Search, Filter, DollarSign, Scale, Tag, Check, Loader2, Image as ImageIcon, MapPin, X, Plus, Phone, MessageCircle, ChevronDown, SlidersHorizontal, ArrowUpRight, Sparkles, User, Info, Star, ShieldCheck, Lock, CreditCard, Smartphone, ShoppingBag, Calendar, ExternalLink, PackageCheck, AlertTriangle } from 'lucide-react';
 import { MarketplaceItem, User as UserType, SystemSettings } from '../types';
@@ -197,7 +198,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onBack, onToast,
         // Upload Image First
         let imageUrl = capturedImage;
         if (imageFile) {
-            const uploadedUrl = await StorageAPI.uploadImage(imageFile, 'marketplace');
+            // Fixed: StorageAPI.uploadImage only accepts one argument (file)
+            const uploadedUrl = await StorageAPI.uploadImage(imageFile);
             if (uploadedUrl) {
                 imageUrl = uploadedUrl;
             } else {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
     ArrowLeft, Plus, Search, Battery, Signal, Truck, Settings, Trash2, 
@@ -102,11 +103,11 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
     const loadVehicles = async () => {
         setIsLoading(true);
         try {
-            // Pour Reset à 0: on vide la liste
-            // const data = await VehicleAPI.getAll(); 
-            setVehicles([]);
+            // Chargement réel des véhicules depuis l'API locale/Supabase
+            const data = await VehicleAPI.getAll(); 
+            setVehicles(data);
         } catch (e) {
-            console.error(e);
+            console.error("Erreur chargement véhicules:", e);
         } finally {
             setIsLoading(false);
         }
@@ -134,12 +135,11 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
 
         try {
             if (vehicleForm.id) {
-                // await VehicleAPI.update(vehicleData);
+                await VehicleAPI.update(vehicleData);
                 setVehicles(prev => prev.map(v => v.id === vehicleData.id ? vehicleData : v));
                 if (onToast) onToast("Véhicule mis à jour", "success");
             } else {
-                // const created = await VehicleAPI.add(vehicleData);
-                const created = { ...vehicleData, id: `v-${Date.now()}` }; // Simulation locale pour éviter d'appeler l'API réelle
+                const created = await VehicleAPI.add(vehicleData);
                 setVehicles([...vehicles, created]);
                 if (onToast) onToast(`Véhicule ${created.name} ajouté`, "success");
             }
@@ -162,6 +162,18 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
         setTimeout(() => {
             if (onToast) onToast("Position mise à jour : Signal fort", "success");
         }, 2000);
+    };
+
+    const handleDeleteVehicle = async (id: string) => {
+        if (confirm("Supprimer ce véhicule de la flotte ?")) {
+            try {
+                await VehicleAPI.delete(id);
+                setVehicles(prev => prev.filter(v => v.id !== id));
+                if (onToast) onToast("Véhicule retiré de la flotte", "success");
+            } catch (e) {
+                if (onToast) onToast("Erreur suppression", "error");
+            }
+        }
     };
 
     // --- FILTERS ---
@@ -291,9 +303,12 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                                         </div>
                                         <div>
                                             <h3 className="font-bold text-gray-800 dark:text-white">{v.name}</h3>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded inline-block mt-1">
-                                                {v.plateNumber}
-                                            </p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                                                    {v.plateNumber}
+                                                </p>
+                                                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold uppercase">{v.type}</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end">
@@ -357,7 +372,7 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                                 >
                                     <Popup closeButton={false}>
                                         <div className="text-xs font-bold">{v.name}</div>
-                                        <div className="text-[10px] text-gray-500 capitalize">{v.status}</div>
+                                        <div className="text-[10px] text-gray-500 capitalize">{v.status} ({v.type})</div>
                                     </Popup>
                                 </Marker>
                             ))}
@@ -390,7 +405,7 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                         <div className="p-6 pb-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                             <div className="flex justify-between items-start mb-4">
                                 <h2 className="text-2xl font-black text-gray-800 dark:text-white">{selectedVehicle.name}</h2>
-                                <button onClick={() => setShowDetailDrawer(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500">
+                                <button onClick={() => setShowDetailDrawer(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500">
                                     <X size={24} />
                                 </button>
                             </div>
@@ -402,6 +417,7 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                                 <span className="text-xs font-mono text-gray-500 bg-white dark:bg-gray-700 px-2 py-1 rounded border dark:border-gray-600">
                                     {selectedVehicle.plateNumber}
                                 </span>
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold uppercase">{selectedVehicle.type}</span>
                             </div>
 
                             {/* Quick Stats Row */}
@@ -480,6 +496,25 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                                             >
                                                 <Navigation size={18} />
                                                 Ping GPS
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions Administratives */}
+                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                        <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Actions</h4>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => { setShowAddModal(true); setVehicleForm(selectedVehicle); setShowDetailDrawer(false); }}
+                                                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                                            >
+                                                <Edit2 size={14} /> Modifier
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteVehicle(selectedVehicle.id)}
+                                                className="flex-1 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                                            >
+                                                <Trash2 size={14} /> Supprimer
                                             </button>
                                         </div>
                                     </div>
@@ -599,6 +634,7 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                                         <option value="camion">Camion</option>
                                         <option value="tricycle">Tricycle</option>
                                         <option value="pickup">Pickup</option>
+                                        <option value="chariot">Chariot</option>
                                     </select>
                                 </div>
                             </div>
@@ -613,7 +649,7 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
 
                             <div className="flex gap-3 pt-4">
                                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl font-bold text-gray-600 dark:text-gray-300">Annuler</button>
-                                <button type="submit" className="flex-1 py-3 bg-[#2962FF] text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30">Sauvegarder</button>
+                                <button type="submit" className="flex-1 py-3 bg-[#2962FF] text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20">Sauvegarder</button>
                             </div>
                         </form>
                     </div>
