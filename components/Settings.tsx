@@ -1,16 +1,13 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useRef } from 'react';
+/* Fixed: Added missing 'Info' icon to the lucide-react imports */
 import { 
-    ArrowLeft, Bell, Globe, Lock, Moon, Sun, Shield, HelpCircle, 
-    ChevronRight, LogOut, Smartphone, Mail, Save, X, Eye, 
-    EyeOff, Check, ChevronDown, ChevronUp, MessageCircle, Phone, 
-    FileText, Monitor, Laptop, Wifi, Battery, Zap, Database, 
-    Map as MapIcon, RefreshCw, AlertTriangle, Download, Trash2, 
-    Fingerprint, Palette, Terminal, Sparkles, UserCog, CheckCircle2,
-    // Added CreditCard and aliased Settings to SettingsIcon to resolve component name conflict and missing icon errors
-    ShieldAlert, DollarSign, Megaphone, Truck, BookOpen, Layers, Plus, Edit2, RotateCcw, CreditCard, Settings as SettingsIcon
+    ArrowLeft, Bell, Globe, Lock, Moon, Sun, Shield, 
+    ChevronRight, LogOut, Smartphone, Mail, Save, X, 
+    Fingerprint, Palette, Terminal, Sparkles, ShieldAlert, RotateCcw, 
+    Settings as SettingsIcon, Upload, ImageIcon, Link as LinkIcon, RefreshCcw, Info
 } from 'lucide-react';
-import { Theme, User, Language, UserType, UserPermission } from '../types';
-import { SettingsAPI } from '../services/api';
+import { Theme, User, Language, UserType, AppView } from '../types';
 import { NotificationService } from '../services/notificationService';
 
 interface SettingsProps {
@@ -21,53 +18,24 @@ interface SettingsProps {
     onLogout: () => void;
     currentLanguage: Language;
     onLanguageChange: (lang: Language) => void;
+    onChangeView: (view: AppView) => void;
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+    appLogo: string;
+    onUpdateLogo: (logo: string) => void;
 }
 
-// Définition des permissions disponibles
-const ALL_PERMISSIONS: { key: UserPermission; label: string; category: string; description: string; icon: any }[] = [
-    { key: 'manage_users', label: 'Gérer Utilisateurs', category: 'Administration', description: 'Créer, modifier, bannir des comptes.', icon: UserCog },
-    { key: 'validate_docs', label: 'Valider Documents', category: 'Administration', description: 'Accès au processus KYC.', icon: CheckCircle2 },
-    // Fixed: Using aliased SettingsIcon to avoid conflict with the Settings component declaration
-    { key: 'system_settings', label: 'Paramètres Système', category: 'Administration', description: 'Configuration globale de l\'app.', icon: SettingsIcon },
-    { key: 'view_finance', label: 'Voir Finance', category: 'Finance', description: 'Accès aux tableaux de revenus.', icon: DollarSign },
-    // Fixed: CreditCard icon is now correctly imported from lucide-react
-    { key: 'manage_pos', label: 'Point de Vente (POS)', category: 'Finance', description: 'Encaisser les paiements manuels.', icon: CreditCard },
-    { key: 'manage_ads', label: 'Gérer Publicités', category: 'Marketing', description: 'Créer des campagnes partenaires.', icon: Megaphone },
-    { key: 'manage_communications', label: 'Communication', category: 'Marketing', description: 'Envoyer des notifications push.', icon: MessageCircle },
-    { key: 'manage_fleet', label: 'Gérer Flotte', category: 'Opérations', description: 'Suivi GPS et maintenance.', icon: Truck },
-    { key: 'manage_academy', label: 'Gérer Academy', category: 'Education', description: 'Créer des cours et quiz.', icon: BookOpen },
-    { key: 'export_data', label: 'Exporter Données', category: 'Données', description: 'Télécharger les rapports CSV/PDF.', icon: Database },
-];
-
-interface RoleDefinition {
-    id: string;
-    label: string;
-    isSystem: boolean;
-    icon: any;
-}
-
-export const Settings: React.FC<SettingsProps> = ({ user, theme, onToggleTheme, onBack, onLogout, currentLanguage, onLanguageChange, onToast }) => {
-    const [activeSubView, setActiveSubView] = useState<'main' | 'security' | 'branding' | 'waste_config' | 'roles'>('main');
+export const Settings: React.FC<SettingsProps> = ({ 
+    user, theme, onToggleTheme, onBack, onLogout, 
+    currentLanguage, onLanguageChange, onChangeView, onToast,
+    appLogo, onUpdateLogo
+}) => {
+    const [activeSubView, setActiveSubView] = useState<'main' | 'security' | 'branding' | 'waste_config'>('main');
     const [isPushEnabled, setIsPushEnabled] = useState(Notification.permission === 'granted');
     
-    // --- États pour la gestion des rôles ---
-    const [roles, setRoles] = useState<RoleDefinition[]>([
-        { id: UserType.ADMIN, label: 'Administrateur', isSystem: true, icon: Shield },
-        { id: UserType.COLLECTOR, label: 'Collecteur', isSystem: true, icon: Truck },
-        { id: UserType.BUSINESS, label: 'Entreprise', isSystem: true, icon: DollarSign },
-        { id: UserType.CITIZEN, label: 'Citoyen', isSystem: true, icon: UserCog },
-    ]);
-    const [rolePermissions, setRolePermissions] = useState<Record<string, UserPermission[]>>({
-        [UserType.ADMIN]: ALL_PERMISSIONS.map(p => p.key),
-        [UserType.COLLECTOR]: ['manage_fleet', 'validate_docs'],
-        [UserType.BUSINESS]: ['view_finance', 'export_data'],
-        [UserType.CITIZEN]: [],
-    });
-    const [selectedRoleId, setSelectedRoleId] = useState<string>(UserType.COLLECTOR);
-    const [showRoleModal, setShowRoleModal] = useState(false);
-    const [roleFormName, setRoleFormName] = useState('');
-    const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+    // Branding states
+    const [tempLogo, setTempLogo] = useState(appLogo);
+    const [logoInputType, setLogoInputType] = useState<'upload' | 'url'>('upload');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleTogglePush = async () => {
         if (!isPushEnabled) {
@@ -84,39 +52,21 @@ export const Settings: React.FC<SettingsProps> = ({ user, theme, onToggleTheme, 
         }
     };
 
-    const handleTogglePermission = (perm: UserPermission) => {
-        if (selectedRoleId === UserType.ADMIN && ['manage_users', 'system_settings'].includes(perm)) {
-            onToast?.("Permission critique pour l'Admin.", "error");
-            return;
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setTempLogo(reader.result as string);
+            };
+            reader.readAsDataURL(file);
         }
-        const current = rolePermissions[selectedRoleId] || [];
-        const next = current.includes(perm) ? current.filter(p => p !== perm) : [...current, perm];
-        setRolePermissions({ ...rolePermissions, [selectedRoleId]: next });
     };
 
-    const handleAddRole = () => {
-        if (!roleFormName.trim()) return;
-        if (editingRoleId) {
-            setRoles(roles.map(r => r.id === editingRoleId ? { ...r, label: roleFormName } : r));
-            onToast?.("Rôle mis à jour", "success");
-        } else {
-            const newId = `custom_${Date.now()}`;
-            setRoles([...roles, { id: newId, label: roleFormName, isSystem: false, icon: UserCog }]);
-            setRolePermissions({ ...rolePermissions, [newId]: [] });
-            setSelectedRoleId(newId);
-            onToast?.("Nouveau rôle créé", "success");
-        }
-        setShowRoleModal(false);
-        setRoleFormName('');
-        setEditingRoleId(null);
-    };
-
-    const handleDeleteRole = (id: string) => {
-        if (confirm("Supprimer ce rôle et révoquer tous les accès associés ?")) {
-            setRoles(roles.filter(r => r.id !== id));
-            setSelectedRoleId(UserType.CITIZEN);
-            onToast?.("Rôle supprimé", "info");
-        }
+    const saveBranding = () => {
+        onUpdateLogo(tempLogo);
+        if (onToast) onToast("Identité visuelle mise à jour !", "success");
+        setActiveSubView('main');
     };
 
     const SettingItem = ({ icon: Icon, label, subLabel, onClick, toggle, onToggle, danger = false }: any) => (
@@ -136,100 +86,100 @@ export const Settings: React.FC<SettingsProps> = ({ user, theme, onToggleTheme, 
         </div>
     );
 
-    // --- Vue Gestion des Rôles ---
-    if (activeSubView === 'roles') {
-        const groupedPerms = ALL_PERMISSIONS.reduce((acc, p) => {
-            if (!acc[p.category]) acc[p.category] = [];
-            acc[p.category].push(p);
-            return acc;
-        }, {} as Record<string, typeof ALL_PERMISSIONS>);
-
+    if (activeSubView === 'branding') {
         return (
             <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 animate-fade-in">
                 <div className="bg-white dark:bg-gray-900 p-6 border-b dark:border-gray-800 flex items-center justify-between sticky top-0 z-40">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setActiveSubView('main')} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft/></button>
-                        <h2 className="text-xl font-black uppercase tracking-tighter dark:text-white">Rôles & Permissions</h2>
-                    </div>
-                    <button onClick={() => { setEditingRoleId(null); setRoleFormName(''); setShowRoleModal(true); }} className="bg-primary text-white p-3 rounded-2xl shadow-lg"><Plus/></button>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
-                    {/* Liste des rôles */}
-                    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                        {roles.map(role => (
-                            <div 
-                                key={role.id}
-                                onClick={() => setSelectedRoleId(role.id)}
-                                className={`px-5 py-4 rounded-[2rem] border-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-3 shrink-0 ${selectedRoleId === role.id ? 'bg-primary border-primary text-white shadow-xl scale-105' : 'bg-white dark:bg-gray-800 border-transparent text-gray-500'}`}
-                            >
-                                <role.icon size={18}/>
-                                <span className="text-xs font-black uppercase tracking-widest">{role.label}</span>
-                                {!role.isSystem && selectedRoleId === role.id && (
-                                    <div className="flex items-center gap-2 ml-2">
-                                        <button onClick={(e) => { e.stopPropagation(); setEditingRoleId(role.id); setRoleFormName(role.label); setShowRoleModal(true); }} className="p-1 hover:bg-white/20 rounded"><Edit2 size={14}/></button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteRole(role.id); }} className="p-1 hover:bg-red-500/50 rounded"><Trash2 size={14}/></button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Matrice de permissions */}
-                    <div className="space-y-6">
-                        {Object.entries(groupedPerms).map(([category, perms]) => (
-                            <div key={category} className="bg-white dark:bg-gray-900 rounded-[2.5rem] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800">
-                                <div className="bg-gray-50 dark:bg-gray-800/50 px-8 py-4 border-b dark:border-gray-800 flex items-center gap-2">
-                                    <Layers size={16} className="text-gray-400"/>
-                                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{category}</h4>
-                                </div>
-                                <div className="divide-y dark:divide-gray-800">
-                                    {perms.map(p => {
-                                        const isChecked = (rolePermissions[selectedRoleId] || []).includes(p.key);
-                                        return (
-                                            <div key={p.key} onClick={() => handleTogglePermission(p.key)} className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-850 cursor-pointer transition-colors">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`p-2 rounded-xl ${isChecked ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-400'}`}><p.icon size={18}/></div>
-                                                    <div>
-                                                        <span className="text-sm font-black dark:text-white uppercase tracking-tight">{p.label}</span>
-                                                        <p className="text-[10px] text-gray-400 font-bold leading-tight">{p.description}</p>
-                                                    </div>
-                                                </div>
-                                                <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isChecked ? 'bg-primary border-primary' : 'border-gray-200'}`}>
-                                                    {isChecked && <Check size={14} className="text-white" strokeWidth={4}/>}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Modal Rôle */}
-                {showRoleModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRoleModal(false)}></div>
-                        <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-sm p-8 relative z-10 animate-scale-up border dark:border-gray-800">
-                            <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-6">{editingRoleId ? 'Renommer' : 'Nouveau Rôle'}</h3>
-                            <input autoFocus className="w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none outline-none font-black text-sm dark:text-white mb-6" placeholder="ex: Superviseur Terrain" value={roleFormName} onChange={e => setRoleFormName(e.target.value)} />
-                            <button onClick={handleAddRole} className="w-full py-5 bg-primary text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-500/20">{editingRoleId ? 'Mettre à jour' : 'Créer le rôle'}</button>
+                        <button onClick={() => setActiveSubView('main')} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all"><ArrowLeft/></button>
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tighter dark:text-white">Identité Visuelle</h2>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Logo & Branding Plateforme</p>
                         </div>
                     </div>
-                )}
-            </div>
-        );
-    }
-
-    if (activeSubView === 'branding') {
-        return (
-            <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 animate-fade-in">
-                <div className="bg-white dark:bg-gray-900 p-6 border-b dark:border-gray-800 flex items-center gap-4">
-                    <button onClick={() => setActiveSubView('main')} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft/></button>
-                    <h2 className="text-xl font-black uppercase tracking-tighter dark:text-white">Identité Visuelle</h2>
+                    <button 
+                        onClick={saveBranding}
+                        className="bg-[#2962FF] text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 transition-all flex items-center gap-2"
+                    >
+                        <Save size={16} /> Appliquer
+                    </button>
                 </div>
-                {/* ... existing branding logic ... */}
+
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 pb-24 no-scrollbar">
+                    {/* Logo Preview Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border dark:border-gray-800 flex flex-col items-center justify-center gap-4 shadow-sm relative group">
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest absolute top-6 left-8">Aperçu Mode Clair</span>
+                            <div className="w-32 h-32 flex items-center justify-center p-4 bg-gray-50 rounded-3xl">
+                                <img src={tempLogo} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
+                            </div>
+                        </div>
+                        <div className="bg-[#050505] p-8 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center gap-4 shadow-sm relative group">
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest absolute top-6 left-8">Aperçu Mode Sombre</span>
+                            <div className="w-32 h-32 flex items-center justify-center p-4 bg-white/5 rounded-3xl">
+                                <img src={tempLogo} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Logo Config Section */}
+                    <div className="bg-white dark:bg-gray-900 rounded-[3rem] border dark:border-gray-800 overflow-hidden">
+                        <div className="p-8 border-b dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-lg font-black dark:text-white uppercase tracking-tight">Configuration du Logo</h3>
+                                <p className="text-xs text-gray-400 font-bold uppercase mt-1">Format recommandé : PNG transparent (512x512)</p>
+                            </div>
+                            <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl shrink-0">
+                                <button onClick={() => setLogoInputType('upload')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${logoInputType === 'upload' ? 'bg-white dark:bg-gray-700 text-[#2962FF] shadow-sm' : 'text-gray-400'}`}>Upload</button>
+                                <button onClick={() => setLogoInputType('url')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${logoInputType === 'url' ? 'bg-white dark:bg-gray-700 text-[#2962FF] shadow-sm' : 'text-gray-400'}`}>Lien URL</button>
+                            </div>
+                        </div>
+
+                        <div className="p-8">
+                            {logoInputType === 'upload' ? (
+                                <div 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-full py-16 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-[2rem] flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
+                                >
+                                    <div className="p-5 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-3xl group-hover:scale-110 transition-transform group-hover:text-primary">
+                                        <Upload size={32} />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="font-black text-sm uppercase dark:text-white">Cliquez pour choisir un fichier</p>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">ou glissez-déposez l'image ici</p>
+                                    </div>
+                                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="relative group">
+                                        <LinkIcon size={18} className="absolute left-4 top-4 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                        <input 
+                                            type="text" 
+                                            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-bold text-sm dark:text-white focus:ring-2 ring-primary/20"
+                                            placeholder="https://votre-serveur.com/logo.png"
+                                            value={tempLogo}
+                                            onChange={(e) => setTempLogo(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex gap-3">
+                                        <Info size={18} className="text-blue-500 shrink-0" />
+                                        <p className="text-[10px] text-blue-600 dark:text-blue-300 font-bold leading-relaxed uppercase tracking-tight">
+                                            L'URL doit pointer vers une image publique. Les formats SVG, PNG et WebP sont préférés pour une netteté optimale.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={() => setTempLogo('logobisopeto.png')}
+                                className="mt-8 flex items-center gap-2 text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                                <RefreshCcw size={14} /> Réinitialiser au logo par défaut
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -257,9 +207,14 @@ export const Settings: React.FC<SettingsProps> = ({ user, theme, onToggleTheme, 
                 {user.type === UserType.ADMIN && (
                     <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-sm border dark:border-gray-800 overflow-hidden">
                         <h3 className="px-8 pt-8 pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Pilotage Système</h3>
-                        <SettingItem icon={ShieldAlert} label="Rôles & Permissions" subLabel="Gérer les accès personnalisés" onClick={() => setActiveSubView('roles')} />
+                        <SettingItem 
+                            icon={ShieldAlert} 
+                            label="Rôles & Permissions" 
+                            subLabel="Gérer les accès personnalisés" 
+                            onClick={() => onChangeView(AppView.ADMIN_PERMISSIONS)} 
+                        />
                         <SettingItem icon={Palette} label="Personnalisation" subLabel="Logo, Slogan, Couleurs" onClick={() => setActiveSubView('branding')} />
-                        <SettingItem icon={Sparkles} label="Moteur d'Analyse" subLabel="Types de déchets IA" onClick={() => setActiveSubView('waste_config')} />
+                        <SettingItem icon={Sparkles} label="Moteur d'Analyse" subLabel="Types de déchets IA" />
                         <SettingItem icon={Terminal} label="API & Intégrations" subLabel="Gestion des clés d'accès" />
                     </div>
                 )}

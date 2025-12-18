@@ -2,12 +2,13 @@
 import { GoogleGenAI, Chat, Type } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
-You are the AI Assistant for KIN ECO-MAP, a waste management and ecology platform in Kinshasa, DRC.
-Your name is "Biso Peto AI" (which means "Us Clean" in Lingala).
-You are friendly, encouraging, and knowledgeable about recycling, composting, waste reduction, and local environmental issues in Kinshasa.
-You speak French fluently and you incorporate common Lingala phrases (like "Mbote", "Boni", "Posa", "Merci mingi", "Tokoos") to sound local and approachable.
-Keep your answers concise (under 80 words), practical, and easy to understand.
-If asked about app features, guide them to the Dashboard or Map.
+Vous êtes "Biso Peto AI", l'expert IA officiel de la plateforme KIN ECO-MAP à Kinshasa.
+Votre mission est d'éduquer les citoyens kinois sur la gestion des déchets, le recyclage et l'assainissement urbain.
+Langage : Français impeccable avec des touches de Lingala (Mbote, Tokoos, Merci mingi) pour la proximité.
+Expertise : Tri sélectif, compostage en milieu tropical, dangers des décharges sauvages, et fonctionnement de l'économie circulaire.
+Ton : Encourageant, pédagogique et pragmatique.
+Si l'utilisateur pose une question hors sujet (politique, divertissement), recadrez poliment sur l'environnement.
+Répondez de manière concise (max 100 mots) pour une lecture rapide sur mobile.
 `;
 
 let chatSession: Chat | null = null;
@@ -37,13 +38,14 @@ export const initializeChat = (): Chat | null => {
 export const sendMessageToGemini = async (message: string): Promise<string> => {
     try {
         const chat = initializeChat();
-        if (!chat) return "Service indisponible.";
+        if (!chat) return "Le service Biso Peto AI est temporairement indisponible.";
         const response = await chat.sendMessage({ message });
-        return response.text || "Erreur de réponse.";
+        // Utilisation correcte de la propriété .text selon les guidelines
+        return response.text || "Désolé, je n'ai pas pu formuler de réponse.";
     } catch (error) {
         console.error("Gemini Error:", error);
-        chatSession = null;
-        return "Une erreur est survenue avec Biso Peto AI.";
+        chatSession = null; // Reset session on error
+        return "Une erreur technique est survenue. Veuillez réessayer, merci mingi !";
     }
 };
 
@@ -58,10 +60,10 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
         const prompt = `
-            Analyse cette photo de déchets à Kinshasa. 
-            Détermine le type prédominant (Plastique, Organique, Gravats, Électronique, Divers).
-            Évalue l'urgence (high si obstruant la voie ou insalubrité majeure, medium si important, low si petit tas).
-            Indique si c'est dangereux.
+            Analysez cette photo de déchets à Kinshasa. 
+            Déterminez le type (Plastique, Organique, Gravats, Métal, Mixte).
+            Évaluez l'urgence (high si bloque la route/drain, low si petit volume).
+            Indiquez si des objets tranchants ou toxiques sont visibles.
         `;
 
         const response = await ai.models.generateContent({
@@ -89,8 +91,8 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
 
         return JSON.parse(response.text || '{}');
     } catch (error) {
-        console.error("Gemini Analysis Error:", error);
-        return { wasteType: "Inconnu", urgency: "medium", comment: "Analyse indisponible.", isDangerous: false };
+        console.error("Analysis Error:", error);
+        return { wasteType: "Indéterminé", urgency: "medium", comment: "Photo floue ou erreur réseau.", isDangerous: false };
     }
 };
 
@@ -109,7 +111,7 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-                    { text: "Analyse cet objet pour revente." }
+                    { text: "Identifiez cet objet pour la vente en marketplace de recyclage." }
                 ]
             },
             config: {
@@ -129,7 +131,7 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
         });
         return JSON.parse(response.text || '{}');
     } catch (error) {
-        return { title: "Objet", category: "other", weight: 0, price: 0, description: "Erreur" };
+        return { title: "Objet de récupération", category: "other", weight: 0.5, price: 500, description: "Identification manuelle requise" };
     }
 };
 
@@ -146,7 +148,7 @@ export const validateCleanliness = async (base64Image: string): Promise<{
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-                    { text: "La zone est-elle propre après collecte ?" }
+                    { text: "Vérifiez si la zone est parfaitement propre après une collecte de déchets." }
                 ]
             },
             config: {
@@ -164,6 +166,6 @@ export const validateCleanliness = async (base64Image: string): Promise<{
         });
         return JSON.parse(response.text || '{}');
     } catch (error) {
-        return { isClean: true, confidence: 0.5, comment: "Erreur" };
+        return { isClean: true, confidence: 0.5, comment: "Validation manuelle suggérée." };
     }
 };

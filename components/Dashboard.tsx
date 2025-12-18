@@ -9,14 +9,14 @@ import {
     ShieldCheck, PhoneCall, Phone, FileText, Download, Globe2, Wind, Sparkles, Plus,
     Mail, ShieldAlert, Siren, Zap, Target, UserCheck, ShoppingBag, MessageSquare, Battery,
     ArrowDownRight, ChevronRight, Briefcase, Factory, ShieldEllipsis, History, FileCheck,
-    X, ClipboardList, Camera
+    X, ClipboardList, Camera, Package
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
     PieChart, Pie, AreaChart, Area, CartesianGrid, YAxis, Legend
 } from 'recharts';
-import { User, AppView, UserType } from '../types';
-import { UserAPI } from '../services/api';
+import { User, AppView, UserType, WasteReport, MarketplaceItem } from '../types';
+import { UserAPI, ReportsAPI, MarketplaceAPI } from '../services/api';
 
 interface DashboardProps {
     user: User;
@@ -59,20 +59,37 @@ export const Dashboard: React.FC<DashboardProps> = (props) => {
 const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [searchQuery, setSearchQuery] = useState('');
+    
+    // Global data states
     const [allUsers, setAllUsers] = useState<User[]>([]);
-    const [searchResults, setSearchResults] = useState<User[]>([]);
+    const [allReports, setAllReports] = useState<WasteReport[]>([]);
+    const [allMarketplace, setAllMarketplace] = useState<MarketplaceItem[]>([]);
+    
+    // Filtered search results
+    const [searchResults, setSearchResults] = useState<{
+        users: User[],
+        reports: WasteReport[],
+        marketplace: MarketplaceItem[]
+    }>({ users: [], reports: [], marketplace: [] });
+    
     const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        loadAllUsers();
+        loadAllData();
         return () => clearInterval(timer);
     }, []);
 
-    const loadAllUsers = async () => {
+    const loadAllData = async () => {
         try {
-            const data = await UserAPI.getAll();
-            setAllUsers(data);
+            const [usersData, reportsData, marketplaceData] = await Promise.all([
+                UserAPI.getAll(),
+                ReportsAPI.getAll(),
+                MarketplaceAPI.getAll()
+            ]);
+            setAllUsers(usersData);
+            setAllReports(reportsData);
+            setAllMarketplace(marketplaceData);
         } catch (e) {
             console.error(e);
         }
@@ -83,18 +100,41 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
         if (query.trim().length > 1) {
             setIsSearching(true);
             const lowerQuery = query.toLowerCase();
-            const filtered = allUsers.filter(u => 
+            
+            const filteredUsers = allUsers.filter(u => 
                 `${u.firstName} ${u.lastName}`.toLowerCase().includes(lowerQuery) ||
                 u.email?.toLowerCase().includes(lowerQuery) ||
                 u.phone.includes(lowerQuery) ||
                 u.commune?.toLowerCase().includes(lowerQuery)
-            ).slice(0, 5); // Limit results to 5
-            setSearchResults(filtered);
+            ).slice(0, 3);
+
+            const filteredReports = allReports.filter(r => 
+                r.wasteType.toLowerCase().includes(lowerQuery) ||
+                r.status.toLowerCase().includes(lowerQuery) ||
+                r.urgency.toLowerCase().includes(lowerQuery) ||
+                r.commune?.toLowerCase().includes(lowerQuery) ||
+                r.comment.toLowerCase().includes(lowerQuery)
+            ).slice(0, 3);
+
+            const filteredMarketplace = allMarketplace.filter(m => 
+                m.title.toLowerCase().includes(lowerQuery) ||
+                m.sellerName.toLowerCase().includes(lowerQuery) ||
+                m.category.toLowerCase().includes(lowerQuery) ||
+                m.description.toLowerCase().includes(lowerQuery)
+            ).slice(0, 3);
+
+            setSearchResults({
+                users: filteredUsers,
+                reports: filteredReports,
+                marketplace: filteredMarketplace
+            });
         } else {
             setIsSearching(false);
-            setSearchResults([]);
+            setSearchResults({ users: [], reports: [], marketplace: [] });
         }
     };
+
+    const hasAnyResults = searchResults.users.length > 0 || searchResults.reports.length > 0 || searchResults.marketplace.length > 0;
 
     return (
         <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8 max-w-[1600px] mx-auto">
@@ -107,14 +147,14 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none uppercase">Vue Stratégique</h1>
                     
-                    {/* Global User Search Bar */}
+                    {/* Expanded Global Search Bar */}
                     <div className="relative w-full max-w-xl mt-6 group">
                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2962FF] transition-colors">
                             <Search size={20} />
                         </div>
                         <input 
                             type="text"
-                            placeholder="Nom, Email, Téléphone ou Commune..."
+                            placeholder="Rechercher utilisateurs, signalements ou annonces..."
                             className="w-full pl-12 pr-12 py-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-[#2962FF] outline-none font-bold text-sm transition-all"
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
@@ -128,46 +168,108 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             </button>
                         )}
 
-                        {/* Search Results Dropdown */}
-                        {isSearching && searchResults.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-[100] overflow-hidden animate-scale-up">
-                                <div className="p-2">
-                                    {searchResults.map((result) => (
-                                        <button 
-                                            key={result.id}
-                                            onClick={() => onChangeView(AppView.ADMIN_USERS)}
-                                            className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors text-left"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 font-black">
-                                                    {result.firstName[0]}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-black dark:text-white leading-none">{result.firstName} {result.lastName}</p>
-                                                    <div className="flex items-center gap-1.5 mt-1">
-                                                        <span className="text-[10px] text-gray-400 font-bold uppercase">{result.type}</span>
-                                                        <span className="text-[10px] text-gray-300">•</span>
-                                                        <span className="text-[10px] text-[#2962FF] font-black uppercase">{result.commune || 'KSH'}</span>
-                                                        <span className="text-[10px] text-gray-300">•</span>
-                                                        <span className="text-[10px] text-gray-400 font-bold">{result.phone}</span>
+                        {/* Results Dropdown */}
+                        {isSearching && hasAnyResults && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-[100] overflow-hidden animate-scale-up max-h-[450px] overflow-y-auto no-scrollbar">
+                                <div className="p-2 space-y-4">
+                                    {/* Section: Utilisateurs */}
+                                    {searchResults.users.length > 0 && (
+                                        <div className="space-y-1">
+                                            <p className="px-3 py-1 text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                                <Users size={12} /> Utilisateurs
+                                            </p>
+                                            {searchResults.users.map((result) => (
+                                                <button 
+                                                    key={result.id}
+                                                    onClick={() => onChangeView(AppView.ADMIN_USERS)}
+                                                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors text-left"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 font-black">
+                                                            {result.firstName[0]}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-black dark:text-white leading-none">{result.firstName} {result.lastName}</p>
+                                                            <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{result.type} • {result.commune || 'Kinshasa'}</p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </div>
-                                            <ChevronRight size={16} className="text-gray-300" />
-                                        </button>
-                                    ))}
-                                    <button 
-                                        onClick={() => onChangeView(AppView.ADMIN_USERS)}
-                                        className="w-full py-2 text-[10px] font-black uppercase text-blue-600 text-center hover:underline"
-                                    >
-                                        Voir tous les résultats
-                                    </button>
+                                                    <ChevronRight size={16} className="text-gray-300" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Section: Signalements */}
+                                    {searchResults.reports.length > 0 && (
+                                        <div className="space-y-1">
+                                            <p className="px-3 py-1 text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                                <AlertTriangle size={12} /> Signalements
+                                            </p>
+                                            {searchResults.reports.map((report) => (
+                                                <button 
+                                                    key={report.id}
+                                                    onClick={() => onChangeView(AppView.ADMIN_REPORTS)}
+                                                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors text-left"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 overflow-hidden rounded-lg shadow-inner bg-gray-100 dark:bg-gray-700">
+                                                            <img src={report.imageUrl} className="w-full h-full object-cover" alt="" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-black dark:text-white leading-none uppercase tracking-tight">{report.wasteType}</p>
+                                                            <div className="flex items-center gap-1.5 mt-1">
+                                                                <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${report.urgency === 'high' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+                                                                    {report.urgency}
+                                                                </span>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase">{report.status} • {report.commune || 'KSH'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight size={16} className="text-gray-300" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Section: Marketplace */}
+                                    {searchResults.marketplace.length > 0 && (
+                                        <div className="space-y-1">
+                                            <p className="px-3 py-1 text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                                <Package size={12} /> Marketplace
+                                            </p>
+                                            {searchResults.marketplace.map((item) => (
+                                                <button 
+                                                    key={item.id}
+                                                    onClick={() => onChangeView(AppView.ADMIN_MARKETPLACE)}
+                                                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors text-left"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 overflow-hidden rounded-lg shadow-inner bg-gray-100 dark:bg-gray-700">
+                                                            <img src={item.imageUrl} className="w-full h-full object-cover" alt="" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-black dark:text-white leading-none truncate max-w-[200px]">{item.title}</p>
+                                                            <p className="text-[10px] text-[#00C853] font-black mt-1 uppercase">{item.price.toLocaleString()} FC • Par {item.sellerName}</p>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight size={16} className="text-gray-300" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <div className="pt-2 border-t dark:border-gray-700">
+                                        <p className="text-center text-[9px] font-black text-gray-400 uppercase py-2">Fin des résultats</p>
+                                    </div>
                                 </div>
                             </div>
                         )}
-                        {isSearching && searchResults.length === 0 && searchQuery.length > 1 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-[100] p-6 text-center text-gray-400 font-bold text-xs uppercase tracking-widest">
-                                Aucun utilisateur trouvé
+                        {isSearching && !hasAnyResults && searchQuery.length > 1 && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-[100] p-8 text-center animate-scale-up">
+                                <Search size={40} className="mx-auto text-gray-200 mb-3" />
+                                <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">
+                                    Aucune correspondance pour "{searchQuery}"
+                                </p>
                             </div>
                         )}
                     </div>
@@ -376,7 +478,7 @@ const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) =>
 
                 <button 
                     onClick={() => onChangeView(AppView.MAP)}
-                    className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center gap-6 group hover:shadow-xl transition-all"
+                    className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 border-gray-700 shadow-sm flex flex-col items-center gap-6 group hover:shadow-xl transition-all"
                 >
                     <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-[2rem] flex items-center justify-center text-[#00C853] transition-transform group-hover:scale-110 group-hover:-rotate-6">
                         <MapIcon size={36} />

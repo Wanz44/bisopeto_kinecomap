@@ -12,9 +12,10 @@ import {
 interface LandingPageProps {
   onStart: () => void;
   onLogin: () => void;
+  appLogo: string;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appLogo }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [formState, setFormState] = useState({ name: '', email: '', message: '' });
@@ -68,8 +69,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin }) =>
           : 'bg-transparent'
         }`}>
           <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-            <div className="w-11 h-11 bg-primary rounded-2xl flex items-center justify-center p-2 shadow-xl group-hover:rotate-[10deg] group-hover:scale-110 transition-all duration-500">
-              <img src="logobisopeto.png" alt="BISO PETO" className="w-full h-full object-contain brightness-0 invert" />
+            <div className="w-11 h-11 bg-white dark:bg-black rounded-2xl flex items-center justify-center p-2 shadow-xl group-hover:rotate-[10deg] group-hover:scale-110 transition-all duration-500 border border-gray-100 dark:border-white/10">
+              <img src={appLogo} alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
@@ -332,7 +333,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin }) =>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
             <div className="col-span-1 lg:col-span-2 space-y-8">
                <div className="flex items-center gap-4">
-                  <img src="logobisopeto.png" className="w-16 h-16 brightness-0 invert" alt="Logo"/>
+                  <div className="w-16 h-16 bg-white rounded-2xl p-2">
+                    <img src={appLogo} className="w-full h-full object-contain" alt="Logo"/>
+                  </div>
                   <div>
                     <h3 className="text-3xl font-black tracking-tighter">BISO PETO</h3>
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">KIN ECO-MAP SYSTEM</p>

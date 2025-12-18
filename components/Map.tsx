@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { ArrowLeft, Search, Loader2, X, Locate, MapPin, AlertTriangle, Info, Truck, Battery, Signal, Navigation } from 'lucide-react';
+import { ArrowLeft, Search, Loader2, X, Locate, MapPin, AlertTriangle, Info, Truck, Battery, Signal, Navigation, Zap } from 'lucide-react';
 import { User, UserType, WasteReport, Vehicle } from '../types';
 import { ReportsAPI, VehicleAPI } from '../services/api';
 
@@ -34,7 +34,6 @@ const reportIcon = new L.Icon({
     shadowSize: [41, 41]
 });
 
-// Icône personnalisée pour les camions de collecte
 const getTruckIcon = (status: string) => {
     const color = status === 'active' ? '#2E7D32' : '#FBC02D';
     return L.divIcon({
@@ -66,6 +65,7 @@ export const MapView: React.FC<MapViewProps> = ({ user, onBack }) => {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [showVehicles, setShowVehicles] = useState(true);
+    const [showTraffic, setShowTraffic] = useState(false);
 
     const loadData = async () => {
         try {
@@ -82,7 +82,6 @@ export const MapView: React.FC<MapViewProps> = ({ user, onBack }) => {
 
     useEffect(() => {
         loadData();
-        // Simulation de rafraîchissement "live" toutes les 15 secondes
         const interval = setInterval(loadData, 15000);
         return () => clearInterval(interval);
     }, []);
@@ -151,97 +150,57 @@ export const MapView: React.FC<MapViewProps> = ({ user, onBack }) => {
                         >
                             <Truck size={14} /> Voir Collecteurs
                         </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Bottom Legend Overlay */}
-            <div className="absolute bottom-10 left-4 z-[900] bg-white/90 dark:bg-gray-800/90 backdrop-blur-md p-4 rounded-3xl shadow-2xl border dark:border-gray-700 hidden sm:block">
-                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">Légende</h4>
-                <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full border-2 border-white"></div>
-                        <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase">Vous</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
-                        <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase">Déchets signalés</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 bg-primary rounded-full border-2 border-white"></div>
-                        <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase">Camion en mouvement</span>
+                        <button 
+                            onClick={() => setShowTraffic(!showTraffic)}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border-2 ${
+                                showTraffic 
+                                ? 'bg-orange-500 text-white border-orange-500 shadow-lg' 
+                                : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 border-transparent dark:text-gray-400'
+                            }`}
+                        >
+                            <Zap size={14} /> Flux Trafic
+                        </button>
                     </div>
                 </div>
             </div>
 
             <MapContainer center={position} zoom={14} style={{ width: '100%', height: '100%' }} zoomControl={false}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                
+                {/* Traffic Overlay Layer (Simulated with high contrast roads) */}
+                {showTraffic && (
+                    <TileLayer 
+                        url="https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=f6d53957f86443c683b5443329977826" 
+                        opacity={0.6}
+                        zIndex={10}
+                    />
+                )}
+
                 <MapUpdater center={position} />
                 
-                {/* Marqueur Utilisateur */}
                 <Marker position={position} icon={userIcon}>
-                    <Popup>
-                        <div className="p-1 font-bold text-xs uppercase">Votre position actuelle</div>
-                    </Popup>
+                    <Popup><div className="p-1 font-bold text-xs uppercase">Votre position</div></Popup>
                 </Marker>
 
-                {/* Marqueurs Signalements */}
                 {reports.map(rep => (
                     <Marker key={rep.id} position={[rep.lat, rep.lng]} icon={reportIcon}>
                         <Popup>
-                            <div className="p-2 space-y-3 max-w-[200px]">
-                                <div className="relative h-24 rounded-lg overflow-hidden shadow-inner">
-                                    <img src={rep.imageUrl} className="w-full h-full object-cover" alt="Signalement" />
-                                    <div className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[8px] font-black text-white ${rep.urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>
-                                        {rep.urgency.toUpperCase()}
-                                    </div>
+                            <div className="p-2 space-y-2 max-w-[200px]">
+                                <div className="h-24 rounded-lg overflow-hidden">
+                                    <img src={rep.imageUrl} className="w-full h-full object-cover" alt="" />
                                 </div>
-                                <div>
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded font-black text-gray-600 dark:text-gray-300 uppercase tracking-tighter">{rep.wasteType}</span>
-                                        <span className="text-[8px] text-gray-400 font-bold uppercase">{new Date(rep.date).toLocaleDateString()}</span>
-                                    </div>
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 italic leading-tight">"{rep.comment}"</p>
-                                </div>
+                                <p className="text-xs font-black uppercase text-red-600">{rep.wasteType}</p>
                             </div>
                         </Popup>
                     </Marker>
                 ))}
 
-                {/* Marqueurs Collecteurs (Camions) */}
                 {showVehicles && vehicles.map(veh => (
-                    <Marker 
-                        key={veh.id} 
-                        position={[veh.lat, veh.lng]} 
-                        icon={getTruckIcon(veh.status)}
-                    >
+                    <Marker key={veh.id} position={[veh.lat, veh.lng]} icon={getTruckIcon(veh.status)}>
                         <Popup>
-                            <div className="p-3 space-y-3 min-w-[180px]">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                                        <Truck size={20} />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-black text-sm text-gray-900 dark:text-white uppercase leading-none">{veh.name}</h4>
-                                        <p className="text-[9px] font-bold text-gray-400 uppercase mt-1 tracking-widest">{veh.plateNumber}</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2 border-t dark:border-gray-700 pt-3">
-                                    <div className="flex items-center gap-1.5">
-                                        <Battery size={14} className={veh.batteryLevel < 25 ? 'text-red-500' : 'text-green-600'} />
-                                        <span className="text-[10px] font-bold dark:text-gray-300">{veh.batteryLevel}%</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 justify-end">
-                                        <Signal size={14} className="text-blue-500" />
-                                        <span className="text-[10px] font-bold dark:text-gray-300">{veh.signalStrength}%</span>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg flex items-center justify-center gap-2">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${veh.status === 'active' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-                                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">{veh.status === 'active' ? 'En Collecte' : 'Arrêt Temporaire'}</span>
-                                </div>
+                            <div className="p-2">
+                                <p className="font-black text-xs uppercase">{veh.name}</p>
+                                <p className="text-[10px] text-gray-400 font-bold">{veh.plateNumber}</p>
                             </div>
                         </Popup>
                     </Marker>

@@ -70,7 +70,9 @@ function App() {
 
     const [exchangeRate, setExchangeRate] = useState(2800);
     const [plans, setPlans] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
-    const [appLogo, setAppLogo] = useState('components/logobisopeto.png');
+    const [appLogo, setAppLogo] = useState(() => {
+        return localStorage.getItem('kinecomap_app_logo') || 'logobisopeto.png';
+    });
 
     useEffect(() => {
         const loadInitData = async () => {
@@ -89,6 +91,11 @@ function App() {
         if (theme === 'dark') document.body.classList.add('dark');
         else document.body.classList.remove('dark');
     }, [theme]);
+
+    const handleUpdateLogo = (newLogo: string) => {
+        setAppLogo(newLogo);
+        localStorage.setItem('kinecomap_app_logo', newLogo);
+    };
 
     const navigateTo = (newView: AppView) => {
         if (newView !== view) {
@@ -121,10 +128,8 @@ function App() {
         };
         setNotifications([newNotif, ...notifications]);
 
-        // Déclencher une notification Push réelle si l'utilisateur est concerné
-        // (Simulé ici : on pousse la notification si c'est pour ALL ou si l'ID correspond)
         if (targetId === 'ALL' || targetId === user?.id || (targetId === 'ADMIN' && user?.type === UserType.ADMIN)) {
-            NotificationService.sendPush(title, message);
+            NotificationService.sendPush(title, message, appLogo);
         }
     };
 
@@ -134,7 +139,7 @@ function App() {
 
     const renderContent = () => {
         if (!user) {
-            if (view === AppView.LANDING) return <LandingPage onStart={() => navigateTo(AppView.ONBOARDING)} onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} />;
+            if (view === AppView.LANDING) return <LandingPage onStart={() => navigateTo(AppView.ONBOARDING)} onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} appLogo={appLogo} />;
             if (view === AppView.ONBOARDING) return <Onboarding initialShowLogin={onboardingStartWithLogin} onBackToLanding={() => setHistory([AppView.LANDING])} onComplete={(data) => { setUser(data as User); localStorage.setItem('kinecomap_user', JSON.stringify(data)); setHistory([AppView.DASHBOARD]); }} appLogo={appLogo} onToast={handleShowToast} />;
             return null;
         }
@@ -149,14 +154,14 @@ function App() {
             case AppView.SUBSCRIPTION: return <Subscription user={user} onBack={goBack} onUpdatePlan={(p) => { setUser({...user, subscription: p}); goBack(); }} plans={plans} exchangeRate={exchangeRate} onToast={handleShowToast} />;
             case AppView.PLANNING: return <Planning onBack={goBack} />;
             case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, read: true})))} isAdmin={user.type === UserType.ADMIN} onSendNotification={(n) => handleNotify(n.targetUserId || 'ALL', n.title || '', n.message || '', n.type)} />;
-            case AppView.SETTINGS: return <Settings user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} currentLanguage={language} onLanguageChange={setLanguage} onToast={handleShowToast} />;
+            case AppView.SETTINGS: return <Settings user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} currentLanguage={language} onLanguageChange={setLanguage} onChangeView={navigateTo} onToast={handleShowToast} appLogo={appLogo} onUpdateLogo={handleUpdateLogo} />;
             case AppView.COLLECTOR_JOBS: return <CollectorJobs user={user} onBack={goBack} onNotify={handleNotify} onToast={handleShowToast} />;
             case AppView.ADMIN_USERS: return <AdminUsers onBack={goBack} currentUser={user} onNotify={handleNotify} onToast={handleShowToast} />;
             case AppView.ADMIN_VEHICLES: return <AdminVehicles onBack={goBack} onToast={handleShowToast} />;
             case AppView.ADMIN_ACADEMY: return <AdminAcademy onBack={goBack} onToast={handleShowToast} />;
             case AppView.ADMIN_REPORTS: return <AdminReports onBack={goBack} onToast={handleShowToast} onNotify={handleNotify} />;
             case AppView.ADMIN_MARKETPLACE: return <AdminMarketplace onBack={goBack} onToast={handleShowToast} />;
-            case AppView.ADMIN_SUBSCRIPTIONS: return <AdminSubscriptions onBack={goBack} plans={plans} exchangeRate={exchangeRate} onUpdatePlan={(p) => setPlans(plans.map(pl => pl.id === p.id ? p : pl))} onUpdateExchangeRate={setExchangeRate} currentLogo={appLogo} onUpdateLogo={setAppLogo} systemSettings={systemSettings} onUpdateSystemSettings={(s) => setSystemSettings(s)} onToast={handleShowToast} />;
+            case AppView.ADMIN_SUBSCRIPTIONS: return <AdminSubscriptions onBack={goBack} plans={plans} exchangeRate={exchangeRate} onUpdatePlan={(p) => setPlans(plans.map(pl => pl.id === p.id ? p : pl))} onUpdateExchangeRate={setExchangeRate} currentLogo={appLogo} onUpdateLogo={handleUpdateLogo} systemSettings={systemSettings} onUpdateSystemSettings={(s) => setSystemSettings(s)} onToast={handleShowToast} />;
             case AppView.ADMIN_PERMISSIONS: return <AdminPermissions onBack={goBack} onToast={handleShowToast} />;
             default: return <Dashboard user={user} onChangeView={navigateTo} onToast={handleShowToast} />;
         }
