@@ -24,26 +24,6 @@ export type UserPermission =
     | 'manage_pos'
     | 'system_settings';
 
-export interface SystemSettings {
-    maintenanceMode: boolean;
-    supportEmail: string;
-    appVersion: string;
-    force2FA: boolean;
-    sessionTimeout: number;
-    passwordPolicy: 'standard' | 'strong' | 'strict';
-    marketplaceCommission: number;
-}
-
-export interface SubscriptionPlan {
-    id: string;
-    name: string;
-    priceUSD: number;
-    schedule: string;
-    features: string[];
-    popular?: boolean;
-    isVariable?: boolean;
-}
-
 export interface User {
     id?: string; 
     firstName: string;
@@ -64,6 +44,10 @@ export interface User {
     zone?: string;
     housingType?: string;
     permissions?: UserPermission[];
+    // Métriques Business
+    totalTonnage?: number;
+    co2Saved?: number;
+    recyclingRate?: number;
 }
 
 export interface Collector {
@@ -118,6 +102,28 @@ export interface NotificationItem {
     time: string;
     read: boolean;
     targetUserId?: string | 'ADMIN' | 'ALL'; 
+}
+
+// Added missing SubscriptionPlan interface to resolve export errors
+export interface SubscriptionPlan {
+    id: 'standard' | 'plus' | 'premium' | 'special';
+    name: string;
+    priceUSD: number;
+    schedule: string;
+    features: string[];
+    popular?: boolean;
+    isVariable?: boolean;
+}
+
+// Added missing SystemSettings interface to resolve export errors
+export interface SystemSettings {
+    maintenanceMode: boolean;
+    supportEmail: string;
+    appVersion: string;
+    force2FA: boolean;
+    sessionTimeout: number;
+    passwordPolicy: string;
+    marketplaceCommission: number;
 }
 
 export type VehicleType = 'moto' | 'tricycle' | 'pickup' | 'camion' | 'chariot';

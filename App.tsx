@@ -67,11 +67,7 @@ function App() {
 
     const [exchangeRate, setExchangeRate] = useState(2800);
     const [plans, setPlans] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
-    const [appLogo, setAppLogo] = useState('./logo%20bisopeto.png');
-
-    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; visible: boolean }>({
-        message: '', type: 'success', visible: false
-    });
+    const [appLogo, setAppLogo] = useState('components/logobisopeto.png');
 
     useEffect(() => {
         const loadInitData = async () => {
@@ -123,6 +119,10 @@ function App() {
         };
         setNotifications([newNotif, ...notifications]);
     };
+
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; visible: boolean }>({
+        message: '', type: 'success', visible: false
+    });
 
     const renderContent = () => {
         if (!user) {

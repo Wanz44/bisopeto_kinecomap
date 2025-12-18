@@ -5,7 +5,7 @@ interface SplashScreenProps {
     appLogo?: string;
 }
 
-export const SplashScreen: React.FC<SplashScreenProps> = ({ appLogo = './logo%20bisopeto.png' }) => {
+export const SplashScreen: React.FC<SplashScreenProps> = ({ appLogo = 'logobisopeto.png' }) => {
     return (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#f3f3f3] dark:bg-[#000000] transition-colors duration-700">
             <style>

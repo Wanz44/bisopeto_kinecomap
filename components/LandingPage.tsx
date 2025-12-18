@@ -98,7 +98,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin }) =>
           <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="w-10 h-10 bg-gradient-to-br from-[#00C853] to-[#2962FF] rounded-xl flex items-center justify-center p-0.5 shadow-lg group-hover:rotate-12 transition-transform">
               <div className="bg-white dark:bg-black w-full h-full rounded-[10px] flex items-center justify-center overflow-hidden">
-                <img src="./logo%20bisopeto.png" alt="Logo" className="w-7 h-7 object-contain" />
+                <img src="logobisopeto.png" alt="Logo" className="w-7 h-7 object-contain" />
               </div>
             </div>
             <div className="flex flex-col leading-none">
@@ -268,7 +268,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin }) =>
       <footer className="bg-black text-white pt-20 pb-10">
         <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
             <div className="space-y-6">
-              <div className="flex items-center gap-3"><img src="./logo%20bisopeto.png" alt="Logo" className="w-12 h-12" /><h3 className="font-black text-2xl text-[#00C853]">BISO PETO</h3></div>
+              <div className="flex items-center gap-3"><img src="./logobisopeto.png" alt="Logo" className="w-12 h-12" /><h3 className="font-black text-2xl text-[#00C853]">BISO PETO</h3></div>
               <p className="text-gray-500 font-medium">Leader dans la digitalisation de la gestion des déchets à Kinshasa.</p>
             </div>
             <div>

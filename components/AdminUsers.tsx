@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-    ArrowLeft, Search, Shield, User, Truck, Check, X, Edit2, Plus, Loader2, UserCheck, Briefcase, MapPin, Trash2
+    ArrowLeft, Search, Shield, User, Truck, Check, X, Edit2, Plus, Loader2, UserCheck, Briefcase, MapPin, Trash2, Phone, Mail,
+    ShieldAlert, AlertCircle, Info, PhoneCall, Sparkles
 } from 'lucide-react';
 import { UserPermission, User as AppUser, UserType } from '../types';
 import { UserAPI } from '../services/api';
@@ -46,15 +47,20 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
         finally { setIsLoading(false); }
     };
 
+    // --- QUALIFICATION DU COMPTE (Activation après contact humain) ---
     const handleQualifyUser = async (user: AppUser) => {
         try {
             await UserAPI.update({ ...user, id: user.id!, status: 'active' });
             setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: 'active' as const } : u));
             if (selectedUser?.id === user.id) setSelectedUser({ ...selectedUser, status: 'active' as const });
             
-            onNotify(user.id!, "Bienvenue chez Bisopeto !", "Votre compte a été validé par nos agents. Vous avez maintenant accès complet à nos services.", 'success');
+            // ÉTAPE 5 : Simulation d'e-mail automatique de bienvenue/félicitations
+            onNotify(user.id!, "Compte Bisopeto Activé ! ♻️", 
+                `Félicitations ${user.firstName}, votre compte a été qualifié avec succès par notre équipe. 
+                Vous avez désormais accès à l'intégralité des services de collecte et aux modules Eco-Academy. 
+                Bienvenue dans la communauté !`, 'success');
             
-            if (onToast) onToast(`Compte de ${user.firstName} activé !`, "success");
+            if (onToast) onToast(`Compte de ${user.firstName} qualifié et activé ! E-mail de bienvenue envoyé.`, "success");
         } catch (e) {
             if (onToast) onToast("Erreur lors de la qualification", "error");
         }
@@ -71,7 +77,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
             address: userForm.location,
             vehicleType: userForm.vehicleType,
             permissions: userForm.permissions,
-            status: 'active'
+            status: 'active' // Les créations manuelles admin sont actives par défaut
         };
 
         try {
@@ -81,8 +87,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                 if (onToast) onToast("Utilisateur mis à jour", "success");
             } else {
                 const newUser = { ...userData, id: `u-${Date.now()}`, points: 0, collections: 0, badges: 0, subscription: 'standard' };
-                // Fixed: Property 'add' does not exist on UserAPI, using 'register' instead
-                await UserAPI.register(newUser, "TemporaryPass123!");
+                await UserAPI.register(newUser, "TempPass123!");
                 setUsers([newUser, ...users]);
                 if (onToast) onToast("Nouveau compte créé !", "success");
             }
@@ -117,8 +122,9 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
     const getStatusStyle = (status: string) => {
         switch(status) {
             case 'active': return 'bg-green-100 text-green-700 border-green-200';
-            case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200 animate-pulse';
-            default: return 'bg-red-100 text-red-700 border-red-200';
+            case 'pending': return 'bg-orange-100 text-orange-700 border-orange-200 animate-pulse';
+            case 'suspended': return 'bg-red-100 text-red-700 border-red-200';
+            default: return 'bg-gray-100 text-gray-700 border-gray-200';
         }
     };
 
@@ -137,7 +143,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={onBack} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"><ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" /></button>
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Gestion Utilisateurs</h2>
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Annuaire Clients</h2>
                     </div>
                     <button onClick={() => { setIsEditing(false); setUserForm({ id: '', firstName: '', lastName: '', email: '', phone: '', role: UserType.CITIZEN, location: '', vehicleType: '', permissions: [] }); setShowUserModal(true); }} className="px-4 py-2 bg-[#2962FF] text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20"><Plus size={18} /> Ajouter</button>
                 </div>
@@ -145,7 +151,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                 <div className="flex flex-col md:flex-row gap-3 bg-gray-50 dark:bg-gray-750 p-2 rounded-xl border border-gray-100 dark:border-gray-700">
                     <div className="relative flex-1">
                         <Search size={16} className="absolute left-3 top-3 text-gray-400" />
-                        <input type="text" placeholder="Rechercher nom, email, téléphone..." className="w-full pl-9 pr-4 py-2 rounded-lg bg-white dark:bg-gray-800 border-none outline-none text-sm focus:ring-2 focus:ring-[#2962FF]" value={search} onChange={(e) => setSearch(e.target.value)} />
+                        <input type="text" placeholder="Nom, téléphone, email..." className="w-full pl-9 pr-4 py-2 rounded-lg bg-white dark:bg-gray-800 border-none outline-none text-sm focus:ring-2 focus:ring-[#2962FF]" value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
                     <div className="flex gap-2">
                         <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="px-3 py-2 rounded-lg bg-white dark:bg-gray-800 text-sm font-medium outline-none">
@@ -156,51 +162,49 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                             <option value={UserType.CITIZEN}>Citoyen</option>
                         </select>
                         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 rounded-lg bg-white dark:bg-gray-800 text-sm font-medium outline-none">
-                            <option value="all">Tous Status</option>
-                            <option value="pending">À qualifier</option>
-                            <option value="active">Actif</option>
+                            <option value="all">Statuts</option>
+                            <option value="pending">À Qualifier 🚀</option>
+                            <option value="active">Actifs</option>
                         </select>
                     </div>
                 </div>
              </div>
 
-             <div className="flex-1 overflow-y-auto px-4 pb-4">
+             <div className="flex-1 overflow-y-auto px-4 pb-4 mt-4">
                  {isLoading ? (
                      <div className="flex justify-center pt-20"><Loader2 className="animate-spin text-[#2962FF] w-8 h-8" /></div>
                  ) : (
-                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-gray-50 dark:bg-gray-750 text-[10px] uppercase font-bold text-gray-500">
                                 <tr>
                                     <th className="p-4">Utilisateur</th>
-                                    <th className="p-4">Rôle & Véhicule</th>
+                                    <th className="p-4">Rôle</th>
                                     <th className="p-4">Statut</th>
                                     <th className="p-4 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                                 {filteredUsers.map((user: AppUser) => (
-                                    <tr key={user.id || Math.random().toString()} className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors group">
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">{(user.firstName || "?")[0]}</div>
-                                                <div><div className="font-bold text-gray-900 dark:text-white">{user.firstName} {user.lastName}</div><div className="text-xs text-gray-500">{user.phone}</div></div>
+                                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold uppercase">{user.firstName[0]}{user.lastName[0]}</div>
+                                                <div>
+                                                    <div className="font-bold text-gray-900 dark:text-white">{user.firstName} {user.lastName}</div>
+                                                    <div className="text-[10px] text-gray-400 flex items-center gap-1"><Phone size={10}/> {user.phone}</div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-2">
-                                                    {getRoleIcon(user.type)}
-                                                    <span className="capitalize font-bold text-xs">{user.type}</span>
-                                                </div>
-                                                {user.type === UserType.COLLECTOR && user.vehicleType && (
-                                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 w-fit">🚛 {user.vehicleType}</span>
-                                                )}
+                                            <div className="flex items-center gap-2">
+                                                {getRoleIcon(user.type)}
+                                                <span className="capitalize font-bold text-xs">{user.type}</span>
                                             </div>
                                         </td>
                                         <td className="p-4">
                                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border ${getStatusStyle(user.status)}`}>
-                                                {user.status === 'pending' ? 'À qualifier' : user.status}
+                                                {user.status === 'pending' ? 'À Qualifier' : user.status}
                                             </span>
                                         </td>
                                         <td className="p-4 text-right">
@@ -208,12 +212,13 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                                 {user.status === 'pending' && (
                                                     <button 
                                                         onClick={() => handleQualifyUser(user)}
-                                                        className="px-3 py-1.5 bg-green-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-green-600 shadow-md flex items-center gap-1"
+                                                        className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 shadow-md flex items-center gap-1 animate-pulse"
+                                                        title="Valider le compte après contact humain"
                                                     >
                                                         <UserCheck size={14} /> Qualifier
                                                     </button>
                                                 )}
-                                                <button onClick={() => setSelectedUser(user)} className="text-[#2962FF] font-bold text-xs p-2">Détails</button>
+                                                <button onClick={() => setSelectedUser(user)} className="text-[#2962FF] font-bold text-xs p-2 hover:bg-blue-50 rounded-lg">Détails</button>
                                                 <button onClick={() => openEditModal(user)} className="p-2 text-gray-400 hover:text-blue-600"><Edit2 size={16} /></button>
                                             </div>
                                         </td>
@@ -228,49 +233,50 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
              {showUserModal && (
                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowUserModal(false)}></div>
-                     <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-lg p-6 relative z-10 shadow-2xl animate-scale-up">
+                     <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] w-full max-w-lg p-8 relative z-10 shadow-2xl animate-scale-up">
                          <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold dark:text-white">{isEditing ? 'Modifier Utilisateur' : 'Nouveau Compte'}</h3>
-                            <button onClick={() => setShowUserModal(false)} className="p-2 text-gray-500"><X size={24} /></button>
+                            <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{isEditing ? 'Éditer Fiche' : 'Nouveau Client'}</h3>
+                            <button onClick={() => setShowUserModal(false)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-full"><X size={24} /></button>
                          </div>
 
-                         <form onSubmit={handleSaveUser} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+                         <form onSubmit={handleSaveUser} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 no-scrollbar">
                             <div className="grid grid-cols-2 gap-4">
-                                <input placeholder="Prénom" className="p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userForm.firstName} onChange={e => setUserForm({...userForm, firstName: e.target.value})} required />
-                                <input placeholder="Nom" className="p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userForm.lastName} onChange={e => setUserForm({...userForm, lastName: e.target.value})} required />
-                            </div>
-                            <input placeholder="Email" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userForm.email} onChange={e => setUserForm({...userForm, email: e.target.value})} />
-                            <input placeholder="Téléphone" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userForm.phone} onChange={e => setUserForm({...userForm, phone: e.target.value})} required />
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Rôle</label>
-                                    <select className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value as any})}>
-                                        <option value={UserType.CITIZEN}>Citoyen</option>
-                                        <option value={UserType.COLLECTOR}>Collecteur</option>
-                                        <option value={UserType.BUSINESS}>Entreprise</option>
-                                        <option value={UserType.ADMIN}>Admin</option>
-                                    </select>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Prénom</label>
+                                    <input className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 ring-blue-500" value={userForm.firstName} onChange={e => setUserForm({...userForm, firstName: e.target.value})} required />
                                 </div>
-                                {userForm.role === UserType.COLLECTOR && (
-                                    <div>
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Véhicule</label>
-                                        <select className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userForm.vehicleType} onChange={e => setUserForm({...userForm, vehicleType: e.target.value})}>
-                                            <option value="">Non assigné</option>
-                                            <option value="moto">Moto</option>
-                                            <option value="camion">Camion</option>
-                                            <option value="tricycle">Tricycle</option>
-                                            <option value="pickup">Pickup</option>
-                                        </select>
-                                    </div>
-                                )}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Nom</label>
+                                    <input className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 ring-blue-500" value={userForm.lastName} onChange={e => setUserForm({...userForm, lastName: e.target.value})} required />
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Contact</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input placeholder="Téléphone" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 ring-blue-500" value={userForm.phone} onChange={e => setUserForm({...userForm, phone: e.target.value})} required />
+                                    <input placeholder="Email" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 ring-blue-500" value={userForm.email} onChange={e => setUserForm({...userForm, email: e.target.value})} />
+                                </div>
                             </div>
 
-                            <textarea placeholder="Adresse" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none" rows={2} value={userForm.location} onChange={e => setUserForm({...userForm, location: e.target.value})} />
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Rôle Système</label>
+                                <select className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value as any})}>
+                                    <option value={UserType.CITIZEN}>Citoyen</option>
+                                    <option value={UserType.COLLECTOR}>Collecteur</option>
+                                    <option value={UserType.BUSINESS}>Entreprise</option>
+                                    <option value={UserType.ADMIN}>Administrateur</option>
+                                </select>
+                            </div>
 
-                            <div className="pt-4 flex gap-3">
-                                <button type="button" onClick={() => setShowUserModal(false)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl font-bold">Annuler</button>
-                                <button type="submit" className="flex-1 py-3 bg-[#2962FF] text-white rounded-xl font-bold shadow-lg shadow-blue-500/20">Enregistrer</button>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Adresse de collecte</label>
+                                <textarea className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none" rows={2} value={userForm.location} onChange={e => setUserForm({...userForm, location: e.target.value})} />
+                            </div>
+
+                            <div className="pt-6 flex gap-3">
+                                <button type="button" onClick={() => setShowUserModal(false)} className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 rounded-2xl font-bold">Annuler</button>
+                                <button type="submit" className="flex-1 py-4 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl font-bold shadow-xl">Enregistrer</button>
                             </div>
                          </form>
                      </div>
@@ -280,35 +286,56 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
              {selectedUser && (
                  <div className="fixed inset-0 z-50 flex justify-end">
                      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedUser(null)}></div>
-                     <div className="w-full max-w-xl bg-white dark:bg-gray-900 h-full relative z-10 animate-fade-in-left flex flex-col shadow-2xl">
-                         <div className="p-6 border-b flex justify-between items-start bg-gray-50 dark:bg-gray-800">
-                             <div className="flex gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-2xl font-bold">{(selectedUser.firstName || "?")[0]}</div>
-                                <div>
-                                    <h2 className="text-2xl font-bold dark:text-white">{selectedUser.firstName} {selectedUser.lastName}</h2>
-                                    <p className="text-sm text-gray-500">{selectedUser.phone}</p>
-                                    <div className="flex gap-2 mt-2">
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border ${getStatusStyle(selectedUser.status)}`}>{selectedUser.status}</span>
-                                        {selectedUser.type === UserType.COLLECTOR && selectedUser.vehicleType && (
-                                            <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase border border-blue-200">🚛 {selectedUser.vehicleType}</span>
-                                        )}
+                     <div className="w-full max-w-md bg-white dark:bg-gray-900 h-full relative z-10 animate-fade-in-left flex flex-col shadow-2xl border-l dark:border-gray-800">
+                         <div className="p-8 border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                             <div className="flex justify-between items-start mb-6">
+                                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-3xl font-black">{selectedUser.firstName[0]}</div>
+                                <button onClick={() => setSelectedUser(null)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-full"><X size={24} /></button>
+                             </div>
+                             <h2 className="text-3xl font-black dark:text-white tracking-tighter">{selectedUser.firstName} {selectedUser.lastName}</h2>
+                             <div className="flex gap-2 mt-4">
+                                <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase border ${getStatusStyle(selectedUser.status)}`}>{selectedUser.status === 'pending' ? 'À Qualifier' : selectedUser.status}</span>
+                                <span className="text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full font-black uppercase border border-blue-100 dark:border-blue-900/50">{selectedUser.type}</span>
+                             </div>
+                         </div>
+
+                         <div className="p-8 flex-1 overflow-y-auto space-y-8">
+                            <div className="space-y-4">
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Coordonnées</h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-4 text-gray-700 dark:text-gray-300">
+                                        <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg"><Phone size={18}/></div>
+                                        <span className="font-bold">{selectedUser.phone}</span>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-gray-700 dark:text-gray-300">
+                                        <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg"><Mail size={18}/></div>
+                                        <span className="font-medium underline">{selectedUser.email || 'Pas d\'email'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-gray-700 dark:text-gray-300">
+                                        <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg"><MapPin size={18}/></div>
+                                        <span className="text-sm font-medium">{selectedUser.address}</span>
                                     </div>
                                 </div>
-                             </div>
-                             <button onClick={() => setSelectedUser(null)} className="p-2 text-gray-500"><X size={24} /></button>
-                         </div>
-                         <div className="p-6 flex-1 overflow-y-auto space-y-6">
-                            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border">
-                                <h3 className="font-bold mb-4 flex items-center gap-2"><MapPin size={18} className="text-red-500" /> Localisation</h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">{selectedUser.address}</p>
                             </div>
+
                             {selectedUser.status === 'pending' && (
-                                <button 
-                                    onClick={() => handleQualifyUser(selectedUser)}
-                                    className="w-full py-4 bg-green-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-500/20 hover:scale-[1.02] transition-transform"
-                                >
-                                    Valider et Qualifier le client
-                                </button>
+                                <div className="bg-orange-50 dark:bg-orange-900/10 p-6 rounded-[2rem] border border-orange-100 dark:border-orange-900/30 shadow-sm">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="p-2 bg-orange-100 text-orange-600 rounded-xl">
+                                            <PhoneCall size={20} />
+                                        </div>
+                                        <h4 className="font-black text-orange-800 dark:text-orange-400">Qualification Requise</h4>
+                                    </div>
+                                    <p className="text-xs text-orange-700 dark:text-orange-300 mb-6 leading-relaxed">
+                                        Étape indispensable : Contactez ce client par téléphone pour confirmer ses informations et valider sa zone de collecte avant d'activer son accès.
+                                    </p>
+                                    <button 
+                                        onClick={() => handleQualifyUser(selectedUser)}
+                                        className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                                    >
+                                        <UserCheck size={20} /> Activer et Envoyer Mail
+                                    </button>
+                                </div>
                             )}
                          </div>
                      </div>

@@ -56,7 +56,7 @@ const ROLES_CONFIG = [
     },
 ];
 
-export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLanding, appLogo = './logo%20bisopeto.png', onToast, initialShowLogin = false }) => {
+export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLanding, appLogo = './logobisopeto.png', onToast, initialShowLogin = false }) => {
     const [showLogin, setShowLogin] = useState(initialShowLogin);
     const [registrationFinished, setRegistrationFinished] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -117,8 +117,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
         if (!formData.address) { setError("L'adresse est requise pour la collecte."); return; }
         setIsLoading(true);
         try {
-            await UserAPI.register(formData as User, registerPassword);
+            const registeredUser = await UserAPI.register({ ...formData, status: 'pending' } as User, registerPassword);
             setRegistrationFinished(true);
+            // On peut automatiquement connecter l'utilisateur en mode 'pending'
+            onComplete(registeredUser);
         } catch (err: any) {
             setError(err.message || "Une erreur est survenue lors de l'inscription.");
         } finally {
@@ -129,15 +131,38 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
     if (registrationFinished) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#050505] p-6 text-center">
-                <div className="w-full max-w-md bg-white dark:bg-[#111827] rounded-[3rem] p-10 shadow-2xl animate-scale-up border border-gray-100 dark:border-gray-800">
-                    <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-8 text-[#00C853]">
-                        <CheckCircle2 size={48} className="animate-pulse" />
+                <div className="w-full max-w-md bg-white dark:bg-[#111827] rounded-[3.5rem] p-10 shadow-2xl animate-scale-up border border-gray-100 dark:border-gray-800 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 blur-2xl rounded-full -mr-8 -mt-8"></div>
+                    
+                    <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-8 text-[#00C853] shadow-inner">
+                        <CheckCircle2 size={48} className="animate-bounce" />
                     </div>
-                    <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tighter">Compte Créé !</h2>
-                    <p className="text-gray-600 dark:text-gray-400 font-bold mb-10 leading-relaxed">
-                        Bienvenue dans la communauté BISO PETO. Nos agents vont valider votre zone de collecte sous peu.
-                    </p>
-                    <button onClick={onBackToLanding} className="w-full bg-gray-900 dark:bg-white text-white dark:text-black py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs transition-transform active:scale-95">Retour à l'accueil</button>
+                    
+                    <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter">C'est Presque Fini !</h2>
+                    
+                    <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-3xl mb-8 border border-gray-100 dark:border-gray-700">
+                        <p className="text-gray-600 dark:text-gray-300 font-bold leading-relaxed">
+                            "Merci pour votre souscription. Notre équipe vous contactera sous peu pour finaliser votre abonnement à <span className="text-[#00C853] font-black">Bisopeto</span>."
+                        </p>
+                    </div>
+
+                    <div className="space-y-4 mb-8">
+                        <div className="flex items-center gap-3 text-left">
+                            <div className="w-2 h-2 rounded-full bg-[#00C853]"></div>
+                            <span className="text-xs font-bold text-gray-500">Qualification par appel vocal</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-left">
+                            <div className="w-2 h-2 rounded-full bg-[#2962FF]"></div>
+                            <span className="text-xs font-bold text-gray-500">Validation de la zone de collecte</span>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={() => onComplete(formData as User)} 
+                        className="w-full bg-gray-900 dark:bg-white text-white dark:text-black py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl hover:shadow-green-500/10"
+                    >
+                        Accéder à mon espace attente
+                    </button>
                 </div>
             </div>
         );

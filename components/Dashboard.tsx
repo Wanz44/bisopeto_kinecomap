@@ -1,71 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-    Trash2, 
-    Recycle, 
-    Star, 
-    Award, 
-    Map as MapIcon, 
-    Calendar, 
-    CreditCard, 
-    GraduationCap, 
-    Leaf,
-    Users,
-    User as UserIcon,
-    TrendingUp,
-    AlertTriangle,
-    Activity,
-    Truck,
-    CheckCircle,
-    Navigation,
-    Megaphone,
-    Weight,
-    Share2,
-    MapPin,
-    ArrowRight,
-    Server,
-    Database,
-    Wifi,
-    Globe,
-    BookOpen,
-    Copy,
-    X,
-    Smartphone,
-    BarChart3,
-    MousePointer,
-    Eye,
-    ListFilter,
-    Plus,
-    Upload,
-    Building2,
-    Mail,
-    Phone,
-    Edit2,
-    Cpu,
-    Zap,
-    Clock,
-    Search,
-    Filter,
-    DollarSign,
-    ShieldAlert,
-    HardDrive,
-    ArrowUpRight,
-    ArrowDownRight,
-    MoreHorizontal,
-    Minus,
-    ClipboardList,
-    ShoppingBag,
-    Factory,
-    PhoneCall,
-    ShieldCheck
+    Trash2, Recycle, Star, Award, Map as MapIcon, Calendar, CreditCard, 
+    GraduationCap, Leaf, Users, User as UserIcon, TrendingUp, AlertTriangle, 
+    Activity, Truck, CheckCircle, Navigation, Megaphone, Weight, Share2, 
+    MapPin, ArrowRight, BarChart3, Clock, Search, Filter, DollarSign, 
+    // Added missing Phone import
+    ShieldCheck, PhoneCall, Phone, FileText, Download, Globe2, Wind, Sparkles, Plus,
+    Mail, ShieldAlert
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
-    PieChart, Pie, Legend, AreaChart, Area, CartesianGrid, YAxis,
-    RadialBarChart, RadialBar, LineChart, Line
+    PieChart, Pie, AreaChart, Area, CartesianGrid, YAxis
 } from 'recharts';
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
-import L from 'leaflet';
 import { User, AppView, UserType } from '../types';
 
 const DashboardSearchBar = () => (
@@ -93,27 +40,61 @@ interface DashboardProps {
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
+// --- ÉCRAN D'ATTENTE (Processus de Qualification Professionnel) ---
 const PendingDashboard: React.FC<DashboardProps> = ({ user }) => {
     return (
-        <div className="p-5 md:p-12 min-h-screen flex flex-col items-center justify-center text-center animate-fade-in">
-            <div className="bg-white dark:bg-[#111827] p-10 rounded-[3rem] shadow-2xl border border-gray-100 dark:border-white/5 max-w-xl">
-                <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce">
-                    <PhoneCall size={48} />
-                </div>
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-4">Qualification en cours</h1>
-                <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 leading-relaxed font-medium">
-                    Mbote <span className="text-[#2962FF] font-black">{user.firstName}</span> ! Votre profil est en cours de validation par nos agents Bisopeto.
-                    <br/><br/>
-                    Nous vous contacterons au <span className="font-black text-gray-900 dark:text-white underline decoration-[#00C853] decoration-2">{user.phone}</span> sous 24h.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center gap-3 border border-gray-100 dark:border-gray-700">
-                        <ShieldCheck className="text-[#00C853]" />
-                        <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Identité Vérifiée</span>
+        <div className="p-5 md:p-12 min-h-[calc(100vh-80px)] flex flex-col items-center justify-center text-center animate-fade-in bg-gray-50 dark:bg-[#050505]">
+            <div className="bg-white dark:bg-[#111827] p-8 md:p-12 rounded-[3.5rem] shadow-2xl border border-gray-100 dark:border-white/5 max-w-2xl w-full relative overflow-hidden">
+                {/* Décoration d'arrière-plan */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#00C853]/10 blur-[60px] rounded-full -mr-10 -mt-10"></div>
+                
+                <div className="relative z-10">
+                    <div className="w-24 h-24 bg-green-50 dark:bg-green-900/20 text-[#00C853] rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner animate-pulse">
+                        <ShieldCheck size={48} />
                     </div>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center gap-3 border border-gray-100 dark:border-gray-700">
-                        <Clock className="text-[#2962FF]" />
-                        <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Service Express</span>
+                    
+                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter leading-tight">
+                        Souscription Enregistrée !
+                    </h1>
+                    
+                    <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-6 rounded-3xl mb-8">
+                        <p className="text-lg text-blue-900 dark:text-blue-200 font-bold leading-relaxed">
+                            "Merci pour votre souscription. Notre équipe vous contactera sous peu pour finaliser votre abonnement à <span className="text-[#00C853]">Bisopeto</span>."
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left mb-10">
+                        <div className="p-5 bg-gray-50 dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-[#2962FF]">
+                                    <PhoneCall size={20} />
+                                </div>
+                                <span className="text-xs font-black uppercase tracking-widest text-gray-500">Lien Humain</span>
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                                Un de nos agents vous appellera au <span className="font-bold text-gray-800 dark:text-white">{user.phone}</span> pour confirmer vos informations et vous présenter nos services.
+                            </p>
+                        </div>
+                        <div className="p-5 bg-gray-50 dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-[#00C853]">
+                                    <Mail size={20} />
+                                </div>
+                                <span className="text-xs font-black uppercase tracking-widest text-gray-500">Félicitations</span>
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                                Après cet échange, vous recevrez un e-mail de bienvenue et votre accès complet à la plateforme sera activé.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-gray-100 dark:border-gray-800 flex flex-col items-center gap-4">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Besoin d'aide ?</p>
+                        <div className="flex gap-4">
+                             <a href="tel:+243852291755" className="flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl font-black text-xs uppercase tracking-widest transition-transform active:scale-95 shadow-xl">
+                                <Phone size={16} /> Nous appeler
+                             </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -122,7 +103,7 @@ const PendingDashboard: React.FC<DashboardProps> = ({ user }) => {
 };
 
 const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
-    const data = [ { name: 'Lun', uv: 0 }, { name: 'Mar', uv: 0 }, { name: 'Mer', uv: 0 }, { name: 'Jeu', uv: 0 }, { name: 'Ven', uv: 0 }, { name: 'Sam', uv: 0 }, { name: 'Dim', uv: 0 } ];
+    const data = [ { name: 'Lun', uv: 0 }, { name: 'Mar', uv: 10 }, { name: 'Mer', uv: 5 }, { name: 'Jeu', uv: 8 }, { name: 'Ven', uv: 12 }, { name: 'Sam', uv: 20 }, { name: 'Dim', uv: 0 } ];
 
     return (
         <div className="p-5 md:p-8 space-y-6 animate-fade-in pb-24 md:pb-8">
@@ -145,7 +126,7 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {[
                     { icon: Trash2, label: 'Collectes', value: user.collections, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20' },
-                    { icon: Recycle, label: 'Recyclage', value: '0%', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+                    { icon: Recycle, label: 'Recyclage', value: '12kg', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
                     { icon: Star, label: 'Points', value: user.points, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
                     { icon: Award, label: 'Badges', value: user.badges, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20' }
                 ].map((stat, idx) => (
@@ -204,9 +185,108 @@ const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     );
 };
 
-// ... Les autres dashboards (Business, Collector, Admin) suivent une structure de couleurs similaire améliorée ...
+const BusinessDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
+    const wasteData = [
+        { name: 'S1', volume: 450 },
+        { name: 'S2', volume: 380 },
+        { name: 'S3', volume: 520 },
+        { name: 'S4', volume: 410 },
+    ];
+
+    const compositionData = [
+        { name: 'Plastique', value: 400, color: '#2962FF' },
+        { name: 'Papier/Carton', value: 300, color: '#00C853' },
+        { name: 'Organique', value: 200, color: '#FFB300' },
+        { name: 'Autres', value: 100, color: '#6B7280' },
+    ];
+
+    return (
+        <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8 max-w-[1600px] mx-auto">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter">Tableau de Bord Entreprise</h1>
+                    <p className="text-gray-500 font-bold mt-1">Pilotage écologique & Reporting RSE</p>
+                </div>
+                <div className="flex gap-3 w-full md:w-auto">
+                    <button onClick={() => onChangeView(AppView.PLANNING)} className="flex-1 md:flex-none bg-[#2962FF] text-white px-6 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-2">
+                        <Plus size={18} /> Demander un passage spécial
+                    </button>
+                    <button className="p-4 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-2xl text-gray-600 dark:text-gray-300 shadow-sm">
+                        <Download size={20} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                    { label: 'Tonnage Total', value: '1.24 T', sub: '+12% vs mois dernier', icon: Weight, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+                    { label: 'Empreinte Carbone', value: '-840 kg', sub: 'Équivalent CO2 évité', icon: Wind, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20' },
+                    { label: 'Taux Recyclage', value: '68%', sub: 'Objectif : 75%', icon: Recycle, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+                    { label: 'Budget Déchets', value: '450 $', sub: 'Paiement auto actif', icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20' }
+                ].map((kpi, idx) => (
+                    <div key={idx} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm group hover:border-[#2962FF] transition-all">
+                        <div className={`w-12 h-12 rounded-2xl ${kpi.bg} ${kpi.color} flex items-center justify-center mb-4`}>
+                            <kpi.icon size={24} />
+                        </div>
+                        <h4 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{kpi.label}</h4>
+                        <div className="flex items-baseline gap-2 mt-1">
+                            <span className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">{kpi.value}</span>
+                        </div>
+                        <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 mt-2 uppercase flex items-center gap-1">
+                            <Activity size={10} className="text-[#2962FF]" /> {kpi.sub}
+                        </p>
+                    </div>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div className="xl:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <div className="flex justify-between items-center mb-10">
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                            <BarChart3 size={20} className="text-[#2962FF]" /> Courbe de Tonnage Mensuel
+                        </h3>
+                    </div>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={wasteData}>
+                                <defs>
+                                    <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#2962FF" stopOpacity={0.1}/>
+                                        <stop offset="95%" stopColor="#2962FF" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.1)" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontWeight: 700, fontSize: 12}} />
+                                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontWeight: 700, fontSize: 12}} />
+                                <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} />
+                                <Area type="monotone" dataKey="volume" stroke="#2962FF" strokeWidth={4} fillOpacity={1} fill="url(#colorVolume)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-[#111827] p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Composition Moyenne</h3>
+                    <div className="flex-1 h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie data={compositionData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={8} dataKey="value">
+                                    {compositionData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export const Dashboard: React.FC<DashboardProps> = (props) => {
+    // Si l'utilisateur n'est pas Admin et que son statut est 'pending', on affiche l'écran de verrouillage
     if (props.user.type !== UserType.ADMIN && props.user.status === 'pending') {
         return <PendingDashboard {...props} />;
     }
@@ -226,27 +306,21 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
             <div className="flex justify-between items-end mb-4 border-b dark:border-gray-800 pb-6">
                 <div>
                     <div className="flex items-center gap-2 mb-2">
-                        <Cpu size={18} className="text-[#2962FF] animate-pulse" />
-                        <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Eco Command Center</span>
+                        <Activity size={18} className="text-[#2962FF] animate-pulse" />
+                        <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Bisopeto Control Tower</span>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">PILOTAGE</h1>
-                </div>
-                <div className="hidden md:block text-right">
-                    <div className="text-sm font-bold text-green-500 flex items-center justify-end gap-2 uppercase">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
-                        Système en ligne
-                    </div>
+                    <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">GESTION</h1>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { label: 'Utilisateurs', value: '1,240', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-                    { label: 'Flotte Active', value: '35/40', icon: Truck, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-                    { label: 'Revenus MTD', value: '$12,400', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20' },
-                    { label: 'Alertes', value: '2', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20' }
+                    { label: 'Total Inscrits', value: '1,240', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+                    { label: 'À Qualifier', value: '8', icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+                    { label: 'Flotte Active', value: '35/40', icon: Truck, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20' },
+                    { label: 'Revenus MTD', value: '$12,400', icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' }
                 ].map((kpi, idx) => (
-                    <div key={idx} className="bg-white dark:bg-[#111827] p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all">
+                    <div key={idx} onClick={() => kpi.label === 'À Qualifier' ? onChangeView(AppView.ADMIN_USERS) : null} className={`bg-white dark:bg-[#111827] p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm transition-all ${kpi.label === 'À Qualifier' ? 'cursor-pointer hover:border-orange-500 hover:scale-[1.02]' : ''}`}>
                         <div className={`w-12 h-12 rounded-2xl ${kpi.bg} ${kpi.color} flex items-center justify-center mb-4`}>
                             <kpi.icon size={24} />
                         </div>
@@ -266,24 +340,7 @@ const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) =>
                 <div className="relative z-10">
                     <h1 className="text-4xl font-black mb-2 tracking-tighter">Mbote, {user.firstName}!</h1>
                     <p className="text-white/90 text-lg font-bold mb-8">Vous avez <span className="bg-white/20 px-2 py-0.5 rounded-lg">4 missions</span> à Gombe aujourd'hui.</p>
-                    <button onClick={() => onChangeView(AppView.COLLECTOR_JOBS)} className="bg-white text-orange-600 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-black/10">Lancer ma tournée</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const BusinessDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
-    return (
-        <div className="p-5 md:p-8 space-y-6 animate-fade-in pb-24 md:pb-8">
-            <div className="bg-white dark:bg-[#111827] border border-gray-100 dark:border-gray-800 rounded-[2.5rem] p-10 flex flex-col md:flex-row items-center justify-between gap-10 shadow-sm">
-                <div className="max-w-md">
-                    <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter mb-4">Mbote Entreprise! 🏢</h1>
-                    <p className="text-gray-600 dark:text-gray-400 font-bold text-lg leading-relaxed mb-8">Votre impact écologique : <span className="text-[#00C853]">1.2 Tonnes collectées</span> ce mois-ci.</p>
-                    <button onClick={() => onChangeView(AppView.PLANNING)} className="bg-[#2962FF] text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-transform active:scale-95">Passage spécial</button>
-                </div>
-                <div className="w-full md:w-64 h-64 bg-blue-50 dark:bg-blue-900/10 rounded-[3rem] flex items-center justify-center text-[#2962FF] animate-pulse">
-                    <Factory size={120} />
+                    <button onClick={() => onChangeView(AppView.COLLECTOR_JOBS)} className="bg-white text-orange-600 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-black/10 transition-transform active:scale-95">Lancer ma tournée</button>
                 </div>
             </div>
         </div>
