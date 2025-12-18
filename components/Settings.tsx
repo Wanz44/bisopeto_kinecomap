@@ -1,14 +1,15 @@
 
 import React, { useState, useRef } from 'react';
-/* Fixed: Added missing 'Info' icon to the lucide-react imports */
 import { 
     ArrowLeft, Bell, Globe, Lock, Moon, Sun, Shield, 
     ChevronRight, LogOut, Smartphone, Mail, Save, X, 
     Fingerprint, Palette, Terminal, Sparkles, ShieldAlert, RotateCcw, 
-    Settings as SettingsIcon, Upload, ImageIcon, Link as LinkIcon, RefreshCcw, Info
+    Settings as SettingsIcon, Upload, ImageIcon, Link as LinkIcon, RefreshCcw, Info,
+    Trash2, AlertCircle, Database, Zap, ShieldCheck, Activity, Search, Wrench, Cloud, CloudOff
 } from 'lucide-react';
-import { Theme, User, Language, UserType, AppView } from '../types';
+import { Theme, User, Language, UserType, AppView, DatabaseHealth } from '../types';
 import { NotificationService } from '../services/notificationService';
+import { SettingsAPI } from '../services/api';
 
 interface SettingsProps {
     user: User;
@@ -29,13 +30,36 @@ export const Settings: React.FC<SettingsProps> = ({
     currentLanguage, onLanguageChange, onChangeView, onToast,
     appLogo, onUpdateLogo
 }) => {
-    const [activeSubView, setActiveSubView] = useState<'main' | 'security' | 'branding' | 'waste_config'>('main');
+    const [activeSubView, setActiveSubView] = useState<'main' | 'security' | 'branding' | 'maintenance'>('main');
     const [isPushEnabled, setIsPushEnabled] = useState(Notification.permission === 'granted');
+    const [isResetting, setIsResetting] = useState(false);
+    const [isChecking, setIsChecking] = useState(false);
+    const [healthReport, setHealthReport] = useState<DatabaseHealth | null>(null);
     
-    // Branding states
     const [tempLogo, setTempLogo] = useState(appLogo);
     const [logoInputType, setLogoInputType] = useState<'upload' | 'url'>('upload');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleCheckDatabase = async () => {
+        setIsChecking(true);
+        try {
+            const report = await SettingsAPI.checkDatabaseIntegrity();
+            setHealthReport(report);
+            if (onToast) onToast("Audit de la base de données terminé", "success");
+        } catch (e) {
+            if (onToast) onToast("Échec du diagnostic", "error");
+        } finally {
+            setIsChecking(false);
+        }
+    };
+
+    const handleRepairDatabase = async () => {
+        if (window.confirm("Lancer la réparation automatique ? Cela corrigera les structures sans effacer vos données.")) {
+            await SettingsAPI.repairDatabase();
+            await handleCheckDatabase();
+            if (onToast) onToast("Base de données réparée", "success");
+        }
+    };
 
     const handleTogglePush = async () => {
         if (!isPushEnabled) {
@@ -69,6 +93,18 @@ export const Settings: React.FC<SettingsProps> = ({
         setActiveSubView('main');
     };
 
+    const handleFactoryReset = async () => {
+        const confirm = window.confirm("ATTENTION : Cette action va effacer tous les signalements, annonces, véhicules et partenaires de la plateforme. Les compteurs reviendront à zéro. Continuer ?");
+        if (confirm) {
+            setIsResetting(true);
+            await SettingsAPI.resetAllData();
+            if (onToast) onToast("Réinitialisation terminée. Redémarrage...", "success");
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+    };
+
     const SettingItem = ({ icon: Icon, label, subLabel, onClick, toggle, onToggle, danger = false }: any) => (
         <div onClick={!toggle && !onToggle ? onClick : undefined} className={`flex items-center justify-between p-5 bg-white dark:bg-gray-800 border-b dark:border-gray-700 last:border-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${danger ? 'text-red-500' : 'text-gray-800 dark:text-white'}`}>
             <div className="flex items-center gap-4">
@@ -85,6 +121,126 @@ export const Settings: React.FC<SettingsProps> = ({
             ) : <ChevronRight size={18} className="text-gray-300" />}
         </div>
     );
+
+    if (activeSubView === 'maintenance') {
+        return (
+            <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 animate-fade-in">
+                <div className="bg-white dark:bg-gray-900 p-6 border-b dark:border-gray-800 flex items-center justify-between sticky top-0 z-40">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setActiveSubView('main')} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all"><ArrowLeft/></button>
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tighter dark:text-white">Maintenance</h2>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Diagnostic & Intégrité</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 pb-24 no-scrollbar">
+                    
+                    {/* Database Integrity Audit Section */}
+                    <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 space-y-6 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-black dark:text-white uppercase tracking-tight flex items-center gap-2">
+                                <Database size={20} className="text-blue-500" /> Audit de la Base de Données
+                            </h3>
+                            <button 
+                                onClick={handleCheckDatabase}
+                                disabled={isChecking}
+                                className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-100"
+                            >
+                                {isChecking ? <RefreshCcw size={14} className="animate-spin" /> : <Activity size={14} />}
+                                Lancer l'Audit
+                            </button>
+                        </div>
+
+                        {healthReport && (
+                            <div className="space-y-4 animate-fade-in">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className={`p-4 rounded-2xl border flex items-center justify-between ${healthReport.status === 'healthy' ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <ShieldCheck size={24} />
+                                            <div>
+                                                <p className="text-sm font-black uppercase">Statut Global</p>
+                                                <p className="text-[10px] font-bold opacity-70">{healthReport.status.toUpperCase()}</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-xl font-black">{healthReport.totalSizeKB} KB</span>
+                                    </div>
+                                    <div className={`p-4 rounded-2xl border flex items-center justify-between ${healthReport.supabaseConnected ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-orange-50 border-orange-100 text-orange-700'}`}>
+                                        <div className="flex items-center gap-3">
+                                            {healthReport.supabaseConnected ? <Cloud size={24} /> : <CloudOff size={24} />}
+                                            <div>
+                                                <p className="text-sm font-black uppercase">Sync Supabase</p>
+                                                <p className="text-[10px] font-bold opacity-70">{healthReport.supabaseConnected ? 'OPÉRATIONNEL' : 'HORS-LIGNE'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {healthReport.tables.map(table => (
+                                        <div key={table.name} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border dark:border-gray-700 flex justify-between items-center">
+                                            <div>
+                                                <p className="text-[10px] font-black text-gray-400 uppercase">{table.name}</p>
+                                                <p className="text-sm font-black dark:text-white">{table.count} entrées</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase ${table.status === 'ok' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                    {table.status}
+                                                </span>
+                                                <p className="text-[9px] text-gray-400 mt-1">{table.sizeKB} KB</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {healthReport.status !== 'healthy' && (
+                                    <button 
+                                        onClick={handleRepairDatabase}
+                                        className="w-full py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-orange-500/20 flex items-center justify-center gap-2"
+                                    >
+                                        <Wrench size={18} /> Réparer la Structure
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-8 rounded-[3rem] space-y-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 bg-red-500 text-white rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                                <AlertCircle size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-red-600 dark:text-red-400 uppercase tracking-tight">Zone de Danger</h3>
+                                <p className="text-xs text-red-500 font-bold uppercase mt-1 opacity-70">Actions irréversibles sur la base de données</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-red-100 dark:border-red-800 space-y-4 shadow-sm">
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl text-gray-400"><Database size={24}/></div>
+                                <div className="flex-1">
+                                    <h4 className="font-black text-sm uppercase dark:text-white">Remise à zéro de la plateforme</h4>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 leading-relaxed">
+                                        Cette action effacera TOUTES les données et remettra les compteurs globaux à zéro.
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={handleFactoryReset}
+                                disabled={isResetting}
+                                className="w-full py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-xl shadow-red-500/20 flex items-center justify-center gap-2"
+                            >
+                                {isResetting ? <RefreshCcw size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                                {isResetting ? "Réinitialisation..." : "Réinitialiser toute la plateforme"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (activeSubView === 'branding') {
         return (
@@ -106,7 +262,6 @@ export const Settings: React.FC<SettingsProps> = ({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 pb-24 no-scrollbar">
-                    {/* Logo Preview Section */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border dark:border-gray-800 flex flex-col items-center justify-center gap-4 shadow-sm relative group">
                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest absolute top-6 left-8">Aperçu Mode Clair</span>
@@ -122,7 +277,6 @@ export const Settings: React.FC<SettingsProps> = ({
                         </div>
                     </div>
 
-                    {/* Logo Config Section */}
                     <div className="bg-white dark:bg-gray-900 rounded-[3rem] border dark:border-gray-800 overflow-hidden">
                         <div className="p-8 border-b dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -161,12 +315,6 @@ export const Settings: React.FC<SettingsProps> = ({
                                             value={tempLogo}
                                             onChange={(e) => setTempLogo(e.target.value)}
                                         />
-                                    </div>
-                                    <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex gap-3">
-                                        <Info size={18} className="text-blue-500 shrink-0" />
-                                        <p className="text-[10px] text-blue-600 dark:text-blue-300 font-bold leading-relaxed uppercase tracking-tight">
-                                            L'URL doit pointer vers une image publique. Les formats SVG, PNG et WebP sont préférés pour une netteté optimale.
-                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -214,7 +362,7 @@ export const Settings: React.FC<SettingsProps> = ({
                             onClick={() => onChangeView(AppView.ADMIN_PERMISSIONS)} 
                         />
                         <SettingItem icon={Palette} label="Personnalisation" subLabel="Logo, Slogan, Couleurs" onClick={() => setActiveSubView('branding')} />
-                        <SettingItem icon={Sparkles} label="Moteur d'Analyse" subLabel="Types de déchets IA" />
+                        <SettingItem icon={ShieldCheck} label="Maintenance Système" subLabel="Réinitialisation & Diagnostic" onClick={() => setActiveSubView('maintenance')} />
                         <SettingItem icon={Terminal} label="API & Intégrations" subLabel="Gestion des clés d'accès" />
                     </div>
                 )}

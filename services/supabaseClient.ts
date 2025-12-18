@@ -1,27 +1,36 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Récupération des variables injectées par Vite via 'define' dans vite.config.ts
-// Cela correspond à votre configuration Vercel (SUPABASE_URL et SUPABASE_KEY)
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_KEY;
+// URL du projet fournie par l'utilisateur
+const supabaseUrl = 'https://xjllcclxkffrpdnbttmj.supabase.co';
 
-// Vérification si la configuration est présente
+// On utilise SUPABASE_KEY qui est injecté via vite.config.ts depuis le .env
+const supabaseKey = process.env.SUPABASE_KEY;
+
+/**
+ * Vérifie la validité de la configuration
+ */
 export const isSupabaseConfigured = () => {
-    return typeof supabaseUrl === 'string' && 
-           supabaseUrl.length > 0 && 
-           typeof supabaseAnonKey === 'string' && 
-           supabaseAnonKey.length > 0 &&
-           !supabaseUrl.includes('votre-projet');
+    return !!supabaseKey && supabaseKey.length > 20;
 };
 
-// Initialisation du client uniquement si la config est bonne
+/**
+ * Instance unique du client Supabase
+ */
 export const supabase = isSupabaseConfigured() 
-    ? createClient(supabaseUrl!, supabaseAnonKey!) 
+    ? createClient(supabaseUrl, supabaseKey!) 
     : null;
 
-// Helper pour gérer les erreurs
-export const handleSupabaseError = (error: any) => {
-    console.error("Supabase Error:", error);
-    return error.message || "Une erreur inconnue est survenue";
+/**
+ * Utilitaire de test de connexion rapide
+ */
+export const testSupabaseConnection = async (): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+        // Simple requête de comptage sur la table users pour vérifier l'accès
+        const { error } = await supabase.from('users').select('id', { count: 'exact', head: true }).limit(1);
+        return !error;
+    } catch {
+        return false;
+    }
 };

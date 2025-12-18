@@ -8,14 +8,16 @@ import {
   Zap, Award, Users, Trash2, Download, MousePointer2, BarChart3,
   Recycle, Check, Play
 } from 'lucide-react';
+import { GlobalImpact } from '../types';
 
 interface LandingPageProps {
   onStart: () => void;
   onLogin: () => void;
   appLogo: string;
+  impactData: GlobalImpact;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appLogo }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appLogo, impactData }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [formState, setFormState] = useState({ name: '', email: '', message: '' });
@@ -238,10 +240,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
             </div>
             <div className="space-y-10 bg-white/10 backdrop-blur-xl p-10 rounded-[4rem] border border-white/20">
                {[
-                 { label: 'Digitalisation des quartiers', val: 75, icon: Zap },
-                 { label: 'Taux de recyclage plastique', val: 40, icon: Recycle },
-                 { label: 'Sensibilisation scolaire', val: 65, icon: GraduationCap },
-                 { label: 'Collecte temps réel (Gombe)', val: 95, icon: Truck },
+                 { label: 'Digitalisation des quartiers', val: impactData.digitalization, icon: Zap },
+                 { label: 'Taux de recyclage plastique', val: impactData.recyclingRate, icon: Recycle },
+                 { label: 'Sensibilisation scolaire', val: impactData.education, icon: GraduationCap },
+                 { label: 'Collecte temps réel (Gombe)', val: impactData.realTimeCollection, icon: Truck },
                ].map((obj, i) => (
                  <div key={i} className="space-y-3">
                    <div className="flex justify-between items-end">

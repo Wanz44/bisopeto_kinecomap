@@ -23,7 +23,7 @@ import { AdminMarketplace } from './components/AdminMarketplace';
 import { CollectorJobs } from './components/CollectorJobs';
 import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
-import { User, AppView, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings, UserType } from './types';
+import { User, AppView, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings, UserType, GlobalImpact } from './types';
 import { SettingsAPI, UserAPI } from './services/api';
 import { NotificationService } from './services/notificationService';
 
@@ -64,6 +64,13 @@ function App() {
         exchangeRate: 2800
     });
 
+    const [impactData, setImpactData] = useState<GlobalImpact>({
+        digitalization: 0,
+        recyclingRate: 0,
+        education: 0,
+        realTimeCollection: 0
+    });
+
     const [notifications, setNotifications] = useState<NotificationItem[]>([
         { id: '1', title: 'Système Biso Peto', message: 'Bienvenue sur votre Control Tower.', type: 'info', time: 'À l\'instant', read: false, targetUserId: 'ALL' }
     ]);
@@ -77,8 +84,12 @@ function App() {
     useEffect(() => {
         const loadInitData = async () => {
             try {
-                const settings = await SettingsAPI.get();
+                const [settings, impact] = await Promise.all([
+                    SettingsAPI.get(),
+                    SettingsAPI.getImpact()
+                ]);
                 if (settings) setSystemSettings(settings);
+                if (impact) setImpactData(impact);
             } finally {
                 const delay = user ? 1000 : 2500;
                 setTimeout(() => setLoading(false), delay);
@@ -139,7 +150,7 @@ function App() {
 
     const renderContent = () => {
         if (!user) {
-            if (view === AppView.LANDING) return <LandingPage onStart={() => navigateTo(AppView.ONBOARDING)} onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} appLogo={appLogo} />;
+            if (view === AppView.LANDING) return <LandingPage onStart={() => navigateTo(AppView.ONBOARDING)} onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} appLogo={appLogo} impactData={impactData} />;
             if (view === AppView.ONBOARDING) return <Onboarding initialShowLogin={onboardingStartWithLogin} onBackToLanding={() => setHistory([AppView.LANDING])} onComplete={(data) => { setUser(data as User); localStorage.setItem('kinecomap_user', JSON.stringify(data)); setHistory([AppView.DASHBOARD]); }} appLogo={appLogo} onToast={handleShowToast} />;
             return null;
         }

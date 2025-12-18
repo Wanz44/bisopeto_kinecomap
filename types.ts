@@ -40,7 +40,7 @@ export interface User {
     sector?: string;
     vehicleType?: string;
     zone?: string;
-    commune?: string; // Ajout pour filtres admin
+    commune?: string;
     housingType?: string;
     permissions?: UserPermission[];
     totalTonnage?: number;
@@ -57,7 +57,7 @@ export interface WasteReport {
     wasteType: string;
     urgency: 'low' | 'medium' | 'high';
     status: 'pending' | 'assigned' | 'resolved' | 'rejected';
-    assignedTo?: string; // ID du collecteur
+    assignedTo?: string;
     date: string;
     comment: string;
     commune?: string;
@@ -87,16 +87,6 @@ export enum AppView {
     COLLECTOR_JOBS = 'COLLECTOR_JOBS'
 }
 
-export interface SubscriptionPlan {
-    id: 'standard' | 'plus' | 'premium' | 'special';
-    name: string;
-    priceUSD: number;
-    schedule: string;
-    features: string[];
-    popular?: boolean;
-    isVariable?: boolean;
-}
-
 export interface SystemSettings {
     maintenanceMode: boolean;
     supportEmail: string;
@@ -108,7 +98,26 @@ export interface SystemSettings {
     exchangeRate: number;
 }
 
-// Fixed: Added missing properties to Vehicle interface
+export interface GlobalImpact {
+    digitalization: number;
+    recyclingRate: number;
+    education: number;
+    realTimeCollection: number;
+}
+
+export interface DatabaseHealth {
+    status: 'healthy' | 'degraded' | 'critical';
+    totalSizeKB: number;
+    tables: {
+        name: string;
+        count: number;
+        status: 'ok' | 'error';
+        sizeKB: number;
+    }[];
+    supabaseConnected: boolean;
+    lastAudit: string;
+}
+
 export interface Vehicle {
     id: string;
     name: string;
@@ -125,7 +134,6 @@ export interface Vehicle {
     heading?: number;
 }
 
-// Fixed: Added missing types used in various components
 export interface ChatMessage {
     id: string;
     sender: 'user' | 'ai';
@@ -133,11 +141,12 @@ export interface ChatMessage {
     timestamp: Date;
 }
 
+// Added missing QuizQuestion interface
 export interface QuizQuestion {
     id: string;
     question: string;
     options: string[];
-    correctIndex: number;
+    correctAnswer: number;
 }
 
 export interface Course {
@@ -148,8 +157,6 @@ export interface Course {
     icon: string;
     color: string;
     videoUrl?: string;
-    status?: 'draft' | 'published' | 'archived';
-    quiz?: QuizQuestion[];
 }
 
 export interface MarketplaceItem {
@@ -209,4 +216,15 @@ export interface Collector {
     phone: string;
     zone: string;
     status: 'active' | 'inactive';
+}
+
+// Added missing SubscriptionPlan interface
+export interface SubscriptionPlan {
+    id: 'standard' | 'plus' | 'premium' | 'special';
+    name: string;
+    priceUSD: number;
+    popular?: boolean;
+    schedule: string;
+    features: string[];
+    isVariable?: boolean;
 }

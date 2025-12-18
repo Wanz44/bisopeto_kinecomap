@@ -26,6 +26,9 @@ interface ExtendedCourse extends Course {
     category: string;
     modulesCount: number;
     lastUpdated: string;
+    // Added missing status and quiz properties to fix type checking errors
+    status: 'draft' | 'published';
+    quiz: QuizQuestion[];
 }
 
 export const AdminAcademy: React.FC<AdminAcademyProps> = ({ onBack, onToast }) => {
