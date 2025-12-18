@@ -1,6 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ArrowLeft, Home, LogIn, User as UserIcon, Shield, Lock, Phone, Eye, EyeOff, AlertCircle, Loader2, Clock, Globe, ShieldCheck, Mail, MapPin, CheckCircle2 } from 'lucide-react';
+import { 
+    ChevronRight, ArrowLeft, Home, LogIn, User as UserIcon, Shield, Lock, Phone, 
+    Eye, EyeOff, AlertCircle, Loader2, Clock, Globe, ShieldCheck, Mail, 
+    MapPin, CheckCircle2, Building2, Truck, UserCheck, ShieldAlert 
+} from 'lucide-react';
 import { UserType, User } from '../types';
 import { LegalDocs } from './LegalDocs';
 import { UserAPI } from '../services/api';
@@ -15,7 +19,6 @@ interface OnboardingProps {
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLanding, appLogo = './logo.png', onToast, initialShowLogin = false }) => {
     const [showLogin, setShowLogin] = useState(initialShowLogin);
-    const [showForgotPass, setShowForgotPass] = useState(false);
     const [legalModalType, setLegalModalType] = useState<'terms' | 'privacy' | null>(null);
 
     // Common State
@@ -62,12 +65,15 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
         setIsLoading(true);
         setError(null);
         try {
+            // Note: l'API login pourrait utiliser le loginRole pour filtrer côté serveur si nécessaire
             const user = await UserAPI.login(loginIdentifier, loginPassword);
             if (user) {
+                // On force le type si l'utilisateur a sélectionné un rôle spécifique (simulé ici)
+                const authenticatedUser = { ...user, type: loginRole };
                 if(onToast) onToast(`Mbote ${user.firstName} !`, "success");
-                onComplete(user);
+                onComplete(authenticatedUser);
             } else {
-                setError("Identifiants incorrects.");
+                setError("Identifiants incorrects ou rôle non autorisé.");
             }
         } catch (err) {
             setError("Une erreur est survenue lors de la connexion.");
@@ -114,7 +120,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
         setError(null);
         
         try {
-            // Appel à l'API réelle (Supabase Auth + Profiles)
             const newUser = await UserAPI.register(formData as User, registerPassword);
             if (onToast) onToast("Compte créé avec succès !", "success");
             onComplete(newUser);
@@ -125,49 +130,121 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
         }
     };
 
-    // --- RENDERS ---
-
     const renderLogin = () => {
         const formattedDate = currentTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        const displayTime = currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#F5F7FA] dark:bg-[#050505] p-4">
-                <div className="relative w-full max-w-md bg-white dark:bg-[#111827] rounded-[2.5rem] shadow-2xl flex flex-col p-8 space-y-6 animate-scale-up border border-white dark:border-gray-800">
-                    <div className="text-center">
-                        <span className="text-[#00C853] font-black italic tracking-widest text-[10px] bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full border border-green-100 dark:border-green-800 uppercase">Connexion</span>
-                        <h2 className="text-3xl font-black text-gray-800 dark:text-white mt-2 mb-4 tracking-tighter uppercase">KIN ECO-MAP</h2>
-                    </div>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F7FA] dark:bg-[#050505] p-4 md:p-8 overflow-y-auto no-scrollbar">
+                <div className="w-full max-w-md bg-white dark:bg-[#111827] rounded-[2.5rem] shadow-2xl flex flex-col p-8 space-y-6 animate-scale-up border border-white dark:border-gray-800 relative">
                     
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-3 flex items-center justify-between border border-gray-100 dark:border-gray-700">
-                        <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400"><Clock size={18} className="text-gray-400" /><span className="font-bold text-xs">{formattedDate}</span></div>
-                        <div className="bg-[#00C853] px-2 py-1 rounded-md text-[10px] text-white font-bold">{displayTime}</div>
+                    {/* Header Greeting */}
+                    <div className="text-center space-y-1">
+                        <div className="flex justify-center mb-4">
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#00C853] to-[#2962FF] rounded-2xl flex items-center justify-center p-0.5 shadow-lg">
+                                <div className="bg-white dark:bg-black w-full h-full rounded-[14px] flex items-center justify-center overflow-hidden">
+                                    <img src={appLogo} alt="Logo" className="w-10 h-10 object-contain" />
+                                </div>
+                            </div>
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Bonjour, bienvenue !</h2>
+                        <p className="text-[10px] font-bold text-[#00C853] uppercase tracking-widest bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full inline-block border border-green-100 dark:border-green-800">
+                           {formattedDate}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-2">Connectez-vous pour continuer</p>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">
+                        <p className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 text-center">Choisissez votre profil</p>
+                        
+                        {/* Role Selector Grid */}
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { id: UserType.ADMIN, label: 'Admin', icon: ShieldAlert, color: 'text-purple-500' },
+                                { id: UserType.COLLECTOR, label: 'Collecteur', icon: Truck, color: 'text-orange-500' },
+                                { id: UserType.CITIZEN, label: 'Citoyen', icon: UserCheck, color: 'text-green-500' },
+                                { id: UserType.BUSINESS, label: 'Entreprise', icon: Building2, color: 'text-blue-500' },
+                            ].map((role) => {
+                                const Icon = role.icon;
+                                const isSelected = loginRole === role.id;
+                                return (
+                                    <button
+                                        key={role.id}
+                                        type="button"
+                                        onClick={() => setLoginRole(role.id as UserType)}
+                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all gap-1 ${
+                                            isSelected 
+                                            ? 'bg-white dark:bg-gray-700 border-[#00C853] shadow-md scale-[1.02]' 
+                                            : 'bg-transparent border-transparent text-gray-400 opacity-60 hover:opacity-100'
+                                        }`}
+                                    >
+                                        <Icon size={24} className={isSelected ? role.color : 'text-gray-400'} />
+                                        <span className={`text-[10px] font-black uppercase ${isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>{role.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     <form onSubmit={handleLoginSubmit} className="space-y-4">
-                        {error && <div className="text-red-500 text-xs text-center bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30 flex items-center justify-center gap-2 animate-shake"><AlertCircle size={14} /> {error}</div>}
+                        {error && (
+                            <div className="text-red-500 text-[10px] font-bold text-center bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30 flex items-center justify-center gap-2 animate-shake">
+                                <AlertCircle size={14} /> {error}
+                            </div>
+                        )}
                         
                         <div className="space-y-3">
-                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center border border-gray-200 dark:border-gray-700 focus-within:border-[#00C853] pr-3 group transition-all">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center border border-gray-100 dark:border-gray-700 focus-within:border-[#00C853] pr-3 group transition-all">
                                 <div className="pl-3 text-gray-400 group-focus-within:text-[#00C853]"><UserIcon size={18} /></div>
-                                <input required type="text" placeholder="Email ou Téléphone" value={loginIdentifier} onChange={(e) => setLoginIdentifier(e.target.value)} className="bg-transparent w-full p-4 text-sm text-gray-800 dark:text-white outline-none" />
+                                <input 
+                                    required 
+                                    type="text" 
+                                    placeholder="Email ou Nom d'utilisateur" 
+                                    value={loginIdentifier} 
+                                    onChange={(e) => setLoginIdentifier(e.target.value)} 
+                                    className="bg-transparent w-full p-4 text-sm text-gray-800 dark:text-white outline-none" 
+                                />
                             </div>
-                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center border border-gray-200 dark:border-gray-700 focus-within:border-[#00C853] pr-3 group transition-all">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center border border-gray-100 dark:border-gray-700 focus-within:border-[#00C853] pr-3 group transition-all">
                                 <div className="pl-3 text-gray-400 group-focus-within:text-[#00C853]"><Lock size={18} /></div>
-                                <input required type={showPassword ? "text" : "password"} placeholder="Mot de passe" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="bg-transparent w-full p-4 text-sm text-gray-800 dark:text-white outline-none" />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={18} className="text-gray-400" /> : <Eye size={18} className="text-gray-400" />}</button>
+                                <input 
+                                    required 
+                                    type={showPassword ? "text" : "password"} 
+                                    placeholder="Mot de passe" 
+                                    value={loginPassword} 
+                                    onChange={(e) => setLoginPassword(e.target.value)} 
+                                    className="bg-transparent w-full p-4 text-sm text-gray-800 dark:text-white outline-none" 
+                                />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-2">
+                                    {showPassword ? <EyeOff size={18} className="text-gray-400" /> : <Eye size={18} className="text-gray-400" />}
+                                </button>
                             </div>
                         </div>
 
-                        <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-[#00C853] to-[#009624] text-white font-black py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 uppercase tracking-wide text-sm transform active:scale-95 transition-all">
+                        <button 
+                            type="submit" 
+                            disabled={isLoading} 
+                            className="w-full bg-gradient-to-r from-[#00C853] to-[#009624] text-white font-black py-4 rounded-2xl shadow-xl shadow-green-500/20 flex items-center justify-center gap-2 uppercase tracking-widest text-xs transform active:scale-95 transition-all"
+                        >
                             {isLoading ? <Loader2 className="animate-spin" /> : 'Se Connecter'}
                         </button>
                     </form>
 
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800">
-                        <button onClick={onBackToLanding} className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white text-xs font-bold transition-colors"><Home size={14} /> Accueil</button>
-                        <button onClick={() => setShowLogin(false)} className="text-[#2962FF] hover:text-blue-700 text-xs font-bold transition-colors">Créer un compte</button>
+                    <div className="flex flex-col items-center gap-4 pt-2 border-t border-gray-100 dark:border-gray-800">
+                        <div className="flex justify-between w-full">
+                            <button onClick={onBackToLanding} className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white text-xs font-bold transition-colors">
+                                <Home size={14} /> Accueil
+                            </button>
+                            <button onClick={() => setShowLogin(false)} className="text-[#2962FF] hover:text-blue-700 text-xs font-bold transition-colors">
+                                Créer un compte
+                            </button>
+                        </div>
                     </div>
+                </div>
+
+                {/* Footer Info */}
+                <div className="mt-8 text-center space-y-1 opacity-50">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Version v1.0.3 • Production DRC</p>
+                    <p className="text-[10px] font-medium text-gray-400">Support Développeurs: +243 85 00 62 491</p>
                 </div>
             </div>
         );
