@@ -137,7 +137,7 @@ function App() {
             id: Date.now().toString(),
             title, message, type, time: 'À l\'instant', read: false, targetUserId: targetId
         };
-        setNotifications([newNotif, ...notifications]);
+        setNotifications(prev => [newNotif, ...prev]);
 
         if (targetId === 'ALL' || targetId === user?.id || (targetId === 'ADMIN' && user?.type === UserType.ADMIN)) {
             NotificationService.sendPush(title, message, appLogo);
@@ -151,7 +151,14 @@ function App() {
     const renderContent = () => {
         if (!user) {
             if (view === AppView.LANDING) return <LandingPage onStart={() => navigateTo(AppView.ONBOARDING)} onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} appLogo={appLogo} impactData={impactData} />;
-            if (view === AppView.ONBOARDING) return <Onboarding initialShowLogin={onboardingStartWithLogin} onBackToLanding={() => setHistory([AppView.LANDING])} onComplete={(data) => { setUser(data as User); localStorage.setItem('kinecomap_user', JSON.stringify(data)); setHistory([AppView.DASHBOARD]); }} appLogo={appLogo} onToast={handleShowToast} />;
+            if (view === AppView.ONBOARDING) return <Onboarding 
+                initialShowLogin={onboardingStartWithLogin} 
+                onBackToLanding={() => setHistory([AppView.LANDING])} 
+                onComplete={(data) => { setUser(data as User); localStorage.setItem('kinecomap_user', JSON.stringify(data)); setHistory([AppView.DASHBOARD]); }} 
+                appLogo={appLogo} 
+                onToast={handleShowToast}
+                onNotifyAdmin={(title, message) => handleNotify('ADMIN', title, message, 'alert')}
+            />;
             return null;
         }
 

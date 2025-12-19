@@ -15,6 +15,7 @@ interface OnboardingProps {
     appLogo?: string;
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
     initialShowLogin?: boolean;
+    onNotifyAdmin?: (title: string, message: string) => void;
 }
 
 const ONBOARDING_SLIDES = [
@@ -94,7 +95,7 @@ const ROLES_CONFIG = [
     },
 ];
 
-export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLanding, appLogo = './logobisopeto.png', onToast, initialShowLogin = false }) => {
+export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLanding, appLogo = './logobisopeto.png', onToast, initialShowLogin = false, onNotifyAdmin }) => {
     const [mode, setMode] = useState<'slides' | 'auth'>(initialShowLogin ? 'auth' : 'slides');
     const [activeSlide, setActiveSlide] = useState(0);
     const [showLogin, setShowLogin] = useState(initialShowLogin);
@@ -111,7 +112,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
     const [registerPassword, setRegisterPassword] = useState('');
     const [formData, setFormData] = useState<Partial<User>>({
         firstName: '', lastName: '', phone: '', email: '',
-        type: UserType.CITIZEN, status: 'pending', address: '', subscription: 'standard'
+        type: UserType.CITIZEN, status: 'pending', address: '', subscription: 'standard', commune: 'Gombe'
     });
 
     const handleNextSlide = () => {
@@ -161,6 +162,15 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
         setIsLoading(true);
         try {
             const registeredUser = await UserAPI.register({ ...formData, status: 'pending' } as User, registerPassword);
+            
+            // Envoyer une notification aux admins
+            if (onNotifyAdmin) {
+                onNotifyAdmin(
+                    "Nouvelle Inscription 👤", 
+                    `${formData.firstName} ${formData.lastName} (${formData.type}) en attente de validation dans la commune de ${formData.commune}.`
+                );
+            }
+            
             setRegistrationFinished(true);
             onComplete(registeredUser);
         } catch (err: any) {
@@ -326,6 +336,15 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                                     <div className="flex gap-2">
                                         <button onClick={() => setFormData({...formData, type: UserType.CITIZEN})} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs transition-all ${formData.type === UserType.CITIZEN ? 'border-primary-light bg-green-50 text-primary-light' : 'border-transparent bg-gray-100 text-gray-500'}`}>Particulier</button>
                                         <button onClick={() => setFormData({...formData, type: UserType.BUSINESS})} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs transition-all ${formData.type === UserType.BUSINESS ? 'border-secondary bg-blue-50 text-secondary' : 'border-transparent bg-gray-100 text-gray-500'}`}>Entreprise</button>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ma Commune</label>
+                                        <select className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-bold text-xs uppercase" value={formData.commune} onChange={e => setFormData({...formData, commune: e.target.value})}>
+                                            <option value="Gombe">Gombe</option>
+                                            <option value="Ngaliema">Ngaliema</option>
+                                            <option value="Limete">Limete</option>
+                                            <option value="Kintambo">Kintambo</option>
+                                        </select>
                                     </div>
                                     <textarea rows={3} placeholder="Adresse précise pour la collecte..." className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold text-gray-900 dark:text-white outline-none resize-none" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
                                 </div>

@@ -134,7 +134,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
         return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
     }).length;
 
-    const countNewSubs = allUsers.filter(u => u.status === 'active' && u.subscription !== 'standard').length;
+    const countPendingUsers = allUsers.filter(u => u.status === 'pending').length;
     const countInterventions = allReports.filter(r => r.status === 'resolved').length;
     const totalUsersCount = allUsers.length;
 
@@ -222,11 +222,15 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
                     { label: 'Signalements Jour', value: countReportsToday.toString(), trend: countReportsToday > 0 ? '+100%' : '0%', icon: Megaphone, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { label: 'Abonnements Actifs', value: countNewSubs.toString(), trend: 'LIVE', icon: CreditCard, color: 'text-[#00C853]', bg: 'bg-green-50' },
+                    { label: 'Comptes à valider', value: countPendingUsers.toString(), trend: countPendingUsers > 0 ? 'ACTION' : 'OK', icon: UserCheck, color: 'text-[#FBC02D]', bg: 'bg-yellow-50' },
                     { label: 'Collectes Finies', value: countInterventions.toString(), trend: 'TOTAL', icon: CheckCircle, color: 'text-purple-600', bg: 'bg-purple-50' },
                     { label: 'Utilisateurs Totaux', value: totalUsersCount.toString(), trend: 'RÉSEAU', icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' }
                 ].map((stat, idx) => (
-                    <div key={idx} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
+                    <div 
+                        key={idx} 
+                        onClick={() => stat.label === 'Comptes à valider' ? onChangeView(AppView.ADMIN_USERS) : undefined}
+                        className={`bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer`}
+                    >
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} dark:bg-white/5 ${stat.color} flex items-center justify-center mb-6 transition-transform group-hover:scale-110`}>
                             <stat.icon size={24} />
                         </div>

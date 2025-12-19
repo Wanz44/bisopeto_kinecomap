@@ -5,7 +5,7 @@ import {
     UserCheck, Briefcase, MapPin, Trash2, Phone, Mail, CreditCard, ShieldAlert, 
     AlertCircle, Info, PhoneCall, Sparkles, MessageCircle, ExternalLink, 
     MoreVertical, Ban, History, Calendar, Eye, Download, ShieldCheck, ClipboardList, 
-    CheckCircle2, Clock, AlertTriangle
+    CheckCircle2, Clock, AlertTriangle, UserPlus, Key
 } from 'lucide-react';
 import { UserPermission, User as AppUser, UserType, WasteReport } from '../types';
 import { UserAPI, ReportsAPI } from '../services/api';
@@ -28,6 +28,14 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
     const [profileTab, setProfileTab] = useState<'info' | 'interventions' | 'billing'>('info');
     
+    // Create User Modal State
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [newUserForm, setNewUserForm] = useState<Partial<AppUser>>({
+        firstName: '', lastName: '', phone: '', email: '',
+        type: UserType.CITIZEN, status: 'active', address: '', commune: 'Gombe'
+    });
+
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
@@ -58,6 +66,23 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
         }
     };
 
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newUserForm.firstName || !newUserForm.phone) return;
+        setIsCreating(true);
+        try {
+            const created = await UserAPI.register(newUserForm as AppUser, "Password123!");
+            setUsers([created, ...users]);
+            setShowAddModal(false);
+            setNewUserForm({ firstName: '', lastName: '', phone: '', email: '', type: UserType.CITIZEN, status: 'active', address: '', commune: 'Gombe' });
+            if (onToast) onToast("Utilisateur créé avec succès", "success");
+        } catch (e) {
+            if (onToast) onToast("Erreur lors de la création", "error");
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
     const handleBanUser = async (id: string) => {
         if (confirm("Suspendre définitivement l'accès à ce compte ?")) {
             await UserAPI.update({ id, status: 'suspended' });
@@ -82,16 +107,6 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
         return reports.filter(r => r.reporterId === user.id);
     };
 
-    const getStatusIcon = (status: WasteReport['status']) => {
-        switch (status) {
-            case 'resolved': return <CheckCircle2 size={16} className="text-green-500" />;
-            case 'pending': return <Clock size={16} className="text-orange-500" />;
-            case 'assigned': return <Truck size={16} className="text-blue-500" />;
-            case 'rejected': return <X size={16} className="text-red-500" />;
-            default: return null;
-        }
-    };
-
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 transition-colors duration-300 relative overflow-hidden">
              {/* Header */}
@@ -108,8 +123,11 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                     </div>
                     <div className="flex gap-2">
                          <button className="p-3 bg-gray-100 dark:bg-gray-800 rounded-2xl text-gray-500 hover:text-blue-600 transition-all"><Download size={20} /></button>
-                         <button className="bg-[#2962FF] hover:bg-blue-700 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-blue-500/20 transition-all">
-                            <Plus size={18} /> Nouveau Compte
+                         <button 
+                            onClick={() => setShowAddModal(true)}
+                            className="bg-[#2962FF] hover:bg-blue-700 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-blue-500/20 transition-all"
+                        >
+                            <UserPlus size={18} /> Nouveau Compte
                         </button>
                     </div>
                 </div>
@@ -137,7 +155,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                         <option value="Gombe">Gombe</option>
                         <option value="Limete">Limete</option>
                         <option value="Ngaliema">Ngaliema</option>
-                        <option value="Ngaba">Ngaba</option>
+                        <option value="Kintambo">Kintambo</option>
                     </select>
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800 text-xs font-black uppercase border-none outline-none dark:text-gray-300">
                         <option value="all">Tous Statuts</option>
@@ -171,7 +189,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                     <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
                                         <td className="p-6">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-[1.2rem] bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-black text-lg shadow-inner">
+                                                <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center font-black text-lg shadow-inner ${user.status === 'pending' ? 'bg-orange-100 text-orange-600 animate-pulse' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
                                                     {user.firstName[0]}
                                                 </div>
                                                 <div>
@@ -189,14 +207,14 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                                     'bg-green-100 text-green-700'
                                                 }`}>{user.type}</span>
                                                 <div className="flex items-center gap-1 text-[10px] text-gray-500 font-black uppercase truncate max-w-[150px]">
-                                                    <MapPin size={10} className="text-blue-500" /> {user.commune || 'Ksh'} • {user.address.slice(0,15)}...
+                                                    <MapPin size={10} className="text-blue-500" /> {user.commune || 'Ksh'}
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="p-6">
                                             <span className={`text-[9px] px-3 py-1.5 rounded-full font-black uppercase border tracking-widest ${
                                                 user.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                user.status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200 animate-pulse' :
+                                                user.status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200 animate-bounce' :
                                                 'bg-red-50 text-red-700 border-red-200'
                                             }`}>
                                                 {user.status === 'pending' ? 'Verification' : user.status}
@@ -228,6 +246,72 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                  )}
              </div>
 
+             {/* ADD USER MODAL */}
+             {showAddModal && (
+                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>
+                     <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-lg p-8 relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800">
+                        <div className="flex justify-between items-center mb-8">
+                            <div>
+                                <h3 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase">Nouveau Compte</h3>
+                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Création manuelle admin</p>
+                            </div>
+                            <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"><X size={24}/></button>
+                        </div>
+
+                        <form onSubmit={handleCreateUser} className="space-y-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Prénom</label>
+                                    <input required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" value={newUserForm.firstName} onChange={e => setNewUserForm({...newUserForm, firstName: e.target.value})} />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom</label>
+                                    <input required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" value={newUserForm.lastName} onChange={e => setNewUserForm({...newUserForm, lastName: e.target.value})} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Téléphone</label>
+                                <input required type="tel" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" placeholder="081..." value={newUserForm.phone} onChange={e => setNewUserForm({...newUserForm, phone: e.target.value})} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Type de compte</label>
+                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-xs uppercase dark:text-white" value={newUserForm.type} onChange={e => setNewUserForm({...newUserForm, type: e.target.value as UserType})}>
+                                        <option value={UserType.CITIZEN}>Citoyen</option>
+                                        <option value={UserType.COLLECTOR}>Collecteur</option>
+                                        <option value={UserType.BUSINESS}>Entreprise</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Commune</label>
+                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-xs uppercase dark:text-white" value={newUserForm.commune} onChange={e => setNewUserForm({...newUserForm, commune: e.target.value})}>
+                                        <option value="Gombe">Gombe</option>
+                                        <option value="Ngaliema">Ngaliema</option>
+                                        <option value="Limete">Limete</option>
+                                        <option value="Kintambo">Kintambo</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-3">
+                                <Key size={18} className="text-blue-500 shrink-0 mt-0.5" />
+                                <p className="text-[10px] text-blue-600 dark:text-blue-300 font-bold leading-relaxed uppercase tracking-tight">
+                                    Le mot de passe par défaut sera généré automatiquement. L'utilisateur pourra le modifier lors de sa première connexion.
+                                </p>
+                            </div>
+
+                            <button disabled={isCreating} className="w-full py-5 bg-[#2962FF] text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3">
+                                {isCreating ? <Loader2 className="animate-spin" size={20}/> : <UserPlus size={20}/>}
+                                {isCreating ? "Création..." : "Enregistrer l'utilisateur"}
+                            </button>
+                        </form>
+                     </div>
+                 </div>
+             )}
+
              {/* Detailed User Panel (Side Drawer) */}
              {selectedUser && (
                  <div className="fixed inset-0 z-[100] flex justify-end">
@@ -254,24 +338,8 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                              </div>
 
                              <div className="flex gap-4 p-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
-                                <button 
-                                    onClick={() => setProfileTab('info')}
-                                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileTab === 'info' ? 'bg-[#2962FF] text-white shadow-lg' : 'text-gray-400 hover:text-gray-700'}`}
-                                >
-                                    Infos
-                                </button>
-                                <button 
-                                    onClick={() => setProfileTab('interventions')}
-                                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileTab === 'interventions' ? 'bg-[#2962FF] text-white shadow-lg' : 'text-gray-400 hover:text-gray-700'}`}
-                                >
-                                    Interventions
-                                </button>
-                                <button 
-                                    onClick={() => setProfileTab('billing')}
-                                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileTab === 'billing' ? 'bg-[#2962FF] text-white shadow-lg' : 'text-gray-400 hover:text-gray-700'}`}
-                                >
-                                    Facturation
-                                </button>
+                                <button onClick={() => setProfileTab('info')} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileTab === 'info' ? 'bg-[#2962FF] text-white shadow-lg' : 'text-gray-400 hover:text-gray-700'}`}>Infos</button>
+                                <button onClick={() => setProfileTab('interventions')} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileTab === 'interventions' ? 'bg-[#2962FF] text-white shadow-lg' : 'text-gray-400 hover:text-gray-700'}`}>Activités</button>
                              </div>
                          </div>
 
@@ -285,13 +353,13 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                             <p className="text-2xl font-black text-[#00C853]">{selectedUser.points}</p>
                                         </div>
                                         <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-[2rem] border dark:border-gray-800">
-                                            <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Collectes</p>
-                                            <p className="text-2xl font-black text-[#2962FF]">{selectedUser.collections}</p>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Impact CO2</p>
+                                            <p className="text-2xl font-black text-[#2962FF]">{selectedUser.co2Saved || 0}kg</p>
                                         </div>
                                     </div>
 
                                     <div className="space-y-4">
-                                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Coordonnées & Adresses</h3>
+                                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Coordonnées</h3>
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-2xl">
                                                 <div className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-lg"><Mail size={18}/></div>
@@ -299,22 +367,8 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                             </div>
                                             <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-2xl">
                                                 <div className="p-2 bg-green-50 dark:bg-green-900/30 text-green-500 rounded-lg"><MapPin size={18}/></div>
-                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{selectedUser.address}</span>
+                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{selectedUser.commune} • {selectedUser.address}</span>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><PhoneCall size={14}/> Validation Terrain</h3>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <a href={`tel:${selectedUser.phone}`} className="p-4 bg-[#00C853] text-white rounded-3xl flex flex-col items-center gap-2 shadow-lg shadow-green-500/20 hover:scale-105 transition-all">
-                                                <Phone size={24}/>
-                                                <span className="text-[10px] font-black uppercase">Appel Direct</span>
-                                            </a>
-                                            <button className="p-4 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-3xl flex flex-col items-center gap-2 hover:bg-gray-50 transition-all">
-                                                <ShieldCheck size={24} className="text-blue-500"/>
-                                                <span className="text-[10px] font-black uppercase">Voir Documents</span>
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -322,73 +376,28 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
 
                             {profileTab === 'interventions' && (
                                 <div className="space-y-6 animate-fade-in">
-                                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                        <ClipboardList size={14} /> Historique des Interventions
-                                    </h3>
-                                    <div className="space-y-4">
-                                        {getUserInterventions(selectedUser).length === 0 ? (
-                                            <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-[2rem] border-2 border-dashed border-gray-200 dark:border-gray-800">
-                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Aucune intervention enregistrée</p>
-                                            </div>
-                                        ) : (
-                                            getUserInterventions(selectedUser).map(report => (
-                                                <div key={report.id} className="bg-white dark:bg-gray-900 p-5 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 group hover:shadow-md transition-all">
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
-                                                                {getStatusIcon(report.status)}
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{report.wasteType}</h4>
-                                                                <p className="text-[10px] text-gray-500 font-bold">{new Date(report.date).toLocaleDateString()} • {report.commune || 'Kinshasa'}</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase border ${
-                                                            report.status === 'resolved' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                            report.status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                                            'bg-blue-50 text-blue-700 border-blue-100'
-                                                        }`}>
-                                                            {report.status}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-xs text-gray-500 italic line-clamp-1 border-t dark:border-gray-800 pt-3">
-                                                        "{report.comment || 'Aucun commentaire'}"
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {profileTab === 'billing' && (
-                                <div className="space-y-6 animate-fade-in">
-                                    <div className="bg-gray-900 text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-4 opacity-10"><CreditCard size={100} /></div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Abonnement Actuel</p>
-                                        <h3 className="text-3xl font-black uppercase tracking-tighter mb-4">PLAN {selectedUser.subscription?.toUpperCase()}</h3>
-                                        <div className="flex justify-between items-end">
-                                            <div>
-                                                <p className="text-xs font-bold opacity-70">Expire le</p>
-                                                <p className="text-sm font-black uppercase tracking-widest">24 Juin 2024</p>
-                                            </div>
-                                            <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur rounded-xl text-[10px] font-black uppercase transition-all">Historique</button>
+                                    {getUserInterventions(selectedUser).length === 0 ? (
+                                        <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-[2rem] border-2 border-dashed border-gray-200 dark:border-gray-800">
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Aucune intervention enregistrée</p>
                                         </div>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {[1, 2].map(i => (
-                                            <div key={i} className="flex justify-between items-center p-4 bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-green-600"><Check size={16}/></div>
-                                                    <div>
-                                                        <p className="text-xs font-black dark:text-white uppercase tracking-tight">Paiement Mobile Money</p>
-                                                        <p className="text-[9px] text-gray-400 font-bold">12 MAI 2024 • TR-00{i}</p>
+                                    ) : (
+                                        getUserInterventions(selectedUser).map(report => (
+                                            <div key={report.id} className="bg-white dark:bg-gray-900 p-5 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600"><ClipboardList size={16}/></div>
+                                                        <div>
+                                                            <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{report.wasteType}</h4>
+                                                            <p className="text-[10px] text-gray-500 font-bold">{new Date(report.date).toLocaleDateString()}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase border ${report.status === 'resolved' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
+                                                        {report.status}
                                                     </div>
                                                 </div>
-                                                <p className="text-xs font-black text-gray-900 dark:text-white">28,000 FC</p>
                                             </div>
-                                        ))}
-                                    </div>
+                                        ))
+                                    )}
                                 </div>
                             )}
                          </div>
@@ -396,7 +405,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                          {/* Footer Actions */}
                          <div className="p-8 border-t dark:border-gray-800 flex flex-col gap-3 shrink-0 bg-white dark:bg-gray-950">
                             {selectedUser.status === 'pending' && (
-                                <button onClick={() => handleQualifyUser(selectedUser)} className="w-full py-4 bg-[#00C853] text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-green-500/20 active:scale-95 transition-all">Activer le Compte</button>
+                                <button onClick={() => handleQualifyUser(selectedUser)} className="w-full py-4 bg-[#00C853] text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-green-500/20 active:scale-95 transition-all">Valider le profil</button>
                             )}
                             <div className="grid grid-cols-2 gap-3">
                                 <button className="py-4 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"><Edit2 size={16}/> Modifier</button>
