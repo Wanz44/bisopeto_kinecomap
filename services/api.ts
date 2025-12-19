@@ -31,10 +31,10 @@ const DEFAULT_SETTINGS: SystemSettings = {
 };
 
 const DEFAULT_IMPACT: GlobalImpact = {
-    digitalization: 75,
-    recyclingRate: 40,
-    education: 65,
-    realTimeCollection: 95
+    digitalization: 0,
+    recyclingRate: 0,
+    education: 0,
+    realTimeCollection: 0
 };
 
 const SUPER_ADMIN: User = {
@@ -81,7 +81,6 @@ export const ReportsAPI = {
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('waste_reports').insert([newReport]).select().single();
             if (!error && data) return data as WasteReport;
-            console.error("Supabase insert error:", error);
         }
         const reports = getCollection<WasteReport>(KEYS.REPORTS);
         reports.unshift(newReport);
@@ -113,7 +112,6 @@ export const UserAPI = {
             if (!error && data) return data as User;
         }
         const users = getCollection<User>(KEYS.USERS);
-        // Fallback admin si offline
         if (identifier === SUPER_ADMIN.email) return SUPER_ADMIN;
         return users.find(u => (u.email === identifier || u.phone === identifier)) || null;
     },
@@ -202,8 +200,39 @@ export const SettingsAPI = {
         }
     },
     resetAllData: async () => {
+        // 1. Réinitialisation Supabase (si configuré et autorisé)
+        if (isSupabaseConfigured() && supabase) {
+            try {
+                // On vide les tables transactionnelles
+                await supabase.from('waste_reports').delete().neq('id', '0');
+                await supabase.from('marketplace_items').delete().neq('id', '0');
+                await supabase.from('ads').delete().neq('id', '0');
+                // On réinitialise les stats des utilisateurs (sauf l'admin principal)
+                await supabase.from('users').update({ 
+                    points: 0, 
+                    collections: 0, 
+                    totalTonnage: 0, 
+                    co2Saved: 0,
+                    recyclingRate: 0 
+                }).neq('email', SUPER_ADMIN.email);
+            } catch (e) {
+                console.error("Supabase Reset Error:", e);
+            }
+        }
+
+        // 2. Réinitialisation LocalStorage
         localStorage.clear();
-        localStorage.setItem(KEYS.USERS, JSON.stringify([SUPER_ADMIN]));
+        
+        // 3. Restauration de l'Admin par défaut avec compteurs à zéro
+        const cleanAdmin = { ...SUPER_ADMIN, points: 0, collections: 0, totalTonnage: 0, co2Saved: 0 };
+        localStorage.setItem(KEYS.USERS, JSON.stringify([cleanAdmin]));
+        localStorage.setItem(KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
+        localStorage.setItem(KEYS.IMPACT, JSON.stringify(DEFAULT_IMPACT));
+        localStorage.setItem(KEYS.REPORTS, JSON.stringify([]));
+        localStorage.setItem(KEYS.MARKETPLACE, JSON.stringify([]));
+        localStorage.setItem(KEYS.VEHICLES, JSON.stringify([]));
+        localStorage.setItem(KEYS.ADS, JSON.stringify([]));
+        localStorage.setItem(KEYS.PARTNERS, JSON.stringify([]));
     }
 };
 
@@ -227,7 +256,6 @@ export const VehicleAPI = {
         saveCollection(KEYS.VEHICLES, list);
         return nv;
     },
-    // Fix: Added missing update method
     update: async (v: Vehicle) => {
         if (isSupabaseConfigured() && supabase) {
             await supabase.from('vehicles').update(v).eq('id', v.id);
@@ -239,7 +267,6 @@ export const VehicleAPI = {
             saveCollection(KEYS.VEHICLES, list);
         }
     },
-    // Fix: Added missing delete method
     delete: async (id: string) => {
         if (isSupabaseConfigured() && supabase) {
             await supabase.from('vehicles').delete().eq('id', id);
@@ -280,7 +307,7 @@ export const MarketplaceAPI = {
     }
 };
 
-// Fix: Added missing AdsAPI
+// --- ADS API ---
 export const AdsAPI = {
     getAll: async (): Promise<AdCampaign[]> => {
         if (isSupabaseConfigured() && supabase) {
@@ -321,7 +348,7 @@ export const AdsAPI = {
     }
 };
 
-// Fix: Added missing PartnersAPI
+// --- PARTNERS API ---
 export const PartnersAPI = {
     getAll: async (): Promise<Partner[]> => {
         if (isSupabaseConfigured() && supabase) {
@@ -380,5 +407,29 @@ export const StorageAPI = {
             reader.onloadend = () => resolve(reader.result as string);
             reader.readAsDataURL(file);
         });
+    },
+
+    uploadLogo: async (file: File): Promise<string | null> => {
+        if (isSupabaseConfigured() && supabase) {
+            try {
+                const fileName = `logo-${Date.now()}-${file.name}`;
+                // Uploader dans le bucket 'branding'
+                const { data, error } = await supabase.storage.from('branding').upload(fileName, file, {
+                    upsert: true,
+                    cacheControl: '3600'
+                });
+                
+                if (error) throw error;
+                
+                if (data) {
+                    const { data: urlData } = supabase.storage.from('branding').getPublicUrl(data.path);
+                    return urlData.publicUrl;
+                }
+            } catch (e) { 
+                console.error("Logo Upload error", e);
+                return null;
+            }
+        }
+        return null;
     }
 };
