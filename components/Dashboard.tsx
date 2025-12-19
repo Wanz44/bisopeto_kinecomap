@@ -23,7 +23,7 @@ interface DashboardProps {
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
-// Mock data pour les graphiques de performance par zone (ces données pourraient aussi venir de l'API en prod)
+// Mock data pour les graphiques de performance par zone
 const ZONE_PERFORMANCE = [
     { name: 'Gombe', active: 45, reports: 12, cleaned: 10 },
     { name: 'Limete', active: 32, reports: 28, cleaned: 15 },
@@ -127,14 +127,14 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
 
     const hasAnyResults = searchResults.users.length > 0 || searchResults.reports.length > 0 || searchResults.marketplace.length > 0;
 
-    // Calculs des compteurs dynamiques
+    // Calculs des compteurs dynamiques basés sur la longueur réelle des tableaux
     const countReportsToday = allReports.filter(r => {
         const d = new Date(r.date);
         const today = new Date();
         return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
     }).length;
 
-    const countNewSubs = allUsers.filter(u => u.status === 'active' && u.subscription !== 'standard').length; // Simulé
+    const countNewSubs = allUsers.filter(u => u.status === 'active' && u.subscription !== 'standard').length;
     const countInterventions = allReports.filter(r => r.status === 'resolved').length;
     const totalUsersCount = allUsers.length;
 
@@ -199,7 +199,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                                             ))}
                                         </div>
                                     )}
-                                    {/* (Sections Reports et Marketplace similaires...) */}
                                 </div>
                             </div>
                         )}
@@ -240,7 +239,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                 ))}
             </div>
 
-            {/* (Reste du Dashboard inchangé pour la structure visuelle) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm">
                     <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Activité Hebdomadaire</h3>
@@ -253,7 +251,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                     <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Efficacité par Commune</h3>
                     <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar">
                         {ZONE_PERFORMANCE.map((zone, i) => {
-                             // Si plus de rapports, on ajuste le calcul
                              const reportsInZone = allReports.filter(r => r.commune === zone.name).length;
                              const resolvedInZone = allReports.filter(r => r.commune === zone.name && r.status === 'resolved').length;
                              const efficiency = reportsInZone > 0 ? Math.round((resolvedInZone / reportsInZone) * 100) : 0;
@@ -346,7 +343,6 @@ const BusinessDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => 
                     </div>
                 </div>
             </div>
-            {/* ... stats business ... */}
         </div>
     );
 };

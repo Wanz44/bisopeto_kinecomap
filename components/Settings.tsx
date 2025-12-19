@@ -96,23 +96,19 @@ export const Settings: React.FC<SettingsProps> = ({
         try {
             let finalLogoUrl = tempLogo;
 
-            // Si on a un nouveau fichier local, on l'uploade vers Supabase
             if (logoInputType === 'upload' && logoFile) {
                 const cloudUrl = await StorageAPI.uploadLogo(logoFile);
                 if (cloudUrl) {
                     finalLogoUrl = cloudUrl;
                 } else {
-                    throw new Error("Échec de l'upload vers Supabase Storage");
+                    throw new Error("Échec de l'upload vers Supabase Storage. Vérifiez le bucket 'branding'.");
                 }
             }
 
-            // Mise à jour de l'UI et persistance
             onUpdateLogo(finalLogoUrl);
-            
-            // Mise à jour des paramètres système en base pour persistance globale
             await SettingsAPI.update({
                 ...systemSettings,
-                // On peut imaginer un champ logo dans SystemSettings si besoin
+                appVersion: systemSettings.appVersion // On pourrait ajouter logoUrl dans SystemSettings
             });
 
             if (onToast) onToast("Identité visuelle mise à jour sur Supabase !", "success");
@@ -318,7 +314,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         <div className="p-8 border-b dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                                 <h3 className="text-lg font-black dark:text-white uppercase tracking-tight">Configuration du Logo</h3>
-                                <p className="text-xs text-gray-400 font-bold uppercase mt-1">Le logo sera hébergé sur Supabase Storage</p>
+                                <p className="text-xs text-gray-400 font-bold uppercase mt-1">Le logo sera hébergé sur Supabase Storage (bucket 'branding')</p>
                             </div>
                             <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl shrink-0">
                                 <button onClick={() => setLogoInputType('upload')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${logoInputType === 'upload' ? 'bg-white dark:bg-gray-700 text-[#2962FF] shadow-sm' : 'text-gray-400'}`}>Upload Fichier</button>

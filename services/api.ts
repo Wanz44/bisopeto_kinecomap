@@ -200,14 +200,14 @@ export const SettingsAPI = {
         }
     },
     resetAllData: async () => {
-        // 1. Réinitialisation Supabase (si configuré et autorisé)
+        // 1. Réinitialisation Supabase (si configuré)
         if (isSupabaseConfigured() && supabase) {
             try {
-                // On vide les tables transactionnelles
+                // Suppression de toutes les données transactionnelles
                 await supabase.from('waste_reports').delete().neq('id', '0');
                 await supabase.from('marketplace_items').delete().neq('id', '0');
                 await supabase.from('ads').delete().neq('id', '0');
-                // On réinitialise les stats des utilisateurs (sauf l'admin principal)
+                // Réinitialisation des statistiques utilisateurs
                 await supabase.from('users').update({ 
                     points: 0, 
                     collections: 0, 
@@ -413,7 +413,6 @@ export const StorageAPI = {
         if (isSupabaseConfigured() && supabase) {
             try {
                 const fileName = `logo-${Date.now()}-${file.name}`;
-                // Uploader dans le bucket 'branding'
                 const { data, error } = await supabase.storage.from('branding').upload(fileName, file, {
                     upsert: true,
                     cacheControl: '3600'
