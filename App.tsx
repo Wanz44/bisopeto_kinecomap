@@ -24,7 +24,7 @@ import { CollectorJobs } from './components/CollectorJobs';
 import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
 import { User, AppView, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings, UserType, GlobalImpact } from './types';
-import { SettingsAPI, UserAPI } from './services/api';
+import { SettingsAPI, UserAPI, NotificationsAPI } from './services/api';
 import { NotificationService } from './services/notificationService';
 
 const DEFAULT_PLANS: SubscriptionPlan[] = [
@@ -71,9 +71,7 @@ function App() {
         realTimeCollection: 0
     });
 
-    const [notifications, setNotifications] = useState<NotificationItem[]>([
-        { id: '1', title: 'Système Biso Peto', message: 'Bienvenue sur votre Control Tower.', type: 'info', time: 'À l\'instant', read: false, targetUserId: 'ALL' }
-    ]);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
     const [exchangeRate, setExchangeRate] = useState(2800);
     const [plans, setPlans] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
@@ -90,8 +88,14 @@ function App() {
                 ]);
                 if (settings) setSystemSettings(settings);
                 if (impact) setImpactData(impact);
+
+                // Charger les notifications réelles
+                if (user) {
+                    const notifs = await NotificationsAPI.getAll(user.id || '', user.type === UserType.ADMIN);
+                    setNotifications(notifs);
+                }
             } finally {
-                const delay = user ? 1000 : 2500;
+                const delay = user ? 800 : 2000;
                 setTimeout(() => setLoading(false), delay);
             }
         };
@@ -132,11 +136,10 @@ function App() {
         handleShowToast("Session terminée", "info");
     };
 
-    const handleNotify = (targetId: string | 'ADMIN' | 'ALL', title: string, message: string, type: 'info' | 'success' | 'warning' | 'alert') => {
-        const newNotif: NotificationItem = {
-            id: Date.now().toString(),
-            title, message, type, time: 'À l\'instant', read: false, targetUserId: targetId
-        };
+    const handleNotify = async (targetId: string | 'ADMIN' | 'ALL', title: string, message: string, type: 'info' | 'success' | 'warning' | 'alert') => {
+        const newNotif = await NotificationsAPI.add({
+            title, message, type, targetUserId: targetId
+        });
         setNotifications(prev => [newNotif, ...prev]);
 
         if (targetId === 'ALL' || targetId === user?.id || (targetId === 'ADMIN' && user?.type === UserType.ADMIN)) {
@@ -171,7 +174,7 @@ function App() {
             case AppView.PROFILE: return <Profile user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} onManageSubscription={() => navigateTo(AppView.SUBSCRIPTION)} onSettings={() => navigateTo(AppView.SETTINGS)} onUpdateProfile={p => setUser({ ...user, ...p })} onToast={handleShowToast} />;
             case AppView.SUBSCRIPTION: return <Subscription user={user} onBack={goBack} onUpdatePlan={(p) => { setUser({...user, subscription: p}); goBack(); }} plans={plans} exchangeRate={exchangeRate} onToast={handleShowToast} />;
             case AppView.PLANNING: return <Planning onBack={goBack} />;
-            case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, read: true})))} isAdmin={user.type === UserType.ADMIN} onSendNotification={(n) => handleNotify(n.targetUserId || 'ALL', n.title || '', n.message || '', n.type)} />;
+            case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => {}} isAdmin={user.type === UserType.ADMIN} onSendNotification={(n) => handleNotify(n.targetUserId || 'ALL', n.title || '', n.message || '', n.type)} />;
             case AppView.SETTINGS: return <Settings user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} currentLanguage={language} onLanguageChange={setLanguage} onChangeView={navigateTo} onToast={handleShowToast} appLogo={appLogo} onUpdateLogo={handleUpdateLogo} systemSettings={systemSettings} />;
             case AppView.COLLECTOR_JOBS: return <CollectorJobs user={user} onBack={goBack} onNotify={handleNotify} onToast={handleShowToast} />;
             case AppView.ADMIN_USERS: return <AdminUsers onBack={goBack} currentUser={user} onNotify={handleNotify} onToast={handleShowToast} />;

@@ -8,14 +8,15 @@ import {
     ShieldCheck, PhoneCall, Phone, FileText, Download, Globe2, Wind, Sparkles, Plus,
     Mail, ShieldAlert, Siren, Zap, Target, UserCheck, ShoppingBag, MessageSquare, Battery,
     ArrowDownRight, ChevronRight, Briefcase, Factory, ShieldEllipsis, History, FileCheck,
-    X, ClipboardList, Camera, Package
+    X, ClipboardList, Camera, Package, Cloud, CloudOff
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
     PieChart, Pie, AreaChart, Area, CartesianGrid, YAxis, Legend
 } from 'recharts';
 import { User, AppView, UserType, WasteReport, MarketplaceItem, AdCampaign } from '../types';
-import { UserAPI, ReportsAPI, MarketplaceAPI, AdsAPI } from '../services/api';
+import { UserAPI, ReportsAPI, MarketplaceAPI, AdsAPI, NotificationsAPI } from '../services/api';
+import { isSupabaseConfigured, testSupabaseConnection } from '../services/supabaseClient';
 
 interface DashboardProps {
     user: User;
@@ -23,7 +24,6 @@ interface DashboardProps {
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
-// Mock data pour les graphiques de performance par zone
 const ZONE_PERFORMANCE = [
     { name: 'Gombe', active: 45, reports: 12, cleaned: 10 },
     { name: 'Limete', active: 32, reports: 28, cleaned: 15 },
@@ -47,14 +47,13 @@ export const Dashboard: React.FC<DashboardProps> = (props) => {
 const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [searchQuery, setSearchQuery] = useState('');
+    const [isCloudSynced, setIsCloudSynced] = useState(false);
     
-    // Global data states
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [allReports, setAllReports] = useState<WasteReport[]>([]);
     const [allMarketplace, setAllMarketplace] = useState<MarketplaceItem[]>([]);
-    const [allAds, setAllAds] = useState<AdCampaign[]>([]);
+    const [allNotifications, setAllNotifications] = useState<any[]>([]);
     
-    // Filtered search results
     const [searchResults, setSearchResults] = useState<{
         users: User[],
         reports: WasteReport[],
@@ -71,16 +70,19 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
 
     const loadAllData = async () => {
         try {
-            const [usersData, reportsData, marketplaceData, adsData] = await Promise.all([
+            const isLive = await testSupabaseConnection();
+            setIsCloudSynced(isLive);
+
+            const [usersData, reportsData, marketplaceData, notifsData] = await Promise.all([
                 UserAPI.getAll(),
                 ReportsAPI.getAll(),
                 MarketplaceAPI.getAll(),
-                AdsAPI.getAll()
+                NotificationsAPI.getAll(user.id || '', true)
             ]);
             setAllUsers(usersData);
             setAllReports(reportsData);
             setAllMarketplace(marketplaceData);
-            setAllAds(adsData);
+            setAllNotifications(notifsData);
         } catch (e) {
             console.error(e);
         }
@@ -107,17 +109,10 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                 r.comment.toLowerCase().includes(lowerQuery)
             ).slice(0, 3);
 
-            const filteredMarketplace = allMarketplace.filter(m => 
-                m.title.toLowerCase().includes(lowerQuery) ||
-                m.sellerName.toLowerCase().includes(lowerQuery) ||
-                m.category.toLowerCase().includes(lowerQuery) ||
-                m.description.toLowerCase().includes(lowerQuery)
-            ).slice(0, 3);
-
             setSearchResults({
                 users: filteredUsers,
                 reports: filteredReports,
-                marketplace: filteredMarketplace
+                marketplace: []
             });
         } else {
             setIsSearching(false);
@@ -125,13 +120,10 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
         }
     };
 
-    const hasAnyResults = searchResults.users.length > 0 || searchResults.reports.length > 0 || searchResults.marketplace.length > 0;
-
-    // Calculs des compteurs dynamiques basés sur la longueur réelle des tableaux
     const countReportsToday = allReports.filter(r => {
         const d = new Date(r.date);
         const today = new Date();
-        return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+        return d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
     }).length;
 
     const countPendingUsers = allUsers.filter(u => u.status === 'pending').length;
@@ -140,7 +132,20 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
 
     return (
         <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8 max-w-[1600px] mx-auto">
-            {/* Real-time Header */}
+            {/* Sync Header */}
+            <div className={`p-4 rounded-2xl border flex items-center justify-between mb-4 transition-all ${isCloudSynced ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
+                <div className="flex items-center gap-3">
+                    {isCloudSynced ? <Cloud size={20} className="animate-pulse" /> : <CloudOff size={20} />}
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Base de données Cloud Supabase</p>
+                        <p className="text-sm font-bold">{isCloudSynced ? 'Synchronisé et opérationnel' : 'Synchronisation échouée - Mode local uniquement'}</p>
+                    </div>
+                </div>
+                {!isCloudSynced && (
+                    <button onClick={loadAllData} className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-700">Réessayer Sync</button>
+                )}
+            </div>
+
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
                 <div className="w-full xl:w-auto">
                     <div className="flex items-center gap-2 mb-2">
@@ -149,59 +154,17 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none uppercase">Vue Stratégique</h1>
                     
-                    {/* Expanded Global Search Bar */}
                     <div className="relative w-full max-w-xl mt-6 group">
                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2962FF] transition-colors">
                             <Search size={20} />
                         </div>
                         <input 
                             type="text"
-                            placeholder="Rechercher utilisateurs, signalements ou annonces..."
+                            placeholder="Rechercher utilisateurs ou incidents..."
                             className="w-full pl-12 pr-12 py-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-[#2962FF] outline-none font-bold text-sm transition-all"
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
                         />
-                        {searchQuery && (
-                            <button 
-                                onClick={() => handleSearch('')}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white"
-                            >
-                                <X size={18} />
-                            </button>
-                        )}
-
-                        {/* Results Dropdown */}
-                        {isSearching && hasAnyResults && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-[100] overflow-hidden animate-scale-up max-h-[450px] overflow-y-auto no-scrollbar">
-                                <div className="p-2 space-y-4">
-                                    {searchResults.users.length > 0 && (
-                                        <div className="space-y-1">
-                                            <p className="px-3 py-1 text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                                <Users size={12} /> Utilisateurs
-                                            </p>
-                                            {searchResults.users.map((result) => (
-                                                <button 
-                                                    key={result.id}
-                                                    onClick={() => onChangeView(AppView.ADMIN_USERS)}
-                                                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors text-left"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 font-black">
-                                                            {result.firstName[0]}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-black dark:text-white leading-none">{result.firstName} {result.lastName}</p>
-                                                            <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{result.type} • {result.commune || 'Kinshasa'}</p>
-                                                        </div>
-                                                    </div>
-                                                    <ChevronRight size={16} className="text-gray-300" />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
 
@@ -213,22 +176,21 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                         </span>
                     </div>
                     <button onClick={() => onChangeView(AppView.ADMIN_REPORTS)} className="bg-[#2962FF] text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:scale-105 transition-all">
-                        Gérer les Interventions
+                        SIG Temps Réel
                     </button>
                 </div>
             </div>
 
-            {/* Main Stats Grid - Dynamisé */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { label: 'Signalements Jour', value: countReportsToday.toString(), trend: countReportsToday > 0 ? '+100%' : '0%', icon: Megaphone, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { label: 'Comptes à valider', value: countPendingUsers.toString(), trend: countPendingUsers > 0 ? 'ACTION' : 'OK', icon: UserCheck, color: 'text-[#FBC02D]', bg: 'bg-yellow-50' },
+                    { label: 'Alertes Jour', value: countReportsToday.toString(), trend: countReportsToday > 0 ? '+100%' : '0%', icon: Megaphone, color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Dossiers à Valider', value: countPendingUsers.toString(), trend: countPendingUsers > 0 ? 'CRITIQUE' : 'OK', icon: UserCheck, color: 'text-[#FBC02D]', bg: 'bg-yellow-50' },
                     { label: 'Collectes Finies', value: countInterventions.toString(), trend: 'TOTAL', icon: CheckCircle, color: 'text-purple-600', bg: 'bg-purple-50' },
                     { label: 'Utilisateurs Totaux', value: totalUsersCount.toString(), trend: 'RÉSEAU', icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' }
                 ].map((stat, idx) => (
                     <div 
                         key={idx} 
-                        onClick={() => stat.label === 'Comptes à valider' ? onChangeView(AppView.ADMIN_USERS) : undefined}
+                        onClick={() => stat.label === 'Dossiers à Valider' ? onChangeView(AppView.ADMIN_USERS) : undefined}
                         className={`bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer`}
                     >
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} dark:bg-white/5 ${stat.color} flex items-center justify-center mb-6 transition-transform group-hover:scale-110`}>
@@ -244,15 +206,28 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm">
-                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Activité Hebdomadaire</h3>
-                    <div className="h-[350px] mt-8 flex items-center justify-center text-gray-400 font-bold uppercase text-xs italic">
-                        {allReports.length > 0 ? "Graphiques de données live activés" : "En attente de nouvelles données..."}
+                <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Flux des Notifications Admin</h3>
+                    <div className="space-y-4 max-h-[350px] overflow-y-auto no-scrollbar">
+                        {allNotifications.filter(n => n.targetUserId === 'ADMIN').length === 0 ? (
+                            <p className="text-gray-400 font-bold uppercase text-xs italic text-center py-20">Aucun message de validation en attente.</p>
+                        ) : (
+                            allNotifications.filter(n => n.targetUserId === 'ADMIN').map((notif, i) => (
+                                <div key={i} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border dark:border-gray-700 animate-fade-in">
+                                    <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center shrink-0"><AlertTriangle size={18}/></div>
+                                    <div className="flex-1">
+                                        <p className="text-xs font-black dark:text-white uppercase">{notif.title}</p>
+                                        <p className="text-[10px] text-gray-500 font-bold mt-1 leading-relaxed">{notif.message}</p>
+                                    </div>
+                                    <button onClick={() => onChangeView(AppView.ADMIN_USERS)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"><ChevronRight/></button>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
 
                 <div className="bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
-                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Efficacité par Commune</h3>
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Performance Communes</h3>
                     <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar">
                         {ZONE_PERFORMANCE.map((zone, i) => {
                              const reportsInZone = allReports.filter(r => r.commune === zone.name).length;
