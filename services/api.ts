@@ -1,5 +1,5 @@
 
-import { User, MarketplaceItem, Vehicle, Collector, Course, AdCampaign, Partner, UserType, SystemSettings, WasteReport, GlobalImpact, DatabaseHealth, NotificationItem } from '../types';
+import { User, MarketplaceItem, Vehicle, Collector, Course, AdCampaign, Partner, UserType, SystemSettings, WasteReport, GlobalImpact, DatabaseHealth, NotificationItem, Payment } from '../types';
 import { supabase, isSupabaseConfigured, testSupabaseConnection } from './supabaseClient';
 
 const KEYS = {
@@ -10,11 +10,12 @@ const KEYS = {
     REPORTS: 'kinecomap_waste_reports',
     IMPACT: 'kinecomap_global_impact',
     NOTIFICATIONS: 'kinecomap_notifications',
-    // Added missing keys for Ads and Partners
     ADS: 'kinecomap_ads',
-    PARTNERS: 'kinecomap_partners'
+    PARTNERS: 'kinecomap_partners',
+    PAYMENTS: 'kinecomap_payments'
 };
 
+// ... (DEFAULT_SETTINGS, DEFAULT_IMPACT, SUPER_ADMIN, getCollection, saveCollection remain same)
 const DEFAULT_SETTINGS: SystemSettings = {
     maintenanceMode: false,
     supportEmail: 'support@kinecomap.cd',
@@ -63,6 +64,29 @@ const saveCollection = <T>(key: string, data: T[]) => {
     localStorage.setItem(key, JSON.stringify(data));
 };
 
+// --- PAYMENTS API ---
+export const PaymentsAPI = {
+    getAll: async (): Promise<Payment[]> => {
+        if (isSupabaseConfigured() && supabase) {
+            const { data, error } = await supabase.from('payments').select('*').order('created_at', { ascending: false });
+            if (!error && data) return data as Payment[];
+        }
+        return getCollection<Payment>(KEYS.PAYMENTS);
+    },
+    record: async (payment: Payment): Promise<Payment> => {
+        const newPayment = { ...payment, id: payment.id || `pay-${Date.now()}` };
+        if (isSupabaseConfigured() && supabase) {
+            const { data, error } = await supabase.from('payments').insert([newPayment]).select().single();
+            if (!error && data) return data as Payment;
+        }
+        const payments = getCollection<Payment>(KEYS.PAYMENTS);
+        payments.unshift(newPayment);
+        saveCollection(KEYS.PAYMENTS, payments);
+        return newPayment;
+    }
+};
+
+// ... (Rest of the API exports continue same as before, NotificationsAPI, UserAPI, etc.)
 // --- NOTIFICATIONS API ---
 export const NotificationsAPI = {
     getAll: async (userId: string, isAdmin: boolean): Promise<NotificationItem[]> => {
@@ -353,7 +377,6 @@ export const VehicleAPI = {
     }
 };
 
-// Added missing AdsAPI
 // --- ADS API ---
 export const AdsAPI = {
     getAll: async (): Promise<AdCampaign[]> => {
@@ -399,7 +422,6 @@ export const AdsAPI = {
     }
 };
 
-// Added missing PartnersAPI
 // --- PARTNERS API ---
 export const PartnersAPI = {
     getAll: async (): Promise<Partner[]> => {

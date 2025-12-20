@@ -20,6 +20,10 @@ export type UserPermission =
     | 'manage_academy'
     | 'manage_communications'
     | 'manage_pos'
+    | 'manage_recovery'    // Nouveau: Encaissement cash
+    | 'manage_marketplace' // Nouveau: Modération marketplace
+    | 'manage_reports'     // Nouveau: Gestion des signalements SIG
+    | 'manage_subscriptions' // Nouveau: Validation abonnements
     | 'system_settings';
 
 export interface User {
@@ -84,7 +88,22 @@ export enum AppView {
     ADMIN_PERMISSIONS = 'ADMIN_PERMISSIONS',
     ADMIN_REPORTS = 'ADMIN_REPORTS',
     ADMIN_MARKETPLACE = 'ADMIN_MARKETPLACE',
+    ADMIN_RECOVERY = 'ADMIN_RECOVERY',
     COLLECTOR_JOBS = 'COLLECTOR_JOBS'
+}
+
+export interface Payment {
+    id: string;
+    userId: string;
+    userName: string;
+    amountFC: number;
+    currency: 'FC' | 'USD';
+    method: 'cash' | 'mobile_money' | 'card';
+    period: string;
+    collectorId: string;
+    collectorName: string;
+    createdAt: string;
+    qrCodeData: string;
 }
 
 export interface SystemSettings {
@@ -141,7 +160,6 @@ export interface ChatMessage {
     timestamp: Date;
 }
 
-// Added missing QuizQuestion interface
 export interface QuizQuestion {
     id: string;
     question: string;
@@ -218,7 +236,6 @@ export interface Collector {
     status: 'active' | 'inactive';
 }
 
-// Added missing SubscriptionPlan interface
 export interface SubscriptionPlan {
     id: 'standard' | 'plus' | 'premium' | 'special';
     name: string;

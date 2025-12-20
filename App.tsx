@@ -20,6 +20,7 @@ import { AdminAcademy } from './components/AdminAcademy';
 import { AdminPermissions } from './components/AdminPermissions';
 import { AdminReports } from './components/AdminReports';
 import { AdminMarketplace } from './components/AdminMarketplace';
+import { AdminRecovery } from './components/AdminRecovery';
 import { CollectorJobs } from './components/CollectorJobs';
 import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
@@ -89,7 +90,6 @@ function App() {
                 if (settings) setSystemSettings(settings);
                 if (impact) setImpactData(impact);
 
-                // Charger les notifications réelles
                 if (user) {
                     const notifs = await NotificationsAPI.getAll(user.id || '', user.type === UserType.ADMIN);
                     setNotifications(notifs);
@@ -180,8 +180,9 @@ function App() {
             case AppView.ADMIN_USERS: return <AdminUsers onBack={goBack} currentUser={user} onNotify={handleNotify} onToast={handleShowToast} />;
             case AppView.ADMIN_VEHICLES: return <AdminVehicles onBack={goBack} onToast={handleShowToast} />;
             case AppView.ADMIN_ACADEMY: return <AdminAcademy onBack={goBack} onToast={handleShowToast} />;
-            case AppView.ADMIN_REPORTS: return <AdminReports onBack={goBack} onToast={handleShowToast} onNotify={handleNotify} />;
+            case AppView.ADMIN_REPORTS: return <AdminReports onBack={goBack} onToast={handleShowToast} onNotify={handleNotify} currentUser={user} />;
             case AppView.ADMIN_MARKETPLACE: return <AdminMarketplace onBack={goBack} onToast={handleShowToast} />;
+            case AppView.ADMIN_RECOVERY: return <AdminRecovery onBack={goBack} currentUser={user} onToast={handleShowToast} />;
             case AppView.ADMIN_SUBSCRIPTIONS: return <AdminSubscriptions onBack={goBack} plans={plans} exchangeRate={exchangeRate} onUpdatePlan={(p) => setPlans(plans.map(pl => pl.id === p.id ? p : pl))} onUpdateExchangeRate={setExchangeRate} currentLogo={appLogo} onUpdateLogo={handleUpdateLogo} systemSettings={systemSettings} onUpdateSystemSettings={(s) => setSystemSettings(s)} onToast={handleShowToast} />;
             case AppView.ADMIN_PERMISSIONS: return <AdminPermissions onBack={goBack} onToast={handleShowToast} />;
             default: return <Dashboard user={user} onChangeView={navigateTo} onToast={handleShowToast} />;
