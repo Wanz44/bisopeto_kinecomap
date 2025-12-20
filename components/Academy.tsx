@@ -23,10 +23,10 @@ const COURSES: Course[] = [
 ];
 
 const AI_SUGGESTIONS = [
-    "Comment trier les bouteilles plastiques ?",
-    "Boni, où sont les points de recyclage ?",
-    "C'est quoi le compostage ?",
-    "Comment gagner plus d'Eco Points ?",
+    "Comment trier mes déchets ?",
+    "Donne-moi une recette de cuisine locale",
+    "Aide-moi à rédiger un email",
+    "Quel temps fait-il à Kinshasa ?",
 ];
 
 export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
@@ -35,7 +35,7 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
     
     // Chat State
     const [messages, setMessages] = useState<ChatMessage[]>([
-        { id: '0', sender: 'ai', text: 'Mbote ! Je suis Biso Peto AI, votre guide pour une ville plus propre. Comment puis-je vous aider aujourd\'hui ?', timestamp: new Date() }
+        { id: '0', sender: 'ai', text: 'Mbote ! Je suis Biso Peto AI, votre assistant intelligent. Je peux répondre à TOUTES vos questions, sur l\'écologie ou n\'importe quel autre sujet. Comment puis-je vous aider ?', timestamp: new Date() }
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -228,7 +228,7 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
                                     <input 
                                         type="text" 
                                         className="w-full py-4 pl-5 pr-14 bg-gray-50 dark:bg-gray-800 border-none outline-none rounded-[1.5rem] font-bold text-sm dark:text-white focus:ring-2 ring-blue-500/20"
-                                        placeholder="Posez votre question sur l'écologie..."
+                                        placeholder="Posez n'importe quelle question à Biso Peto AI..."
                                         value={inputValue}
                                         onChange={(e) => setInputValue(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}

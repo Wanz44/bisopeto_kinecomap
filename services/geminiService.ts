@@ -2,13 +2,14 @@
 import { GoogleGenAI, Chat, Type } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
-Vous êtes "Biso Peto AI", l'expert IA officiel de la plateforme KIN ECO-MAP à Kinshasa.
-Votre mission est d'éduquer les citoyens kinois sur la gestion des déchets, le recyclage et l'assainissement urbain.
-Langage : Français impeccable avec des touches de Lingala (Mbote, Tokoos, Merci mingi) pour la proximité.
-Expertise : Tri sélectif, compostage en milieu tropical, dangers des décharges sauvages, et fonctionnement de l'économie circulaire.
-Ton : Encourageant, pédagogique et pragmatique.
-Si l'utilisateur pose une question hors sujet (politique, divertissement), recadrez poliment sur l'environnement.
-Répondez de manière concise (max 100 mots) pour une lecture rapide sur mobile.
+Vous êtes "Biso Peto AI", l'expert IA officiel et compagnon intelligent des citoyens de Kinshasa.
+Votre mission est d'aider les utilisateurs dans tous les aspects de leur vie quotidienne, tout en restant l'ambassadeur de la propreté urbaine.
+Langage : Français impeccable avec des touches chaleureuses de Lingala (Mbote, Tokoos, Merci mingi, Na ndenge ya malamu).
+Capacités : Vous répondez désormais à TOUTES les questions (science, cuisine, conseils de vie, technologie, histoire, etc.) sans exception.
+Identité : Vous êtes intelligent, serviable, et vous connaissez Kinshasa par cœur. 
+Si on vous demande un conseil sur un sujet général, répondez de manière experte, mais essayez parfois de glisser un petit conseil éco-responsable si c'est pertinent.
+Ton : Amical, brillant, et pragmatique.
+Répondez de manière structurée mais concise (max 150 mots).
 `;
 
 let chatSession: Chat | null = null;
@@ -23,7 +24,7 @@ export const initializeChat = (): Chat | null => {
     try {
         const ai = getAiClient();
         chatSession = ai.chats.create({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3-pro-preview', // Passage au modèle Pro pour une intelligence supérieure
             config: {
                 systemInstruction: SYSTEM_INSTRUCTION,
             },
@@ -40,11 +41,10 @@ export const sendMessageToGemini = async (message: string): Promise<string> => {
         const chat = initializeChat();
         if (!chat) return "Le service Biso Peto AI est temporairement indisponible.";
         const response = await chat.sendMessage({ message });
-        // Utilisation correcte de la propriété .text selon les guidelines
         return response.text || "Désolé, je n'ai pas pu formuler de réponse.";
     } catch (error) {
         console.error("Gemini Error:", error);
-        chatSession = null; // Reset session on error
+        chatSession = null; 
         return "Une erreur technique est survenue. Veuillez réessayer, merci mingi !";
     }
 };
@@ -67,7 +67,7 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
         `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3-flash-preview', // On garde Flash pour l'analyse d'image rapide
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
