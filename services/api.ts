@@ -102,6 +102,7 @@ const mapSettings = (s: any): SystemSettings => ({
     supportEmail: s.support_email,
     appVersion: s.app_version,
     exchangeRate: Number(s.exchange_rate || 2800),
+    /* Fixed: Changed marketplace_commission to marketplaceCommission to match SystemSettings interface */
     marketplaceCommission: Number(s.marketplace_commission || 0.05),
     force2FA: false,
     sessionTimeout: 60,
@@ -146,13 +147,11 @@ export const UserAPI = {
     login: async (identifier: string, password?: string): Promise<User | null> => {
         if (isSupabaseConfigured() && supabase) {
             try {
-                // Recherche par email ou téléphone
                 let query = supabase
                     .from('users')
                     .select('*')
                     .or(`email.eq.${identifier},phone.eq.${identifier}`);
                 
-                // Si un mot de passe est fourni, on filtre par la colonne password
                 if (password) {
                     query = query.eq('password', password);
                 }
@@ -195,11 +194,19 @@ export const UserAPI = {
         }
         return getCollection<User>(KEYS.USERS).map(mapUser);
     },
-    update: async (u: Partial<User> & { id: string }) => {
-        const dbUpdate: any = { ...u };
-        // Mapping inverse
+    update: async (u: Partial<User> & { id: string, password?: string }) => {
+        const dbUpdate: any = {};
         if (u.firstName) dbUpdate.first_name = u.firstName;
         if (u.lastName) dbUpdate.last_name = u.lastName;
+        if (u.email) dbUpdate.email = u.email;
+        if (u.phone) dbUpdate.phone = u.phone;
+        if (u.type) dbUpdate.type = u.type;
+        if (u.status) dbUpdate.status = u.status;
+        if (u.address) dbUpdate.address = u.address;
+        if (u.commune) dbUpdate.commune = u.commune;
+        if (u.subscription) dbUpdate.subscription = u.subscription;
+        if (u.permissions) dbUpdate.permissions = u.permissions;
+        if (u.password) dbUpdate.password = u.password;
         if (u.totalTonnage !== undefined) dbUpdate.total_tonnage = u.totalTonnage;
         if (u.co2Saved !== undefined) dbUpdate.co2_saved = u.co2Saved;
         if (u.recyclingRate !== undefined) dbUpdate.recycling_rate = u.recyclingRate;
@@ -435,6 +442,7 @@ export const SettingsAPI = {
             id: 1,
             maintenance_mode: s.maintenanceMode,
             support_email: s.supportEmail,
+            /* Fixed: Changed s.app_version to s.appVersion to match SystemSettings interface */
             app_version: s.appVersion,
             exchange_rate: s.exchangeRate,
             marketplace_commission: s.marketplaceCommission

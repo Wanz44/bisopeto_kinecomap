@@ -5,7 +5,7 @@ import {
     UserCheck, Briefcase, MapPin, Trash2, Phone, Mail, CreditCard, ShieldAlert, 
     AlertCircle, Info, PhoneCall, Sparkles, MessageCircle, ExternalLink, 
     MoreVertical, Ban, History, Calendar, Eye, Download, ShieldCheck, ClipboardList, 
-    CheckCircle2, Clock, AlertTriangle, UserPlus, Key
+    CheckCircle2, Clock, AlertTriangle, UserPlus, Key, EyeOff, Lock
 } from 'lucide-react';
 import { UserPermission, User as AppUser, UserType, WasteReport } from '../types';
 import { UserAPI, ReportsAPI } from '../services/api';
@@ -28,12 +28,16 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
     const [profileTab, setProfileTab] = useState<'info' | 'interventions' | 'billing'>('info');
     
-    // Create User Modal State
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [isCreating, setIsCreating] = useState(false);
-    const [newUserForm, setNewUserForm] = useState<Partial<AppUser>>({
+    // UI Modals
+    const [showFormModal, setShowFormModal] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Form State
+    const [userForm, setUserForm] = useState<Partial<AppUser> & { password?: string }>({
         firstName: '', lastName: '', phone: '', email: '',
-        type: UserType.CITIZEN, status: 'active', address: '', commune: 'Gombe'
+        type: UserType.CITIZEN, status: 'active', address: '', commune: 'Gombe', password: ''
     });
 
     useEffect(() => { loadData(); }, []);
@@ -51,6 +55,21 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
         finally { setIsLoading(false); }
     };
 
+    const handleOpenCreate = () => {
+        setIsEditMode(false);
+        setUserForm({
+            firstName: '', lastName: '', phone: '', email: '',
+            type: UserType.CITIZEN, status: 'active', address: '', commune: 'Gombe', password: ''
+        });
+        setShowFormModal(true);
+    };
+
+    const handleOpenEdit = (user: AppUser) => {
+        setIsEditMode(true);
+        setUserForm({ ...user, password: '' }); // On ne charge pas l'ancien mot de passe pour la sécurité
+        setShowFormModal(true);
+    };
+
     const handleQualifyUser = async (user: AppUser) => {
         try {
             await UserAPI.update({ ...user, id: user.id!, status: 'active' });
@@ -66,20 +85,28 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
         }
     };
 
-    const handleCreateUser = async (e: React.FormEvent) => {
+    const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newUserForm.firstName || !newUserForm.phone) return;
-        setIsCreating(true);
+        if (!userForm.firstName || !userForm.phone) return;
+        
+        setIsSaving(true);
         try {
-            const created = await UserAPI.register(newUserForm as AppUser, "Password123!");
-            setUsers([created, ...users]);
-            setShowAddModal(false);
-            setNewUserForm({ firstName: '', lastName: '', phone: '', email: '', type: UserType.CITIZEN, status: 'active', address: '', commune: 'Gombe' });
-            if (onToast) onToast("Utilisateur créé avec succès", "success");
+            if (isEditMode && userForm.id) {
+                // Modification
+                await UserAPI.update(userForm as any);
+                setUsers(prev => prev.map(u => u.id === userForm.id ? { ...u, ...userForm } as AppUser : u));
+                if (onToast) onToast("Compte mis à jour avec succès", "success");
+            } else {
+                // Création
+                const created = await UserAPI.register(userForm as AppUser, userForm.password || "Password123!");
+                setUsers([created, ...users]);
+                if (onToast) onToast(`${userForm.type === UserType.ADMIN ? 'Administrateur' : 'Utilisateur'} créé avec succès`, "success");
+            }
+            setShowFormModal(false);
         } catch (e) {
-            if (onToast) onToast("Erreur lors de la création", "error");
+            if (onToast) onToast("Erreur lors de l'enregistrement", "error");
         } finally {
-            setIsCreating(false);
+            setIsSaving(false);
         }
     };
 
@@ -124,7 +151,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                     <div className="flex gap-2">
                          <button className="p-3 bg-gray-100 dark:bg-gray-800 rounded-2xl text-gray-500 hover:text-blue-600 transition-all"><Download size={20} /></button>
                          <button 
-                            onClick={() => setShowAddModal(true)}
+                            onClick={handleOpenCreate}
                             className="bg-[#2962FF] hover:bg-blue-700 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-blue-500/20 transition-all"
                         >
                             <UserPlus size={18} /> Nouveau Compte
@@ -231,8 +258,16 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                                     </button>
                                                 )}
                                                 <button 
+                                                    onClick={() => handleOpenEdit(user)}
+                                                    className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all"
+                                                    title="Modifier"
+                                                >
+                                                    <Edit2 size={18} />
+                                                </button>
+                                                <button 
                                                     onClick={() => { setSelectedUser(user); setProfileTab('info'); }} 
-                                                    className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-blue-600 hover:text-white transition-all"
+                                                    className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 transition-all"
+                                                    title="Voir profil"
                                                 >
                                                     <Eye size={18} />
                                                 </button>
@@ -246,48 +281,73 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                  )}
              </div>
 
-             {/* ADD USER MODAL */}
-             {showAddModal && (
+             {/* FORM MODAL (CREATE / EDIT) */}
+             {showFormModal && (
                  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>
-                     <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-lg p-8 relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800">
+                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFormModal(false)}></div>
+                     <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-lg p-8 relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800 max-h-[90vh] overflow-y-auto no-scrollbar">
                         <div className="flex justify-between items-center mb-8">
                             <div>
-                                <h3 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase">Nouveau Compte</h3>
-                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Création manuelle admin</p>
+                                <h3 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase">{isEditMode ? 'Modifier Compte' : 'Nouveau Compte'}</h3>
+                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{isEditMode ? 'Mise à jour des informations' : 'Paramétrage manuel admin'}</p>
                             </div>
-                            <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"><X size={24}/></button>
+                            <button onClick={() => setShowFormModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"><X size={24}/></button>
                         </div>
 
-                        <form onSubmit={handleCreateUser} className="space-y-5">
+                        <form onSubmit={handleFormSubmit} className="space-y-5">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Prénom</label>
-                                    <input required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" value={newUserForm.firstName} onChange={e => setNewUserForm({...newUserForm, firstName: e.target.value})} />
+                                    <input required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" value={userForm.firstName} onChange={e => setUserForm({...userForm, firstName: e.target.value})} />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom</label>
-                                    <input required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" value={newUserForm.lastName} onChange={e => setNewUserForm({...newUserForm, lastName: e.target.value})} />
+                                    <input required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" value={userForm.lastName} onChange={e => setUserForm({...userForm, lastName: e.target.value})} />
                                 </div>
                             </div>
 
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Téléphone</label>
+                                    <input required type="tel" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" placeholder="081..." value={userForm.phone} onChange={e => setUserForm({...userForm, phone: e.target.value})} />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email (Optionnel)</label>
+                                    <input type="email" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" placeholder="client@test.com" value={userForm.email} onChange={e => setUserForm({...userForm, email: e.target.value})} />
+                                </div>
+                            </div>
+
+                            {/* Password Section */}
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Téléphone</label>
-                                <input required type="tel" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white" placeholder="081..." value={newUserForm.phone} onChange={e => setNewUserForm({...newUserForm, phone: e.target.value})} />
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{isEditMode ? 'Changer mot de passe' : 'Mot de passe'}</label>
+                                <div className="relative group">
+                                    <Lock size={18} className="absolute left-4 top-4 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                    <input 
+                                        type={showPassword ? "text" : "password"} 
+                                        className="w-full pl-12 pr-12 py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-sm dark:text-white focus:ring-2 ring-primary/20"
+                                        placeholder={isEditMode ? "Laisser vide pour ne pas changer" : "Saisir mot de passe"}
+                                        value={userForm.password}
+                                        onChange={e => setUserForm({...userForm, password: e.target.value})}
+                                    />
+                                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-4 text-gray-400 hover:text-primary">
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Type de compte</label>
-                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-xs uppercase dark:text-white" value={newUserForm.type} onChange={e => setNewUserForm({...newUserForm, type: e.target.value as UserType})}>
-                                        <option value={UserType.CITIZEN}>Citoyen</option>
+                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-xs uppercase dark:text-white" value={userForm.type} onChange={e => setUserForm({...userForm, type: e.target.value as UserType})}>
+                                        <option value={UserType.ADMIN}>Administrateur</option>
                                         <option value={UserType.COLLECTOR}>Collecteur</option>
+                                        <option value={UserType.CITIZEN}>Citoyen</option>
                                         <option value={UserType.BUSINESS}>Entreprise</option>
                                     </select>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Commune</label>
-                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-xs uppercase dark:text-white" value={newUserForm.commune} onChange={e => setNewUserForm({...newUserForm, commune: e.target.value})}>
+                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-xs uppercase dark:text-white" value={userForm.commune} onChange={e => setUserForm({...userForm, commune: e.target.value})}>
                                         <option value="Gombe">Gombe</option>
                                         <option value="Ngaliema">Ngaliema</option>
                                         <option value="Limete">Limete</option>
@@ -296,16 +356,14 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                 </div>
                             </div>
 
-                            <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-3">
-                                <Key size={18} className="text-blue-500 shrink-0 mt-0.5" />
-                                <p className="text-[10px] text-blue-600 dark:text-blue-300 font-bold leading-relaxed uppercase tracking-tight">
-                                    Le mot de passe par défaut sera généré automatiquement. L'utilisateur pourra le modifier lors de sa première connexion.
-                                </p>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Adresse Physique</label>
+                                <textarea className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white resize-none" rows={2} value={userForm.address} onChange={e => setUserForm({...userForm, address: e.target.value})} />
                             </div>
 
-                            <button disabled={isCreating} className="w-full py-5 bg-[#2962FF] text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3">
-                                {isCreating ? <Loader2 className="animate-spin" size={20}/> : <UserPlus size={20}/>}
-                                {isCreating ? "Création..." : "Enregistrer l'utilisateur"}
+                            <button disabled={isSaving} className={`w-full py-5 ${isEditMode ? 'bg-[#2962FF]' : 'bg-primary'} text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3`}>
+                                {isSaving ? <Loader2 className="animate-spin" size={20}/> : isEditMode ? <Check size={20}/> : <UserPlus size={20}/>}
+                                {isSaving ? "Enregistrement..." : isEditMode ? "Mettre à jour" : "Créer le compte"}
                             </button>
                         </form>
                      </div>
@@ -408,7 +466,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                 <button onClick={() => handleQualifyUser(selectedUser)} className="w-full py-4 bg-[#00C853] text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-green-500/20 active:scale-95 transition-all">Valider le profil</button>
                             )}
                             <div className="grid grid-cols-2 gap-3">
-                                <button className="py-4 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"><Edit2 size={16}/> Modifier</button>
+                                <button onClick={() => { handleOpenEdit(selectedUser); setSelectedUser(null); }} className="py-4 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"><Edit2 size={16}/> Modifier</button>
                                 <button onClick={() => handleBanUser(selectedUser.id!)} className="py-4 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all"><Ban size={16}/> Suspendre</button>
                             </div>
                          </div>
