@@ -540,25 +540,36 @@ export const StorageAPI = {
         return null;
     },
     uploadLogo: async (file: File): Promise<string | null> => {
-        if (isSupabaseConfigured() && supabase) {
-            try {
-                const fileName = `logo-${Date.now()}-${file.name.replace(/\s/g, '_')}`;
-                // Suppression de l'ancien fichier si possible ou écrasement
-                const { data, error } = await supabase.storage.from('branding').upload(fileName, file, {
-                    cacheControl: '3600',
-                    upsert: true
-                });
-                
-                if (error) {
-                    console.error("Storage upload error:", error.message);
-                    return null;
-                }
+        if (!isSupabaseConfigured() || !supabase) {
+            throw new Error("Supabase n'est pas configuré.");
+        }
 
-                if (data) {
-                    const { data: urlData } = supabase.storage.from('branding').getPublicUrl(data.path);
-                    return urlData.publicUrl;
+        try {
+            // Nettoyage du nom de fichier pour éviter les erreurs d'URL
+            const cleanName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+            const fileName = `logo-${Date.now()}-${cleanName}`;
+            
+            // Tentative d'upload
+            const { data, error } = await supabase.storage.from('branding').upload(fileName, file, {
+                cacheControl: '3600',
+                upsert: true
+            });
+            
+            if (error) {
+                // Erreurs courantes : "Bucket not found" ou "Policy violation"
+                throw new Error(`Erreur Supabase: ${error.message}. Vérifiez que le bucket 'branding' existe et est PUBLIC.`);
+            }
+
+            if (data) {
+                const { data: urlData } = supabase.storage.from('branding').getPublicUrl(data.path);
+                if (!urlData || !urlData.publicUrl) {
+                    throw new Error("Impossible de générer l'URL publique du logo.");
                 }
-            } catch (e) { console.error("Storage unexpected error:", e); }
+                return urlData.publicUrl;
+            }
+        } catch (e: any) {
+            console.error("Storage upload exception:", e);
+            throw e; // Renvoyer l'erreur au composant UI
         }
         return null;
     }

@@ -98,11 +98,10 @@ export const Settings: React.FC<SettingsProps> = ({
             let finalLogoUrl = tempLogo;
 
             if (logoInputType === 'upload' && logoFile) {
+                // Cette fonction lève maintenant des erreurs explicites
                 const cloudUrl = await StorageAPI.uploadLogo(logoFile);
                 if (cloudUrl) {
                     finalLogoUrl = cloudUrl;
-                } else {
-                    throw new Error("Échec de l'upload. Vérifiez que le bucket 'branding' est public.");
                 }
             }
 
@@ -118,6 +117,8 @@ export const Settings: React.FC<SettingsProps> = ({
             if (onToast) onToast("Identité visuelle mise à jour et sauvegardée !", "success");
             setActiveSubView('main');
         } catch (error: any) {
+            // Affichage de l'erreur réelle (ex: bucket branding manquant)
+            console.error("Branding save error:", error);
             if (onToast) onToast(error.message || "Erreur lors de la sauvegarde", "error");
         } finally {
             setIsUploading(false);
