@@ -23,10 +23,10 @@ const COURSES: Course[] = [
 ];
 
 const AI_SUGGESTIONS = [
-    "Comment trier mes déchets ?",
-    "Donne-moi une recette de cuisine locale",
-    "Aide-moi à rédiger un email",
-    "Quel temps fait-il à Kinshasa ?",
+    "Comment trier le plastique à Kinshasa ?",
+    "Faire son propre compost en appartement",
+    "Pourquoi recycler les métaux ?",
+    "Impact des déchets sur le fleuve Congo",
 ];
 
 export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
@@ -35,7 +35,7 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
     
     // Chat State
     const [messages, setMessages] = useState<ChatMessage[]>([
-        { id: '0', sender: 'ai', text: 'Mbote ! Je suis Biso Peto AI, votre assistant intelligent. Je peux répondre à TOUTES vos questions, sur l\'écologie ou n\'importe quel autre sujet. Comment puis-je vous aider ?', timestamp: new Date() }
+        { id: '0', sender: 'ai', text: 'Mbote ! Je suis Biso Peto AI, votre expert en environnement. Je connais tout sur le recyclage et la propreté à Kinshasa. Posez-moi vos questions écolo ! 🌍', timestamp: new Date() }
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -137,7 +137,7 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
                         onClick={() => setActiveTab('chat')}
                         className={`flex-1 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'chat' ? 'bg-[#2962FF] text-white shadow-lg' : 'bg-gray-50 dark:bg-gray-800 text-gray-500'}`}
                     >
-                        Assistant IA
+                        Expert Écolo IA
                     </button>
                 </div>
             )}
@@ -183,12 +183,12 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
                         <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar pb-10">
                             {messages.map(msg => (
                                 <div key={msg.id} className={`flex items-end gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${msg.sender === 'ai' ? 'bg-[#2962FF] text-white shadow-lg' : 'bg-gray-200 text-gray-500'}`}>
-                                        {msg.sender === 'ai' ? <Bot size={16} /> : <User size={16} />}
+                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${msg.sender === 'ai' ? 'bg-green-600 text-white shadow-lg shadow-green-500/20' : 'bg-gray-200 text-gray-500'}`}>
+                                        {msg.sender === 'ai' ? <Leaf size={16} /> : <User size={16} />}
                                     </div>
                                     <div className={`max-w-[85%] px-5 py-4 rounded-[1.8rem] shadow-sm font-medium text-sm leading-relaxed ${
                                         msg.sender === 'ai' 
-                                        ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-white rounded-bl-none border dark:border-gray-800' 
+                                        ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-white rounded-bl-none border-2 border-green-50 dark:border-green-900/20' 
                                         : 'bg-[#2962FF] text-white rounded-br-none shadow-blue-500/20'
                                     }`}>
                                         {msg.text}
@@ -197,12 +197,12 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
                             ))}
                             {isLoading && (
                                 <div className="flex gap-3">
-                                    <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center"><Bot size={16} className="text-[#2962FF] animate-pulse" /></div>
+                                    <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center"><Bot size={16} className="text-green-600 animate-pulse" /></div>
                                     <div className="bg-white dark:bg-gray-900 px-5 py-4 rounded-[1.8rem] rounded-bl-none border dark:border-gray-800">
                                         <div className="flex gap-1">
-                                            <div className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-bounce"></div>
-                                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+                                            <div className="w-1.5 h-1.5 bg-green-300 rounded-full animate-bounce"></div>
+                                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
                                         </div>
                                     </div>
                                 </div>
@@ -214,26 +214,26 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
                             {messages.length < 3 && (
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
                                     {AI_SUGGESTIONS.map((s, i) => (
-                                        <button key={i} onClick={() => handleSendMessage(s)} className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-[#2962FF] text-[10px] font-black uppercase whitespace-nowrap border border-blue-100 dark:border-blue-900/40">
+                                        <button key={i} onClick={() => handleSendMessage(s)} className="px-4 py-2 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10px] font-black uppercase whitespace-nowrap border border-green-100 dark:border-green-900/40 hover:bg-green-100 transition-colors">
                                             {s}
                                         </button>
                                     ))}
                                 </div>
                             )}
                             <div className="flex gap-2 items-center">
-                                <button onClick={toggleListening} className={`p-4 rounded-2xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-[#2962FF]'}`}>
+                                <button onClick={toggleListening} className={`p-4 rounded-2xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-green-600'}`}>
                                     {isListening ? <MicOff size={22} /> : <Mic size={22} />}
                                 </button>
                                 <div className="flex-1 relative">
                                     <input 
                                         type="text" 
-                                        className="w-full py-4 pl-5 pr-14 bg-gray-50 dark:bg-gray-800 border-none outline-none rounded-[1.5rem] font-bold text-sm dark:text-white focus:ring-2 ring-blue-500/20"
-                                        placeholder="Posez n'importe quelle question à Biso Peto AI..."
+                                        className="w-full py-4 pl-5 pr-14 bg-gray-50 dark:bg-gray-800 border-none outline-none rounded-[1.5rem] font-bold text-sm dark:text-white focus:ring-2 ring-green-500/20"
+                                        placeholder="Question sur le recyclage ou Kinshasa..."
                                         value={inputValue}
                                         onChange={(e) => setInputValue(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                                     />
-                                    <button onClick={() => handleSendMessage()} className="absolute right-2 top-2 p-3 bg-[#2962FF] text-white rounded-xl shadow-lg active:scale-90 transition-all">
+                                    <button onClick={() => handleSendMessage()} className="absolute right-2 top-2 p-3 bg-[#00C853] text-white rounded-xl shadow-lg active:scale-90 transition-all">
                                         <Send size={18} />
                                     </button>
                                 </div>

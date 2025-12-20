@@ -29,6 +29,12 @@ interface SettingsProps {
 
 const DEFAULT_LOGO = 'https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/logo-1766239701120-logo_bisopeto.png';
 
+const LANGUAGES_CONFIG = [
+    { code: 'fr', label: 'Français', native: 'Français', flag: '🇫🇷', desc: 'Langue officielle' },
+    { code: 'en', label: 'English', native: 'English', flag: '🇬🇧', desc: 'International' },
+    { code: 'ln', label: 'Lingala', native: 'Lingála', flag: '🇨🇩', desc: 'Langue locale' },
+];
+
 export const Settings: React.FC<SettingsProps> = ({ 
     user, theme, onToggleTheme, onBack, onLogout, 
     currentLanguage, onLanguageChange, onChangeView, onToast,
@@ -100,17 +106,14 @@ export const Settings: React.FC<SettingsProps> = ({
             let finalLogoUrl = tempLogo;
 
             if (logoInputType === 'upload' && logoFile) {
-                // Cette fonction lève maintenant des erreurs explicites
                 const cloudUrl = await StorageAPI.uploadLogo(logoFile);
                 if (cloudUrl) {
                     finalLogoUrl = cloudUrl;
                 }
             }
 
-            // Mise à jour locale du logo
             onUpdateLogo(finalLogoUrl);
 
-            // Persistance en base de données
             await SettingsAPI.update({
                 ...systemSettings,
                 logoUrl: finalLogoUrl
@@ -119,7 +122,6 @@ export const Settings: React.FC<SettingsProps> = ({
             if (onToast) onToast("Identité visuelle mise à jour et sauvegardée !", "success");
             setActiveSubView('main');
         } catch (error: any) {
-            // Affichage de l'erreur réelle (ex: bucket branding manquant)
             console.error("Branding save error:", error);
             if (onToast) onToast(error.message || "Erreur lors de la sauvegarde", "error");
         } finally {
@@ -181,8 +183,6 @@ export const Settings: React.FC<SettingsProps> = ({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-10 pb-24 no-scrollbar">
-                    
-                    {/* Visual Comparison Section */}
                     <div className="space-y-4">
                         <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest px-2">Prévisualisation Adaptative</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -201,7 +201,6 @@ export const Settings: React.FC<SettingsProps> = ({
                         </div>
                     </div>
 
-                    {/* Logo Source Selection */}
                     <div className="bg-white dark:bg-gray-900 rounded-[3rem] border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
                         <div className="p-8 border-b dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -355,9 +354,9 @@ export const Settings: React.FC<SettingsProps> = ({
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 pb-24 no-scrollbar">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-10 pb-24 no-scrollbar">
                 
-                {/* Theme Selector (Enhanced) */}
+                {/* 1. Theme Selector */}
                 <div className="space-y-4">
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Apparence du Système</h3>
                     <div className="grid grid-cols-2 gap-4">
@@ -380,10 +379,30 @@ export const Settings: React.FC<SettingsProps> = ({
                     </div>
                 </div>
 
+                {/* 2. Language Selector (Improved) */}
+                <div className="space-y-4">
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Préférences de Langue</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {LANGUAGES_CONFIG.map((lang) => (
+                            <div 
+                                key={lang.code}
+                                onClick={() => onLanguageChange(lang.code as Language)}
+                                className={`p-5 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center gap-4 ${currentLanguage === lang.code ? 'bg-white dark:bg-gray-800 border-blue-500 shadow-lg scale-[1.02]' : 'bg-white/50 dark:bg-gray-900/50 border-transparent opacity-60 hover:opacity-100'}`}
+                            >
+                                <div className="text-3xl filter drop-shadow-sm">{lang.flag}</div>
+                                <div className="flex-1">
+                                    <span className="font-black text-xs uppercase dark:text-white block">{lang.native}</span>
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">{lang.desc}</span>
+                                </div>
+                                {currentLanguage === lang.code && <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white"><Check size={12} strokeWidth={4}/></div>}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
                 <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-sm border dark:border-gray-800 overflow-hidden">
                     <h3 className="px-8 pt-8 pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Général</h3>
                     <SettingItem icon={Bell} label="Notifications Push" subLabel="Alertes système en temps réel" toggle={isPushEnabled} onToggle={handleTogglePush} />
-                    <SettingItem icon={Globe} label="Langue" subLabel={currentLanguage === 'fr' ? 'Français' : 'English'} onClick={() => onLanguageChange(currentLanguage === 'fr' ? 'en' : 'fr')} />
                 </div>
 
                 {user.type === UserType.ADMIN && (

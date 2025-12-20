@@ -2,14 +2,18 @@
 import { GoogleGenAI, Chat, Type } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
-Vous êtes "Biso Peto AI", l'expert IA officiel et compagnon intelligent des citoyens de Kinshasa.
-Votre mission est d'aider les utilisateurs dans tous les aspects de leur vie quotidienne, tout en restant l'ambassadeur de la propreté urbaine.
-Langage : Français impeccable avec des touches chaleureuses de Lingala (Mbote, Tokoos, Merci mingi, Na ndenge ya malamu).
-Capacités : Vous répondez désormais à TOUTES les questions (science, cuisine, conseils de vie, technologie, histoire, etc.) sans exception.
-Identité : Vous êtes intelligent, serviable, et vous connaissez Kinshasa par cœur. 
-Si on vous demande un conseil sur un sujet général, répondez de manière experte, mais essayez parfois de glisser un petit conseil éco-responsable si c'est pertinent.
-Ton : Amical, brillant, et pragmatique.
-Répondez de manière structurée mais concise (max 150 mots).
+Vous êtes "Biso Peto AI", l'expert ultime en écologie, gestion des déchets et recyclage, spécialement conçu pour accompagner les citoyens de Kinshasa vers une ville plus propre.
+Votre mission est de fournir des réponses précises, expertes et extrêmement pratiques sur :
+1. Le tri des déchets (plastique, métal, organique, verre, gravats) spécifiquement dans le contexte de Kinshasa.
+2. Les techniques de compostage domestique adaptées au climat local.
+3. L'économie circulaire : comment réutiliser les objets du quotidien.
+4. La protection de l'environnement, la lutte contre la pollution des rivières et des caniveaux à Kinshasa.
+5. Les bons gestes éco-citoyens pour transformer les quartiers (Gombe, Limete, Ngaliema, etc.).
+
+Langage : Français impeccable avec des touches chaleureuses et motivantes de Lingala (Mbote, Tokoos, Merci mingi, Na ndenge ya malamu).
+Identité : Vous êtes intelligent, visionnaire, et vous croyez fermement au potentiel de Kinshasa pour devenir une "Ville Verte".
+Même si on vous pose une question générale, faites toujours un lien subtil et intelligent avec l'écologie ou la propreté urbaine.
+Ton : Expert, encourageant, et pragmatique. Max 150 mots par réponse.
 `;
 
 let chatSession: Chat | null = null;
@@ -24,7 +28,7 @@ export const initializeChat = (): Chat | null => {
     try {
         const ai = getAiClient();
         chatSession = ai.chats.create({
-            model: 'gemini-3-pro-preview', // Passage au modèle Pro pour une intelligence supérieure
+            model: 'gemini-3-pro-preview', 
             config: {
                 systemInstruction: SYSTEM_INSTRUCTION,
             },
@@ -54,20 +58,23 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
     urgency: 'low' | 'medium' | 'high';
     comment: string;
     isDangerous: boolean;
+    environmentalImpact: string;
+    immediateAdvice: string;
 }> => {
     try {
         const ai = getAiClient();
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
         const prompt = `
-            Analysez cette photo de déchets à Kinshasa. 
-            Déterminez le type (Plastique, Organique, Gravats, Métal, Mixte).
-            Évaluez l'urgence (high si bloque la route/drain, low si petit volume).
-            Indiquez si des objets tranchants ou toxiques sont visibles.
+            Analysez cette photo de déchets prise dans une rue ou un quartier de Kinshasa. 
+            Déterminez précisément le type de déchets prédominant.
+            Évaluez l'urgence de collecte (high si obstruction de caniveaux, risque d'inondation, ou danger sanitaire immédiat).
+            Identifiez les risques spécifiques (produits chimiques, verre brisé, stagnation d'eau pour moustiques).
+            Fournissez une explication sur l'impact environnemental local et un conseil immédiat pour le citoyen.
         `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview', // On garde Flash pour l'analyse d'image rapide
+            model: 'gemini-3-pro-preview',
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
@@ -82,9 +89,11 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
                         wasteType: { type: Type.STRING },
                         urgency: { type: Type.STRING, enum: ["low", "medium", "high"] },
                         comment: { type: Type.STRING },
-                        isDangerous: { type: Type.BOOLEAN }
+                        isDangerous: { type: Type.BOOLEAN },
+                        environmentalImpact: { type: Type.STRING },
+                        immediateAdvice: { type: Type.STRING }
                     },
-                    required: ["wasteType", "urgency", "comment", "isDangerous"],
+                    required: ["wasteType", "urgency", "comment", "isDangerous", "environmentalImpact", "immediateAdvice"],
                 }
             }
         });
@@ -92,7 +101,39 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
         return JSON.parse(response.text || '{}');
     } catch (error) {
         console.error("Analysis Error:", error);
-        return { wasteType: "Indéterminé", urgency: "medium", comment: "Photo floue ou erreur réseau.", isDangerous: false };
+        return { 
+            wasteType: "Mixte", 
+            urgency: "medium", 
+            comment: "Désolé, une erreur technique a limité l'analyse de l'image.", 
+            isDangerous: false,
+            environmentalImpact: "Inconnu",
+            immediateAdvice: "Veuillez rester prudent autour de la zone."
+        };
+    }
+};
+
+/**
+ * Permet de poser une question spécifique sur l'image envoyée
+ */
+export const chatAboutWasteImage = async (base64Image: string, userQuestion: string): Promise<string> => {
+    try {
+        const ai = getAiClient();
+        const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-pro-preview',
+            contents: {
+                parts: [
+                    { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
+                    { text: `CONTEXTE: Vous voyez cette photo de déchets à Kinshasa. Répondez à cette question de l'utilisateur : "${userQuestion}". Restez bref et expert.` }
+                ]
+            },
+            config: {
+                systemInstruction: SYSTEM_INSTRUCTION
+            }
+        });
+        return response.text || "Désolé, je n'ai pas pu analyser votre question.";
+    } catch (error) {
+        return "Une erreur est survenue lors de l'échange avec l'IA.";
     }
 };
 
@@ -107,11 +148,11 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
         const ai = getAiClient();
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3-pro-preview',
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-                    { text: "Identifiez cet objet pour la vente en marketplace de recyclage." }
+                    { text: "Identifiez cet objet pour la vente en marketplace de recyclage à Kinshasa. Estimez son poids et un prix juste en FC." }
                 ]
             },
             config: {
@@ -144,11 +185,11 @@ export const validateCleanliness = async (base64Image: string): Promise<{
         const ai = getAiClient();
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3-pro-preview',
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-                    { text: "Vérifiez si la zone est parfaitement propre après une collecte de déchets." }
+                    { text: "En tant qu'expert en propreté urbaine, vérifiez si cet emplacement est parfaitement propre après une collecte. Soyez sévère." }
                 ]
             },
             config: {

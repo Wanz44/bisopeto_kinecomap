@@ -198,7 +198,6 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onBack, onToast,
         // Upload Image First
         let imageUrl = capturedImage;
         if (imageFile) {
-            // Fixed: StorageAPI.uploadImage only accepts one argument (file)
             const uploadedUrl = await StorageAPI.uploadImage(imageFile);
             if (uploadedUrl) {
                 imageUrl = uploadedUrl;
@@ -431,7 +430,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onBack, onToast,
 
 
     return (
-        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-900 transition-colors duration-300">
+        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-900 transition-colors duration-300 relative">
              <div className="bg-white dark:bg-gray-800 px-4 py-3 shadow-sm flex items-center justify-between sticky top-0 z-30 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3">
                     <button onClick={onBack} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300"><ArrowLeft size={20} /></button>
@@ -498,7 +497,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onBack, onToast,
                                     className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
                                         filterCategory === cat.id 
                                         ? 'bg-[#2962FF] text-white shadow-md' 
-                                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
+                                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
                                     }`}
                                 >
                                     {cat.icon} {cat.label}
@@ -648,6 +647,18 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onBack, onToast,
                 </div>
             )}
             
+            {/* Floating Action Button (FAB) for selling */}
+            {view === 'browse' && (
+                <button 
+                    onClick={() => setView('sell')}
+                    className="fixed bottom-24 right-6 md:bottom-10 md:right-10 z-40 bg-[#00C853] text-white flex items-center gap-2 px-6 py-4 rounded-3xl shadow-[0_20px_50px_rgba(0,200,83,0.3)] hover:scale-110 active:scale-95 transition-all group animate-fade-in-up border-4 border-white dark:border-gray-800"
+                >
+                    <Plus size={24} className="group-hover:rotate-90 transition-transform duration-300" />
+                    <span className="font-black uppercase text-xs tracking-widest">Vendre</span>
+                    <div className="absolute inset-0 bg-white/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </button>
+            )}
+
             {/* Modals */}
             <SecurePaymentModal />
             <ContactOptionModal />

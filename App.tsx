@@ -57,7 +57,10 @@ function App() {
         return (localStorage.getItem('kinecomap_theme') as Theme) || 'light';
     });
     
-    const [language, setLanguage] = useState<Language>('fr');
+    const [language, setLanguage] = useState<Language>(() => {
+        return (localStorage.getItem('kinecomap_lang') as Language) || 'fr';
+    });
+    
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [onboardingStartWithLogin, setOnboardingStartWithLogin] = useState(false);
 
@@ -127,6 +130,10 @@ function App() {
             localStorage.setItem('kinecomap_theme', 'light');
         }
     }, [theme]);
+
+    useEffect(() => {
+        localStorage.setItem('kinecomap_lang', language);
+    }, [language]);
 
     const handleUpdateLogo = (newLogo: string) => {
         setAppLogo(newLogo);

@@ -8,7 +8,7 @@ export enum UserType {
 
 export type UserStatus = 'pending' | 'active' | 'suspended';
 export type Theme = 'light' | 'dark';
-export type Language = 'fr' | 'en';
+export type Language = 'fr' | 'en' | 'ln'; // Ajout de 'ln' pour le Lingala
 
 export type UserPermission = 
     | 'manage_users' 
