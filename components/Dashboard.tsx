@@ -8,11 +8,11 @@ import {
     ShieldCheck, PhoneCall, Phone, FileText, Download, Globe2, Wind, Sparkles, Plus,
     Mail, ShieldAlert, Siren, Zap, Target, UserCheck, ShoppingBag, MessageSquare, Battery,
     ArrowDownRight, ChevronRight, Briefcase, Factory, ShieldEllipsis, History, FileCheck,
-    X, ClipboardList, Camera, Package, Cloud, CloudOff, UserPlus, Bell, Lock
+    X, ClipboardList, Camera, Package, Cloud, CloudOff, UserPlus, Bell, Lock, PieChart as PieIcon
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
-    PieChart, Pie, AreaChart, Area, CartesianGrid, YAxis, Legend
+    PieChart as RechartsPieChart, Pie, AreaChart, Area, CartesianGrid, YAxis, Legend
 } from 'recharts';
 import { User, AppView, UserType, WasteReport, MarketplaceItem, AdCampaign, NotificationItem } from '../types';
 import { UserAPI, ReportsAPI, MarketplaceAPI, AdsAPI, NotificationsAPI } from '../services/api';
@@ -233,7 +233,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView, onToast 
                 <div className="bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
                     <div className="flex justify-between items-center mb-8">
                         <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Efficacité Zones</h3>
-                        <PieChart size={20} className="text-blue-500" />
+                        <PieIcon size={20} className="text-blue-500" />
                     </div>
                     <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar">
                         {ZONE_PERFORMANCE.map((zone, i) => {
