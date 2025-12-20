@@ -39,7 +39,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
     const hasPermission = (perm?: UserPermission): boolean => {
         if (!perm) return true;
         if (!user) return false;
-        // Super Admin possède tout par défaut si pas de permissions définies
         if (user.type === UserType.ADMIN && (!user.permissions || user.permissions.length === 0)) return true;
         return user.permissions?.includes(perm) || false;
     };
@@ -53,16 +52,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             ];
 
             const gestionItems: NavItem[] = [];
+            if (hasPermission('manage_reports')) gestionItems.push({ view: AppView.ADMIN_REPORTS, icon: AlertTriangle, label: 'Signalements SIG' });
             if (hasPermission('manage_users')) gestionItems.push({ view: AppView.ADMIN_USERS, icon: Users, label: 'Utilisateurs' });
-            if (hasPermission('manage_reports')) gestionItems.push({ view: AppView.ADMIN_REPORTS, icon: AlertTriangle, label: 'Signalements' });
             if (hasPermission('manage_recovery')) gestionItems.push({ view: AppView.ADMIN_RECOVERY, icon: DollarSign, label: 'Recouvrement' });
             if (hasPermission('manage_subscriptions')) gestionItems.push({ view: AppView.ADMIN_SUBSCRIPTIONS, icon: CreditCard, label: 'Abonnements' });
-            if (gestionItems.length > 0) sections.push({ title: 'Gestion', items: gestionItems });
+            if (gestionItems.length > 0) sections.push({ title: 'Opérations', items: gestionItems });
 
             const contenuItems: NavItem[] = [];
             if (hasPermission('manage_marketplace')) contenuItems.push({ view: AppView.ADMIN_MARKETPLACE, icon: ShoppingBag, label: 'Marketplace' });
             if (hasPermission('manage_academy')) contenuItems.push({ view: AppView.ADMIN_ACADEMY, icon: GraduationCap, label: 'Academy' });
-            if (hasPermission('manage_ads')) contenuItems.push({ view: AppView.ADMIN_ADS, icon: Megaphone, label: 'Publicités' });
+            if (hasPermission('manage_ads')) contenuItems.push({ view: AppView.ADMIN_ADS, icon: Megaphone, label: 'Régie Pub' });
             if (contenuItems.length > 0) sections.push({ title: 'Contenu', items: contenuItems });
 
             const systemeItems: NavItem[] = [{ view: AppView.NOTIFICATIONS, icon: Bell, label: 'Notifications' }];
@@ -70,7 +69,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             if (hasPermission('system_settings')) systemeItems.push({ view: AppView.ADMIN_PERMISSIONS, icon: Settings, label: 'Paramètres' });
             sections.push({ title: 'Système', items: systemeItems });
 
-            sections.push({ items: [{ view: AppView.PROFILE, icon: User, label: 'Profil Admin' }] });
+            sections.push({ items: [{ view: AppView.PROFILE, icon: User, label: 'Mon Profil' }] });
             return sections;
         }
 
@@ -78,15 +77,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             return [{ items: [
                 { view: AppView.DASHBOARD, icon: Home, label: 'Accueil' },
                 { view: AppView.COLLECTOR_JOBS, icon: ClipboardList, label: 'Missions' },
-                { view: AppView.MAP, icon: MapIcon, label: 'Ma Carte' },
+                { view: AppView.MAP, icon: MapIcon, label: 'Carte Live' },
                 { view: AppView.PROFILE, icon: User, label: 'Profil' },
             ]}];
         }
 
         return [{ items: [
             { view: AppView.DASHBOARD, icon: Home, label: 'Accueil' },
-            { view: AppView.REPORTING, icon: Camera, label: 'Signaler' },
-            { view: AppView.MAP, icon: MapIcon, label: 'Carte' },
+            { view: AppView.REPORTING, icon: Camera, label: 'Biso Peto Alert' },
+            { view: AppView.MAP, icon: MapIcon, label: 'Points Verts' },
             { view: AppView.MARKETPLACE, icon: ShoppingBag, label: 'Boutique' },
             { view: AppView.ACADEMY, icon: GraduationCap, label: 'Academy' },
             { view: AppView.PROFILE, icon: User, label: 'Profil' },
@@ -96,8 +95,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
     const navSections = getNavSections();
     const flattenedItems = navSections.flatMap(s => s.items);
 
+    // Priorité mobile pour Admin
+    const mobileItems = user?.type === UserType.ADMIN 
+        ? [
+            flattenedItems.find(i => i.view === AppView.DASHBOARD),
+            flattenedItems.find(i => i.view === AppView.ADMIN_REPORTS),
+            flattenedItems.find(i => i.view === AppView.ADMIN_USERS),
+            flattenedItems.find(i => i.view === AppView.NOTIFICATIONS),
+            flattenedItems.find(i => i.view === AppView.PROFILE),
+        ].filter(Boolean)
+        : flattenedItems.slice(0, 5);
+
     return (
         <div className="w-full h-[100dvh] flex bg-[#F5F5F5] dark:bg-[#050505] transition-colors duration-500 overflow-hidden relative font-sans">
+            {/* Sidebar (Desktop) */}
             <aside className="hidden md:flex flex-col w-72 h-[calc(100vh-3rem)] m-6 rounded-[2.5rem] bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl border border-gray-100 dark:border-white/5 shadow-2xl transition-all duration-300 relative z-50 shrink-0">
                 <div className="p-8 flex flex-col gap-1">
                     <div className="flex items-center gap-4 mb-4">
@@ -126,6 +137,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                     <button onClick={() => setShowLogoutConfirm(true)} className="w-full flex items-center gap-3 p-3 rounded-2xl text-red-500 hover:bg-red-50 transition-colors"><div className="p-2 bg-red-100 rounded-xl"><LogOut size={18} /></div><span className="font-bold text-sm">Déconnexion</span></button>
                 </div>
             </aside>
+
+            {/* Main Content View */}
             <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative z-10">
                 <header className="h-[80px] px-6 md:px-8 flex items-center justify-between sticky top-0 z-40 shrink-0 bg-white/50 backdrop-blur-sm dark:bg-black/50">
                     <div className="flex items-center gap-3 md:hidden"><div className="w-10 h-10 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg border border-gray-100 p-1"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div><span className="font-black text-xl tracking-tighter text-primary">KIN ECO MAP</span></div>
@@ -136,11 +149,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                     </div>
                 </header>
                 <main className="flex-1 overflow-y-auto relative pb-28 md:pb-0 h-full w-full">{children}</main>
+                
+                {/* Tab Bar (Mobile) */}
                 <nav className="md:hidden fixed bottom-6 inset-x-6 h-16 bg-white/90 dark:bg-[#111827]/90 backdrop-blur-xl border border-gray-100 dark:border-white/10 rounded-full shadow-2xl z-[100] flex items-center justify-evenly px-2">
-                    {flattenedItems.slice(0, 5).map((item) => {
+                    {mobileItems.map((item: any) => {
                         const isActive = currentView === item.view;
                         return (
-                            <button key={item.view} onClick={() => onChangeView(item.view)} className="flex flex-col items-center justify-center h-full relative w-12"><div className={`relative z-10 p-3 rounded-full transition-all duration-300 ${isActive ? 'bg-primary text-white -translate-y-4 shadow-xl scale-110' : 'text-gray-400'}`}><item.icon size={20} /></div></button>
+                            <button key={item.view} onClick={() => onChangeView(item.view)} className="flex flex-col items-center justify-center h-full relative w-12">
+                                <div className={`relative z-10 p-3 rounded-full transition-all duration-300 ${isActive ? 'bg-primary text-white -translate-y-4 shadow-xl scale-110' : 'text-gray-400'}`}>
+                                    <item.icon size={20} />
+                                </div>
+                            </button>
                         );
                     })}
                 </nav>

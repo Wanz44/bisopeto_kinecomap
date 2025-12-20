@@ -54,14 +54,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     const [allMarketplace, setAllMarketplace] = useState<MarketplaceItem[]>([]);
     const [allNotifications, setAllNotifications] = useState<any[]>([]);
     
-    const [searchResults, setSearchResults] = useState<{
-        users: User[],
-        reports: WasteReport[],
-        marketplace: MarketplaceItem[]
-    }>({ users: [], reports: [], marketplace: [] });
-    
-    const [isSearching, setIsSearching] = useState(false);
-
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         loadAllData();
@@ -88,38 +80,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
         }
     };
 
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-        if (query.trim().length > 1) {
-            setIsSearching(true);
-            const lowerQuery = query.toLowerCase();
-            
-            const filteredUsers = allUsers.filter(u => 
-                `${u.firstName} ${u.lastName}`.toLowerCase().includes(lowerQuery) ||
-                u.email?.toLowerCase().includes(lowerQuery) ||
-                u.phone.includes(lowerQuery) ||
-                u.commune?.toLowerCase().includes(lowerQuery)
-            ).slice(0, 3);
-
-            const filteredReports = allReports.filter(r => 
-                r.wasteType.toLowerCase().includes(lowerQuery) ||
-                r.status.toLowerCase().includes(lowerQuery) ||
-                r.urgency.toLowerCase().includes(lowerQuery) ||
-                r.commune?.toLowerCase().includes(lowerQuery) ||
-                r.comment.toLowerCase().includes(lowerQuery)
-            ).slice(0, 3);
-
-            setSearchResults({
-                users: filteredUsers,
-                reports: filteredReports,
-                marketplace: []
-            });
-        } else {
-            setIsSearching(false);
-            setSearchResults({ users: [], reports: [], marketplace: [] });
-        }
-    };
-
     const countReportsToday = allReports.filter(r => {
         const d = new Date(r.date);
         const today = new Date();
@@ -129,6 +89,45 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     const countPendingUsers = allUsers.filter(u => u.status === 'pending').length;
     const countInterventions = allReports.filter(r => r.status === 'resolved').length;
     const totalUsersCount = allUsers.length;
+
+    const STATS_CARDS = [
+        { 
+            label: 'Alertes Jour', 
+            value: countReportsToday.toString(), 
+            trend: countReportsToday > 0 ? 'Urgent' : 'OK', 
+            icon: Megaphone, 
+            color: 'text-blue-600', 
+            bg: 'bg-blue-50',
+            targetView: AppView.ADMIN_REPORTS 
+        },
+        { 
+            label: 'Dossiers à Valider', 
+            value: countPendingUsers.toString(), 
+            trend: countPendingUsers > 0 ? 'Action Requise' : 'À Jour', 
+            icon: UserCheck, 
+            color: 'text-[#FBC02D]', 
+            bg: 'bg-yellow-50',
+            targetView: AppView.ADMIN_USERS 
+        },
+        { 
+            label: 'Collectes Finies', 
+            value: countInterventions.toString(), 
+            trend: 'Total', 
+            icon: CheckCircle, 
+            color: 'text-purple-600', 
+            bg: 'bg-purple-50',
+            targetView: AppView.ADMIN_REPORTS 
+        },
+        { 
+            label: 'Utilisateurs Totaux', 
+            value: totalUsersCount.toString(), 
+            trend: 'Actifs', 
+            icon: Users, 
+            color: 'text-orange-600', 
+            bg: 'bg-orange-50',
+            targetView: AppView.ADMIN_USERS 
+        }
+    ];
 
     return (
         <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8 max-w-[1600px] mx-auto">
@@ -153,19 +152,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Biso Peto Control Tower • Live</span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none uppercase">Vue Stratégique</h1>
-                    
-                    <div className="relative w-full max-w-xl mt-6 group">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2962FF] transition-colors">
-                            <Search size={20} />
-                        </div>
-                        <input 
-                            type="text"
-                            placeholder="Rechercher utilisateurs ou incidents..."
-                            className="w-full pl-12 pr-12 py-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-[#2962FF] outline-none font-bold text-sm transition-all"
-                            value={searchQuery}
-                            onChange={(e) => handleSearch(e.target.value)}
-                        />
-                    </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3 items-center">
@@ -182,18 +168,13 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                    { label: 'Alertes Jour', value: countReportsToday.toString(), trend: countReportsToday > 0 ? '+100%' : '0%', icon: Megaphone, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { label: 'Dossiers à Valider', value: countPendingUsers.toString(), trend: countPendingUsers > 0 ? 'CRITIQUE' : 'OK', icon: UserCheck, color: 'text-[#FBC02D]', bg: 'bg-yellow-50' },
-                    { label: 'Collectes Finies', value: countInterventions.toString(), trend: 'TOTAL', icon: CheckCircle, color: 'text-purple-600', bg: 'bg-purple-50' },
-                    { label: 'Utilisateurs Totaux', value: totalUsersCount.toString(), trend: 'RÉSEAU', icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' }
-                ].map((stat, idx) => (
+                {STATS_CARDS.map((stat, idx) => (
                     <div 
                         key={idx} 
-                        onClick={() => stat.label === 'Dossiers à Valider' ? onChangeView(AppView.ADMIN_USERS) : undefined}
-                        className={`bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer`}
+                        onClick={() => onChangeView(stat.targetView)}
+                        className={`bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary transition-all active:scale-95`}
                     >
-                        <div className={`w-12 h-12 rounded-2xl ${stat.bg} dark:bg-white/5 ${stat.color} flex items-center justify-center mb-6 transition-transform group-hover:scale-110`}>
+                        <div className={`w-12 h-12 rounded-2xl ${stat.bg} dark:bg-white/5 ${stat.color} flex items-center justify-center mb-6 transition-transform group-hover:scale-110 group-hover:rotate-6`}>
                             <stat.icon size={24} />
                         </div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
@@ -201,25 +182,34 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">{stat.value}</h2>
                             <span className={`text-[10px] font-black px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500`}>{stat.trend}</span>
                         </div>
+                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ArrowUpRight size={16} className="text-gray-400" />
+                        </div>
                     </div>
                 ))}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Flux des Notifications Admin</h3>
+                    <div className="flex justify-between items-center mb-8">
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Validation en attente</h3>
+                        <button onClick={() => onChangeView(AppView.ADMIN_USERS)} className="text-[10px] font-black uppercase text-blue-500 hover:underline">Voir tout</button>
+                    </div>
                     <div className="space-y-4 max-h-[350px] overflow-y-auto no-scrollbar">
                         {allNotifications.filter(n => n.targetUserId === 'ADMIN').length === 0 ? (
-                            <p className="text-gray-400 font-bold uppercase text-xs italic text-center py-20">Aucun message de validation en attente.</p>
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <ShieldCheck size={48} className="text-green-500 mb-4 opacity-20" />
+                                <p className="text-gray-400 font-bold uppercase text-xs italic">Aucune validation urgente.</p>
+                            </div>
                         ) : (
                             allNotifications.filter(n => n.targetUserId === 'ADMIN').map((notif, i) => (
-                                <div key={i} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border dark:border-gray-700 animate-fade-in">
+                                <div key={i} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border dark:border-gray-700 animate-fade-in group">
                                     <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center shrink-0"><AlertTriangle size={18}/></div>
                                     <div className="flex-1">
                                         <p className="text-xs font-black dark:text-white uppercase">{notif.title}</p>
                                         <p className="text-[10px] text-gray-500 font-bold mt-1 leading-relaxed">{notif.message}</p>
                                     </div>
-                                    <button onClick={() => onChangeView(AppView.ADMIN_USERS)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"><ChevronRight/></button>
+                                    <button onClick={() => onChangeView(AppView.ADMIN_USERS)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><ChevronRight/></button>
                                 </div>
                             ))
                         )}
@@ -227,7 +217,10 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                 </div>
 
                 <div className="bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
-                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Performance Communes</h3>
+                    <div className="flex justify-between items-center mb-8">
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Performance Zones</h3>
+                        <button onClick={() => onChangeView(AppView.MAP)} className="text-[10px] font-black uppercase text-blue-500 hover:underline">Carte</button>
+                    </div>
                     <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar">
                         {ZONE_PERFORMANCE.map((zone, i) => {
                              const reportsInZone = allReports.filter(r => r.commune === zone.name).length;
@@ -256,6 +249,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     );
 };
 
+// ... keep other dashboard components unchanged ...
 const PendingDashboard: React.FC<DashboardProps> = ({ user }) => {
     return (
         <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 animate-fade-in">

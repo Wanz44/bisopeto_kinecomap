@@ -49,7 +49,11 @@ function App() {
     });
 
     const view = history[history.length - 1] || AppView.LANDING;
-    const [theme, setTheme] = useState<Theme>('light');
+    
+    const [theme, setTheme] = useState<Theme>(() => {
+        return (localStorage.getItem('kinecomap_theme') as Theme) || 'light';
+    });
+    
     const [language, setLanguage] = useState<Language>('fr');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [onboardingStartWithLogin, setOnboardingStartWithLogin] = useState(false);
@@ -103,8 +107,13 @@ function App() {
     }, [user]);
 
     useEffect(() => {
-        if (theme === 'dark') document.body.classList.add('dark');
-        else document.body.classList.remove('dark');
+        if (theme === 'dark') {
+            document.body.classList.add('dark');
+            localStorage.setItem('kinecomap_theme', 'dark');
+        } else {
+            document.body.classList.remove('dark');
+            localStorage.setItem('kinecomap_theme', 'light');
+        }
     }, [theme]);
 
     const handleUpdateLogo = (newLogo: string) => {
