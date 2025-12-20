@@ -23,7 +23,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
     sessionTimeout: 60,
     passwordPolicy: 'strong',
     marketplaceCommission: 0.05,
-    exchangeRate: 2800
+    exchangeRate: 2800,
+    logoUrl: 'logobisopeto.png'
 };
 
 const DEFAULT_IMPACT: GlobalImpact = {
@@ -103,9 +104,10 @@ const mapSettings = (s: any): SystemSettings => ({
     appVersion: s.app_version,
     exchangeRate: Number(s.exchange_rate || 2800),
     marketplaceCommission: Number(s.marketplace_commission || 0.05),
-    force2FA: false,
-    sessionTimeout: 60,
-    passwordPolicy: 'strong'
+    force2FA: s.force_2fa || false,
+    sessionTimeout: s.session_timeout || 60,
+    passwordPolicy: s.password_policy || 'strong',
+    logoUrl: s.logo_url || 'logobisopeto.png'
 });
 
 // --- PAYMENTS API ---
@@ -235,7 +237,7 @@ export const ReportsAPI = {
     getAll: async (): Promise<WasteReport[]> => {
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('waste_reports').select('*').order('date', { ascending: false });
-            if (!error && data) return data.map(report);
+            if (!error && data) return data.map(mapReport);
         }
         return getCollection<WasteReport>(KEYS.REPORTS).map(mapReport);
     },
@@ -317,7 +319,6 @@ export const VehicleAPI = {
             plate_number: v.plateNumber,
             status: v.status,
             battery_level: v.batteryLevel,
-            /* Fixed: Changed signal_strength access to correct property v.signalStrength */
             signal_strength: v.signalStrength,
             lat: v.lat,
             lng: v.lng,
@@ -452,7 +453,8 @@ export const SettingsAPI = {
             support_email: s.supportEmail,
             app_version: s.appVersion,
             exchange_rate: s.exchangeRate,
-            marketplace_commission: s.marketplaceCommission
+            marketplace_commission: s.marketplaceCommission,
+            logo_url: s.logoUrl
         };
         if (isSupabaseConfigured() && supabase) {
             await supabase.from('system_settings').upsert(dbData);
@@ -540,13 +542,23 @@ export const StorageAPI = {
     uploadLogo: async (file: File): Promise<string | null> => {
         if (isSupabaseConfigured() && supabase) {
             try {
-                const fileName = `logo-${Date.now()}-${file.name}`;
-                const { data, error } = await supabase.storage.from('branding').upload(fileName, file);
-                if (!error && data) {
+                const fileName = `logo-${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+                // Suppression de l'ancien fichier si possible ou écrasement
+                const { data, error } = await supabase.storage.from('branding').upload(fileName, file, {
+                    cacheControl: '3600',
+                    upsert: true
+                });
+                
+                if (error) {
+                    console.error("Storage upload error:", error.message);
+                    return null;
+                }
+
+                if (data) {
                     const { data: urlData } = supabase.storage.from('branding').getPublicUrl(data.path);
                     return urlData.publicUrl;
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Storage unexpected error:", e); }
         }
         return null;
     }

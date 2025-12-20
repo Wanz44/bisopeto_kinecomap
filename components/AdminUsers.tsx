@@ -194,7 +194,8 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                             placeholder="Chercher un nom, mobile..." 
                             className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none text-sm font-bold focus:ring-2 focus:ring-[#2962FF] dark:text-white" 
                             value={search} 
-                            onChange={(e) => setSearchQuery(e.target.value)} 
+                            /* Fixed: Changed setSearchQuery to setSearch */
+                            onChange={(e) => setSearch(e.target.value)} 
                         />
                     </div>
                     <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800 text-xs font-black uppercase border-none outline-none dark:text-gray-300">

@@ -102,17 +102,20 @@ export const Settings: React.FC<SettingsProps> = ({
                 if (cloudUrl) {
                     finalLogoUrl = cloudUrl;
                 } else {
-                    throw new Error("Échec de l'upload vers Supabase Storage. Vérifiez le bucket 'branding'.");
+                    throw new Error("Échec de l'upload. Vérifiez que le bucket 'branding' est public.");
                 }
             }
 
+            // Mise à jour locale du logo
             onUpdateLogo(finalLogoUrl);
+
+            // Persistance en base de données
             await SettingsAPI.update({
                 ...systemSettings,
-                appVersion: systemSettings.appVersion
+                logoUrl: finalLogoUrl
             });
 
-            if (onToast) onToast("Identité visuelle mise à jour !", "success");
+            if (onToast) onToast("Identité visuelle mise à jour et sauvegardée !", "success");
             setActiveSubView('main');
         } catch (error: any) {
             if (onToast) onToast(error.message || "Erreur lors de la sauvegarde", "error");

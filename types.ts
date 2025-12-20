@@ -115,6 +115,7 @@ export interface SystemSettings {
     passwordPolicy: string;
     marketplaceCommission: number;
     exchangeRate: number;
+    logoUrl?: string;
 }
 
 export interface GlobalImpact {

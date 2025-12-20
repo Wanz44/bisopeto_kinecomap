@@ -66,7 +66,8 @@ function App() {
         sessionTimeout: 60,
         passwordPolicy: 'strong',
         marketplaceCommission: 0.05,
-        exchangeRate: 2800
+        exchangeRate: 2800,
+        logoUrl: 'logobisopeto.png'
     });
 
     const [impactData, setImpactData] = useState<GlobalImpact>({
@@ -91,7 +92,15 @@ function App() {
                     SettingsAPI.get(),
                     SettingsAPI.getImpact()
                 ]);
-                if (settings) setSystemSettings(settings);
+                
+                if (settings) {
+                    setSystemSettings(settings);
+                    if (settings.logoUrl) {
+                        setAppLogo(settings.logoUrl);
+                        localStorage.setItem('kinecomap_app_logo', settings.logoUrl);
+                    }
+                }
+                
                 if (impact) setImpactData(impact);
 
                 if (user) {
