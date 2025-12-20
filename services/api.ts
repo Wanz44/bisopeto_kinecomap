@@ -102,7 +102,6 @@ const mapSettings = (s: any): SystemSettings => ({
     supportEmail: s.support_email,
     appVersion: s.app_version,
     exchangeRate: Number(s.exchange_rate || 2800),
-    /* Fixed: Changed marketplace_commission to marketplaceCommission to match SystemSettings interface */
     marketplaceCommission: Number(s.marketplace_commission || 0.05),
     force2FA: false,
     sessionTimeout: 60,
@@ -220,6 +219,14 @@ export const UserAPI = {
             users[idx] = { ...users[idx], ...u };
             saveCollection(KEYS.USERS, users);
         }
+    },
+    delete: async (id: string): Promise<void> => {
+        if (isSupabaseConfigured() && supabase) {
+            await supabase.from('users').delete().eq('id', id);
+        }
+        const users = getCollection<User>(KEYS.USERS);
+        const filtered = users.filter(u => u.id !== id);
+        saveCollection(KEYS.USERS, filtered);
     }
 };
 
@@ -228,7 +235,7 @@ export const ReportsAPI = {
     getAll: async (): Promise<WasteReport[]> => {
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('waste_reports').select('*').order('date', { ascending: false });
-            if (!error && data) return data.map(mapReport);
+            if (!error && data) return data.map(report);
         }
         return getCollection<WasteReport>(KEYS.REPORTS).map(mapReport);
     },
@@ -310,6 +317,7 @@ export const VehicleAPI = {
             plate_number: v.plateNumber,
             status: v.status,
             battery_level: v.batteryLevel,
+            /* Fixed: Changed signal_strength access to correct property v.signalStrength */
             signal_strength: v.signalStrength,
             lat: v.lat,
             lng: v.lng,
@@ -442,7 +450,6 @@ export const SettingsAPI = {
             id: 1,
             maintenance_mode: s.maintenanceMode,
             support_email: s.supportEmail,
-            /* Fixed: Changed s.app_version to s.appVersion to match SystemSettings interface */
             app_version: s.appVersion,
             exchange_rate: s.exchangeRate,
             marketplace_commission: s.marketplaceCommission
