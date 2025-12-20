@@ -44,18 +44,20 @@ const saveCollection = <T>(key: string, data: T[]) => {
     localStorage.setItem(key, JSON.stringify(data));
 };
 
-// Helper pour transformer les données Supabase (snake_case) en format App (camelCase)
+// --- MAPPERS (Snake Case to Camel Case) ---
+
 const mapUser = (u: any): User => ({
     ...u,
     firstName: u.first_name,
     lastName: u.last_name,
-    totalTonnage: u.total_tonnage,
-    co2_saved: u.co2_saved,
-    recyclingRate: u.recycling_rate,
+    totalTonnage: Number(u.total_tonnage || 0),
+    co2Saved: Number(u.co2_saved || 0),
+    recyclingRate: Number(u.recycling_rate || 0),
     points: u.points || 0,
     collections: u.collections || 0,
     badges: u.badges || 0,
-    subscription: u.subscription || 'standard'
+    subscription: u.subscription || 'standard',
+    permissions: u.permissions || []
 });
 
 const mapReport = (r: any): WasteReport => ({
@@ -66,20 +68,52 @@ const mapReport = (r: any): WasteReport => ({
     assignedTo: r.assigned_to
 });
 
+const mapMarketplace = (i: any): MarketplaceItem => ({
+    ...i,
+    sellerId: i.seller_id,
+    sellerName: i.seller_name,
+    imageUrl: i.image_url,
+    date: i.created_at ? new Date(i.created_at).toLocaleDateString('fr-FR') : ''
+});
+
+const mapPayment = (p: any): Payment => ({
+    ...p,
+    userId: p.user_id,
+    userName: p.user_name,
+    amountFC: Number(p.amount_fc || 0),
+    collectorId: p.collector_id,
+    collectorName: p.collector_name,
+    qrCodeData: p.qr_code_data,
+    createdAt: p.created_at
+});
+
+const mapVehicle = (v: any): Vehicle => ({
+    ...v,
+    plateNumber: v.plate_number,
+    batteryLevel: v.battery_level,
+    signalStrength: v.signal_strength,
+    driverId: v.driver_id,
+    gpsId: v.gps_id,
+    lastUpdate: v.last_update
+});
+
+const mapSettings = (s: any): SystemSettings => ({
+    maintenanceMode: s.maintenance_mode,
+    supportEmail: s.support_email,
+    appVersion: s.app_version,
+    exchangeRate: Number(s.exchange_rate || 2800),
+    marketplaceCommission: Number(s.marketplace_commission || 0.05),
+    force2FA: false,
+    sessionTimeout: 60,
+    passwordPolicy: 'strong'
+});
+
 // --- PAYMENTS API ---
 export const PaymentsAPI = {
     getAll: async (): Promise<Payment[]> => {
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('payments').select('*').order('created_at', { ascending: false });
-            if (!error && data) return data.map(p => ({
-                ...p,
-                userId: p.user_id,
-                userName: p.user_name,
-                amountFC: p.amount_fc,
-                collectorId: p.collector_id,
-                collectorName: p.collector_name,
-                qrCodeData: p.qr_code_data
-            })) as Payment[];
+            if (!error && data) return data.map(mapPayment);
         }
         return getCollection<Payment>(KEYS.PAYMENTS);
     },
@@ -98,7 +132,7 @@ export const PaymentsAPI = {
         };
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('payments').insert([dbData]).select().single();
-            if (!error && data) return data as any;
+            if (!error && data) return mapPayment(data);
         }
         const payments = getCollection<Payment>(KEYS.PAYMENTS);
         payments.unshift(p);
@@ -112,25 +146,19 @@ export const UserAPI = {
     login: async (identifier: string, password?: string): Promise<User | null> => {
         if (isSupabaseConfigured() && supabase) {
             try {
-                // On récupère l'utilisateur par email ou téléphone
-                const { data, error } = await supabase
+                // Recherche par email ou téléphone
+                let query = supabase
                     .from('users')
                     .select('*')
-                    .or(`email.eq.${identifier},phone.eq.${identifier}`)
-                    .maybeSingle();
+                    .or(`email.eq.${identifier},phone.eq.${identifier}`);
                 
-                if (!error && data) {
-                    // Si on a un mot de passe dans la colonne 'password' (test simple)
-                    if (password && data.password === password) {
-                        return mapUser(data);
-                    }
-                    // Si on utilise Supabase Auth ou password_hash (prototype simple pour le moment)
-                    // Note: Pour BCrypt/crypt, il faudrait un RPC Postgres. 
-                    // On accepte la connexion si le mot de passe correspond à la colonne password
-                    if (data.password === password || data.password_hash === password) {
-                         return mapUser(data);
-                    }
+                // Si un mot de passe est fourni, on filtre par la colonne password
+                if (password) {
+                    query = query.eq('password', password);
                 }
+
+                const { data, error } = await query.maybeSingle();
+                if (!error && data) return mapUser(data);
             } catch (e) { console.error(e); }
         }
         const users = getCollection<User>(KEYS.USERS);
@@ -143,13 +171,13 @@ export const UserAPI = {
             last_name: u.lastName,
             email: u.email,
             phone: u.phone,
-            password: password, // Utilisation de la colonne password simple
+            password: password,
             type: u.type,
             status: u.status,
             address: u.address,
             commune: u.commune,
             subscription: u.subscription,
-            permissions: u.permissions
+            permissions: u.permissions || []
         };
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('users').insert([dbUser]).select().single();
@@ -160,17 +188,21 @@ export const UserAPI = {
         saveCollection(KEYS.USERS, users);
         return u;
     },
-    getAll: async () => {
+    getAll: async (): Promise<User[]> => {
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
             if (!error && data) return data.map(mapUser);
         }
-        return getCollection<User>(KEYS.USERS);
+        return getCollection<User>(KEYS.USERS).map(mapUser);
     },
     update: async (u: Partial<User> & { id: string }) => {
         const dbUpdate: any = { ...u };
+        // Mapping inverse
         if (u.firstName) dbUpdate.first_name = u.firstName;
         if (u.lastName) dbUpdate.last_name = u.lastName;
+        if (u.totalTonnage !== undefined) dbUpdate.total_tonnage = u.totalTonnage;
+        if (u.co2Saved !== undefined) dbUpdate.co2_saved = u.co2Saved;
+        if (u.recyclingRate !== undefined) dbUpdate.recycling_rate = u.recyclingRate;
         
         if (isSupabaseConfigured() && supabase) {
             await supabase.from('users').update(dbUpdate).eq('id', u.id);
@@ -234,17 +266,30 @@ export const ReportsAPI = {
 
 // --- VEHICLE API ---
 export const VehicleAPI = {
-    getAll: async () => {
+    getAll: async (): Promise<Vehicle[]> => {
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('vehicles').select('*');
-            if (!error && data) return data as Vehicle[];
+            if (!error && data) return data.map(mapVehicle);
         }
-        return getCollection<Vehicle>(KEYS.VEHICLES);
+        return getCollection<Vehicle>(KEYS.VEHICLES).map(mapVehicle);
     },
-    add: async (v: Vehicle) => {
+    add: async (v: Vehicle): Promise<Vehicle> => {
+        const dbData = {
+            id: v.id || `veh-${Date.now()}`,
+            name: v.name,
+            type: v.type,
+            plate_number: v.plateNumber,
+            status: v.status,
+            battery_level: v.batteryLevel,
+            signal_strength: v.signalStrength,
+            lat: v.lat,
+            lng: v.lng,
+            driver_id: v.driverId,
+            gps_id: v.gpsId
+        };
         if (isSupabaseConfigured() && supabase) {
-            const { data, error } = await supabase.from('vehicles').insert([v]).select().single();
-            if (!error && data) return data as Vehicle;
+            const { data, error } = await supabase.from('vehicles').insert([dbData]).select().single();
+            if (!error && data) return mapVehicle(data);
         }
         const list = getCollection<Vehicle>(KEYS.VEHICLES);
         list.push(v);
@@ -252,8 +297,20 @@ export const VehicleAPI = {
         return v;
     },
     update: async (v: Vehicle) => {
+        const dbData = {
+            name: v.name,
+            type: v.type,
+            plate_number: v.plateNumber,
+            status: v.status,
+            battery_level: v.batteryLevel,
+            signal_strength: v.signalStrength,
+            lat: v.lat,
+            lng: v.lng,
+            driver_id: v.driverId,
+            gps_id: v.gpsId
+        };
         if (isSupabaseConfigured() && supabase) {
-            await supabase.from('vehicles').update(v).eq('id', v.id);
+            await supabase.from('vehicles').update(dbData).eq('id', v.id);
         }
         const list = getCollection<Vehicle>(KEYS.VEHICLES);
         const idx = list.findIndex(item => item.id === v.id);
@@ -274,19 +331,14 @@ export const VehicleAPI = {
 
 // --- MARKETPLACE API ---
 export const MarketplaceAPI = {
-    getAll: async () => {
+    getAll: async (): Promise<MarketplaceItem[]> => {
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('marketplace_items').select('*').order('created_at', { ascending: false });
-            if (!error && data) return data.map(i => ({
-                ...i,
-                sellerId: i.seller_id,
-                sellerName: i.seller_name,
-                imageUrl: i.image_url
-            })) as MarketplaceItem[];
+            if (!error && data) return data.map(mapMarketplace);
         }
-        return getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
+        return getCollection<MarketplaceItem>(KEYS.MARKETPLACE).map(mapMarketplace);
     },
-    add: async (i: MarketplaceItem) => {
+    add: async (i: MarketplaceItem): Promise<MarketplaceItem> => {
         const dbData = {
             id: i.id || `item-${Date.now()}`,
             seller_id: i.sellerId,
@@ -301,7 +353,7 @@ export const MarketplaceAPI = {
         };
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('marketplace_items').insert([dbData]).select().single();
-            if (!error && data) return data as any;
+            if (!error && data) return mapMarketplace(data);
         }
         const items = getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
         items.unshift(i);
@@ -309,8 +361,13 @@ export const MarketplaceAPI = {
         return i;
     },
     update: async (i: MarketplaceItem) => {
+        const dbData = {
+            title: i.title,
+            status: i.status,
+            price: i.price
+        };
         if (isSupabaseConfigured() && supabase) {
-            await supabase.from('marketplace_items').update(i).eq('id', i.id);
+            await supabase.from('marketplace_items').update(dbData).eq('id', i.id);
         }
         const items = getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
         const idx = items.findIndex(item => item.id === i.id);
@@ -330,7 +387,11 @@ export const NotificationsAPI = {
                     query = query.or(`target_user_id.eq.${userId},target_user_id.eq.ALL,target_user_id.eq.ADMIN`);
                 }
                 const { data, error } = await query;
-                if (!error && data) return data.map(n => ({ ...n, targetUserId: n.target_user_id })) as NotificationItem[];
+                if (!error && data) return data.map(n => ({ 
+                    ...n, 
+                    targetUserId: n.target_user_id,
+                    time: n.created_at ? new Date(n.created_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) : '...'
+                })) as NotificationItem[];
             } catch (e) { console.error(e); }
         }
         return getCollection<NotificationItem>(KEYS.NOTIFICATIONS);
@@ -345,7 +406,11 @@ export const NotificationsAPI = {
         };
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('notifications').insert([dbData]).select().single();
-            if (!error && data) return data as any;
+            if (!error && data) return { 
+                ...data, 
+                targetUserId: data.target_user_id,
+                time: 'Maintenant'
+            } as any;
         }
         return n as NotificationItem;
     }
@@ -356,14 +421,7 @@ export const SettingsAPI = {
     get: async (): Promise<SystemSettings> => {
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('system_settings').select('*').maybeSingle();
-            if (!error && data) return {
-                ...DEFAULT_SETTINGS,
-                maintenanceMode: data.maintenance_mode,
-                supportEmail: data.support_email,
-                appVersion: data.app_version,
-                exchangeRate: data.exchange_rate,
-                marketplaceCommission: data.marketplace_commission
-            };
+            if (!error && data) return mapSettings(data);
         }
         const stored = JSON.parse(localStorage.getItem(KEYS.SETTINGS) || JSON.stringify(DEFAULT_SETTINGS));
         return { ...DEFAULT_SETTINGS, ...stored };
