@@ -103,7 +103,8 @@ const mapVehicle = (v: any): Vehicle => ({
 const mapSettings = (s: any): SystemSettings => ({
     maintenanceMode: s.maintenance_mode,
     supportEmail: s.support_email,
-    app_version: s.app_version,
+    // Corrected app_version to appVersion to match SystemSettings interface
+    appVersion: s.app_version,
     exchangeRate: Number(s.exchange_rate || 2800),
     marketplaceCommission: Number(s.marketplace_commission || 0.05),
     force2FA: s.force_2fa || false,
