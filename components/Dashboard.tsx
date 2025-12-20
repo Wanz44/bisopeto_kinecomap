@@ -8,7 +8,7 @@ import {
     ShieldCheck, PhoneCall, Phone, FileText, Download, Globe2, Wind, Sparkles, Plus,
     Mail, ShieldAlert, Siren, Zap, Target, UserCheck, ShoppingBag, MessageSquare, Battery,
     ArrowDownRight, ChevronRight, Briefcase, Factory, ShieldEllipsis, History, FileCheck,
-    X, ClipboardList, Camera, Package, Cloud, CloudOff, UserPlus
+    X, ClipboardList, Camera, Package, Cloud, CloudOff, UserPlus, Bell
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
@@ -45,7 +45,7 @@ export const Dashboard: React.FC<DashboardProps> = (props) => {
     }
 };
 
-const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
+const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView, onToast }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isCloudSynced, setIsCloudSynced] = useState(false);
     
@@ -71,6 +71,12 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
             ]);
             setAllUsers(usersData);
             setAllReports(reportsData);
+
+            // Notification Admin Toast persistante au chargement
+            const pending = usersData.filter(u => u.status === 'pending');
+            if (pending.length > 0 && onToast) {
+                onToast(`Réseau : ${pending.length} dossiers d'assainissement en attente de validation.`, "info");
+            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -98,11 +104,12 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
         { 
             label: 'À Valider', 
             value: pendingUsers.length.toString(), 
-            trend: pendingUsers.length > 0 ? 'Action Requise' : 'À Jour', 
+            trend: pendingUsers.length > 0 ? 'CRITIQUE' : 'À Jour', 
             icon: UserCheck, 
             color: 'text-[#FBC02D]', 
             bg: 'bg-yellow-50',
-            targetView: AppView.ADMIN_USERS 
+            targetView: AppView.ADMIN_USERS,
+            urgent: pendingUsers.length > 0
         },
         { 
             label: 'Collectes Finies', 
@@ -156,31 +163,34 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {STATS_CARDS.map((stat, idx) => (
-                    <div key={idx} onClick={() => onChangeView(stat.targetView)} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary transition-all active:scale-95">
+                    <div key={idx} onClick={() => onChangeView(stat.targetView)} className={`bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border-2 transition-all active:scale-95 cursor-pointer relative overflow-hidden group shadow-sm ${stat.urgent ? 'border-orange-500 animate-pulse bg-orange-50/20 shadow-orange-200' : 'border-gray-100 dark:border-gray-800 hover:border-primary'}`}>
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} dark:bg-white/5 ${stat.color} flex items-center justify-center mb-6 transition-transform group-hover:scale-110 group-hover:rotate-6`}>
                             <stat.icon size={24} />
                         </div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
                         <div className="flex items-end gap-3">
                             <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">{stat.value}</h2>
-                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500`}>{stat.trend}</span>
+                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${stat.urgent ? 'bg-orange-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>{stat.trend}</span>
                         </div>
                     </div>
                 ))}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* REFACTORED: Liste réelle des comptes à valider */}
-                <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
-                    <div className="flex justify-between items-center mb-8">
+                {/* Section Spéciale "Validation d'Assainissement" (Auparavant REFACTORED) */}
+                <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[3rem] border-2 border-orange-200 dark:border-orange-900/40 shadow-2xl flex flex-col relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 text-orange-500 rotate-12"><ShieldAlert size={120} /></div>
+                    <div className="flex justify-between items-center mb-8 relative z-10">
                         <div className="flex items-center gap-3">
-                            <UserPlus size={24} className="text-orange-500" />
-                            <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Demandes de Qualification</h3>
+                            <Siren size={24} className="text-orange-500" />
+                            <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Validation d'Assainissement</h3>
                         </div>
-                        <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">{pendingUsers.length} en attente</span>
+                        <div className="flex items-center gap-2 bg-orange-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-lg shadow-orange-500/20">
+                           <Bell size={12} className="animate-bounce" /> {pendingUsers.length} comptes critiques
+                        </div>
                     </div>
                     
-                    <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar max-h-[400px]">
+                    <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar max-h-[400px] relative z-10">
                         {pendingUsers.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
                                 <ShieldCheck size={48} className="text-green-500 mb-4 opacity-20" />
@@ -188,12 +198,12 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             </div>
                         ) : (
                             pendingUsers.map((pendingUser, i) => (
-                                <div key={pendingUser.id || i} className="flex items-center gap-4 p-5 bg-gray-50 dark:bg-gray-800/50 rounded-[2rem] border-2 border-transparent hover:border-orange-200 transition-all group animate-fade-in">
+                                <div key={pendingUser.id || i} className="flex items-center gap-4 p-5 bg-orange-50/50 dark:bg-orange-900/10 rounded-[2rem] border-2 border-transparent hover:border-orange-200 transition-all group animate-fade-in">
                                     <div className="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center font-black text-xl shrink-0 shadow-sm">{pendingUser.firstName[0]}</div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <p className="text-sm font-black dark:text-white uppercase truncate">{pendingUser.firstName} {pendingUser.lastName}</p>
-                                            <span className="text-[8px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-md font-black uppercase">{pendingUser.type}</span>
+                                            <span className="text-[8px] bg-white text-orange-600 px-2 py-0.5 rounded-md font-black uppercase shadow-sm">{pendingUser.type}</span>
                                         </div>
                                         <div className="flex items-center gap-3 mt-1.5">
                                             <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1"><MapPin size={10}/> {pendingUser.commune || 'Ksh'}</span>
@@ -202,9 +212,9 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                                     </div>
                                     <button 
                                         onClick={() => onChangeView(AppView.ADMIN_USERS)} 
-                                        className="bg-white dark:bg-gray-700 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 text-orange-500 hover:bg-orange-500 hover:text-white transition-all active:scale-90"
+                                        className="bg-orange-500 text-white px-5 py-2.5 rounded-2xl shadow-xl shadow-orange-500/20 font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
                                     >
-                                        <ChevronRight size={20} />
+                                        Qualifier
                                     </button>
                                 </div>
                             ))
@@ -215,7 +225,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             onClick={() => onChangeView(AppView.ADMIN_USERS)}
                             className="mt-6 w-full py-4 bg-gray-900 text-white dark:bg-white dark:text-black rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all"
                         >
-                            Gérer tous les utilisateurs
+                            Ouvrir l'annuaire complet
                         </button>
                     )}
                 </div>

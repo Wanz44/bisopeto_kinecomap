@@ -172,7 +172,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
             }
             
             setRegistrationFinished(true);
-            onComplete(registeredUser);
+            
+            // Simulation d'envoi d'email automatique
+            if (onToast) onToast(`Mbote ! Un email de confirmation a été envoyé à ${formData.email}`, "success");
         } catch (err: any) {
             setError(err.message || "Une erreur est survenue lors de l'inscription.");
         } finally {
@@ -230,9 +232,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                     </div>
                     <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter">C'est Presque Fini !</h2>
                     <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-3xl mb-8 border border-gray-100 dark:border-gray-700">
-                        <p className="text-gray-600 dark:text-gray-300 font-bold leading-relaxed italic">
+                        <p className="text-gray-600 dark:text-gray-300 font-bold leading-relaxed italic mb-4">
                             "Merci pour votre souscription. Notre équipe vous contactera sous peu pour finaliser votre abonnement."
                         </p>
+                        <div className="flex items-center justify-center gap-2 text-xs font-black text-blue-500 uppercase tracking-widest">
+                            <Mail size={14} /> Email de confirmation envoyé.
+                        </div>
                     </div>
                     <button 
                         onClick={() => onComplete(formData as User)} 
