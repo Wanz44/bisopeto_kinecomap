@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Bell, CheckCircle, Info, AlertTriangle, Clock, Send, Users, MapPin, X, Trash2, Calendar, Target, ShieldAlert, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Bell, CheckCircle, Info, AlertTriangle, Clock, Send, Users, MapPin, X, Trash2, Calendar, Target, ShieldAlert, MessageSquare, Filter } from 'lucide-react';
 import { NotificationItem, UserType } from '../types';
 
 interface NotificationsProps {
@@ -9,10 +9,13 @@ interface NotificationsProps {
     onMarkAllRead: () => void;
     isAdmin?: boolean;
     onSendNotification?: (notif: Partial<NotificationItem>) => void;
+    onDeleteNotification?: (id: string) => void;
 }
 
-export const Notifications: React.FC<NotificationsProps> = ({ onBack, notifications, onMarkAllRead, isAdmin, onSendNotification }) => {
+export const Notifications: React.FC<NotificationsProps> = ({ onBack, notifications, onMarkAllRead, isAdmin, onSendNotification, onDeleteNotification }) => {
     const [viewMode, setViewMode] = useState<'inbox' | 'compose' | 'history'>(isAdmin ? 'compose' : 'inbox');
+    const [filterStart, setFilterStart] = useState('');
+    const [filterEnd, setFilterEnd] = useState('');
     const [newNotif, setNewNotif] = useState({
         title: '',
         message: '',
@@ -37,6 +40,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ onBack, notificati
                 ...newNotif,
                 id: Date.now().toString(),
                 time: 'À l\'instant',
+                date: new Date().toISOString(),
                 read: false,
                 targetUserId: newNotif.targetRole === 'ALL' ? 'ALL' : newNotif.targetRole
             });
@@ -44,6 +48,16 @@ export const Notifications: React.FC<NotificationsProps> = ({ onBack, notificati
             setViewMode('history');
         }
     };
+
+    const filteredNotifications = notifications.filter(notif => {
+        if (!filterStart && !filterEnd) return true;
+        const nDate = new Date(notif.date || 0);
+        const start = filterStart ? new Date(filterStart) : null;
+        const end = filterEnd ? new Date(filterEnd) : null;
+        if (start && nDate < start) return false;
+        if (end && nDate > end) return false;
+        return true;
+    });
 
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 transition-colors duration-300">
@@ -115,13 +129,27 @@ export const Notifications: React.FC<NotificationsProps> = ({ onBack, notificati
 
                 {(viewMode === 'inbox' || viewMode === 'history') && (
                     <div className="space-y-4 animate-fade-in">
-                        {notifications.length === 0 ? (
+                        {isAdmin && viewMode === 'history' && (
+                            <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border dark:border-gray-800 mb-6 flex flex-col sm:flex-row gap-4 items-end">
+                                <div className="flex-1 space-y-2 w-full">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Début (Date & Heure)</label>
+                                    <input type="datetime-local" value={filterStart} onChange={e => setFilterStart(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none outline-none font-bold text-xs dark:text-white" />
+                                </div>
+                                <div className="flex-1 space-y-2 w-full">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Fin (Date & Heure)</label>
+                                    <input type="datetime-local" value={filterEnd} onChange={e => setFilterEnd(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none outline-none font-bold text-xs dark:text-white" />
+                                </div>
+                                <button onClick={() => { setFilterStart(''); setFilterEnd(''); }} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-xl hover:text-red-500 transition-all"><X size={20}/></button>
+                            </div>
+                        )}
+
+                        {filteredNotifications.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                                 <Bell size={48} className="mb-4 opacity-20" />
                                 <p className="font-black uppercase text-xs tracking-widest">Aucun message pour le moment</p>
                             </div>
                         ) : (
-                            notifications.map(notif => (
+                            filteredNotifications.map(notif => (
                                 <div key={notif.id} className={`bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] border dark:border-gray-800 shadow-sm flex gap-6 items-start transition-all hover:shadow-md ${!notif.read ? 'border-l-4 border-l-blue-500' : ''}`}>
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                                         notif.type === 'success' ? 'bg-green-50 text-green-600' : 
@@ -134,7 +162,17 @@ export const Notifications: React.FC<NotificationsProps> = ({ onBack, notificati
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start mb-2">
                                             <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none">{notif.title}</h4>
-                                            <span className="text-[10px] font-black text-gray-400 uppercase">{notif.time}</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[10px] font-black text-gray-400 uppercase">{notif.time}</span>
+                                                {isAdmin && (
+                                                    <button 
+                                                        onClick={() => onDeleteNotification?.(notif.id)}
+                                                        className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"
+                                                    >
+                                                        <Trash2 size={16}/>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 font-bold leading-relaxed">{notif.message}</p>
                                         {isAdmin && (

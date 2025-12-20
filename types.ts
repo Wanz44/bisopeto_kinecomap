@@ -225,6 +225,7 @@ export interface NotificationItem {
     message: string;
     type: 'info' | 'success' | 'warning' | 'alert';
     time: string;
+    date?: string; // ISO String pour le filtrage
     read: boolean;
     targetUserId: string;
 }

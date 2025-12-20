@@ -1,4 +1,3 @@
-
 import { User, MarketplaceItem, Vehicle, AdCampaign, Partner, UserType, SystemSettings, WasteReport, GlobalImpact, DatabaseHealth, NotificationItem, Payment } from '../types';
 import { supabase, isSupabaseConfigured, testSupabaseConnection } from './supabaseClient';
 
@@ -103,6 +102,7 @@ const mapVehicle = (v: any): Vehicle => ({
 const mapSettings = (s: any): SystemSettings => ({
     maintenanceMode: s.maintenance_mode,
     supportEmail: s.support_email,
+    // Fix: Changed 'app_version' to 'appVersion' to match SystemSettings interface
     appVersion: s.app_version,
     exchangeRate: Number(s.exchange_rate || 2800),
     marketplaceCommission: Number(s.marketplace_commission || 0.05),
@@ -340,7 +340,6 @@ export const VehicleAPI = {
             lat: v.lat,
             lng: v.lng,
             driver_id: v.driverId,
-            // Fixed: gps_id must access v.gpsId on a Vehicle typed object
             gps_id: v.gpsId
         };
         if (isSupabaseConfigured() && supabase) {
@@ -425,7 +424,8 @@ export const NotificationsAPI = {
                 if (!error && data) return data.map(n => ({ 
                     ...n, 
                     targetUserId: n.target_user_id,
-                    time: n.created_at ? new Date(n.created_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) : '...'
+                    time: n.created_at ? new Date(n.created_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) : '...',
+                    date: n.created_at || new Date().toISOString()
                 })) as NotificationItem[];
             } catch (e) { console.error(e); }
         }
@@ -437,17 +437,30 @@ export const NotificationsAPI = {
             title: n.title,
             message: n.message,
             type: n.type || 'info',
-            read: false
+            read: false,
+            created_at: new Date().toISOString()
         };
         if (isSupabaseConfigured() && supabase) {
             const { data, error } = await supabase.from('notifications').insert([dbData]).select().single();
             if (!error && data) return { 
                 ...data, 
                 targetUserId: data.target_user_id,
-                time: 'Maintenant'
+                time: 'Maintenant',
+                date: data.created_at
             } as any;
         }
-        return n as NotificationItem;
+        const notifs = getCollection<NotificationItem>(KEYS.NOTIFICATIONS);
+        const finalNotif = { ...n, id: Date.now().toString(), date: new Date().toISOString(), read: false } as NotificationItem;
+        notifs.unshift(finalNotif);
+        saveCollection(KEYS.NOTIFICATIONS, notifs);
+        return finalNotif;
+    },
+    delete: async (id: string): Promise<void> => {
+        if (isSupabaseConfigured() && supabase) {
+            await supabase.from('notifications').delete().eq('id', id);
+        }
+        const notifs = getCollection<NotificationItem>(KEYS.NOTIFICATIONS);
+        saveCollection(KEYS.NOTIFICATIONS, notifs.filter(n => n.id !== id));
     }
 };
 
@@ -468,6 +481,7 @@ export const SettingsAPI = {
     update: async (s: SystemSettings) => {
         const dbData = {
             id: 1,
+            // Fix: Changed s.maintenance_mode to s.maintenanceMode, s.support_email to s.supportEmail, etc.
             maintenance_mode: s.maintenanceMode,
             support_email: s.supportEmail,
             app_version: s.appVersion,

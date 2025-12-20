@@ -168,6 +168,16 @@ function App() {
         }
     };
 
+    const handleDeleteNotification = async (id: string) => {
+        try {
+            await NotificationsAPI.delete(id);
+            setNotifications(prev => prev.filter(n => n.id !== id));
+            handleShowToast("Notification supprimée", "info");
+        } catch (e) {
+            handleShowToast("Échec de suppression", "error");
+        }
+    };
+
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; visible: boolean }>({
         message: '', type: 'success', visible: false
     });
@@ -195,7 +205,7 @@ function App() {
             case AppView.PROFILE: return <Profile user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} onManageSubscription={() => navigateTo(AppView.SUBSCRIPTION)} onSettings={() => navigateTo(AppView.SETTINGS)} onUpdateProfile={p => setUser({ ...user, ...p })} onToast={handleShowToast} />;
             case AppView.SUBSCRIPTION: return <Subscription user={user} onBack={goBack} onUpdatePlan={(p) => { setUser({...user, subscription: p}); goBack(); }} plans={plans} exchangeRate={exchangeRate} onToast={handleShowToast} />;
             case AppView.PLANNING: return <Planning onBack={goBack} />;
-            case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => {}} isAdmin={user.type === UserType.ADMIN} onSendNotification={(n) => handleNotify(n.targetUserId || 'ALL', n.title || '', n.message || '', n.type)} />;
+            case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => {}} isAdmin={user.type === UserType.ADMIN} onSendNotification={(n) => handleNotify(n.targetUserId || 'ALL', n.title || '', n.message || '', n.type)} onDeleteNotification={handleDeleteNotification} />;
             case AppView.SETTINGS: return <Settings user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} currentLanguage={language} onLanguageChange={setLanguage} onChangeView={navigateTo} onToast={handleShowToast} appLogo={appLogo} onUpdateLogo={handleUpdateLogo} systemSettings={systemSettings} />;
             case AppView.COLLECTOR_JOBS: return <CollectorJobs user={user} onBack={goBack} onNotify={handleNotify} onToast={handleShowToast} />;
             case AppView.ADMIN_USERS: return <AdminUsers onBack={goBack} currentUser={user} onNotify={handleNotify} onToast={handleShowToast} />;
