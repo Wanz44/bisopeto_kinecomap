@@ -35,6 +35,8 @@ const DEFAULT_PLANS: SubscriptionPlan[] = [
     { id: 'special', name: 'Spécial / Kilo', priceUSD: 0, isVariable: true, schedule: 'Sur demande', features: ['Paiement à la pesée', 'Idéal gros volumes', 'Horaires flexibles'] },
 ];
 
+const DEFAULT_LOGO = 'https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/logo-1766239701120-logo_bisopeto.png';
+
 function App() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<User | null>(() => {
@@ -67,7 +69,7 @@ function App() {
         passwordPolicy: 'strong',
         marketplaceCommission: 0.05,
         exchangeRate: 2800,
-        logoUrl: 'logobisopeto.png'
+        logoUrl: DEFAULT_LOGO
     });
 
     const [impactData, setImpactData] = useState<GlobalImpact>({
@@ -82,7 +84,7 @@ function App() {
     const [exchangeRate, setExchangeRate] = useState(2800);
     const [plans, setPlans] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
     const [appLogo, setAppLogo] = useState(() => {
-        return localStorage.getItem('kinecomap_app_logo') || 'logobisopeto.png';
+        return localStorage.getItem('kinecomap_app_logo') || DEFAULT_LOGO;
     });
 
     useEffect(() => {

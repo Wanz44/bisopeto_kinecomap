@@ -15,6 +15,8 @@ const KEYS = {
     PAYMENTS: 'kinecomap_payments'
 };
 
+const DEFAULT_LOGO = 'https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/logo-1766239701120-logo_bisopeto.png';
+
 const DEFAULT_SETTINGS: SystemSettings = {
     maintenanceMode: false,
     supportEmail: 'support@kinecomap.cd',
@@ -24,7 +26,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
     passwordPolicy: 'strong',
     marketplaceCommission: 0.05,
     exchangeRate: 2800,
-    logoUrl: 'logobisopeto.png'
+    logoUrl: DEFAULT_LOGO
 };
 
 const DEFAULT_IMPACT: GlobalImpact = {
@@ -101,13 +103,13 @@ const mapVehicle = (v: any): Vehicle => ({
 const mapSettings = (s: any): SystemSettings => ({
     maintenanceMode: s.maintenance_mode,
     supportEmail: s.support_email,
-    appVersion: s.app_version,
+    app_version: s.app_version,
     exchangeRate: Number(s.exchange_rate || 2800),
     marketplaceCommission: Number(s.marketplace_commission || 0.05),
     force2FA: s.force_2fa || false,
     sessionTimeout: s.session_timeout || 60,
     passwordPolicy: s.password_policy || 'strong',
-    logoUrl: s.logo_url || 'logobisopeto.png'
+    logoUrl: s.logo_url || DEFAULT_LOGO
 });
 
 // --- PAYMENTS API ---
@@ -124,12 +126,14 @@ export const PaymentsAPI = {
             id: p.id || `pay-${Date.now()}`,
             user_id: p.userId,
             user_name: p.userName,
+            // Fix: Use amountFC from the Payment interface instead of amount_fc
             amount_fc: p.amountFC,
             currency: p.currency,
             method: p.method,
             period: p.period,
             collector_id: p.collectorId,
             collector_name: p.collectorName,
+            // Fix: Use qrCodeData from the Payment interface instead of qr_code_data
             qr_code_data: p.qrCodeData
         };
         if (isSupabaseConfigured() && supabase) {

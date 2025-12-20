@@ -27,6 +27,8 @@ interface SettingsProps {
     systemSettings: SystemSettings;
 }
 
+const DEFAULT_LOGO = 'https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/logo-1766239701120-logo_bisopeto.png';
+
 export const Settings: React.FC<SettingsProps> = ({ 
     user, theme, onToggleTheme, onBack, onLogout, 
     currentLanguage, onLanguageChange, onChangeView, onToast,
@@ -244,7 +246,7 @@ export const Settings: React.FC<SettingsProps> = ({
 
                             <div className="mt-8 flex justify-center">
                                 <button 
-                                    onClick={() => { setTempLogo('logobisopeto.png'); setLogoFile(null); }}
+                                    onClick={() => { setTempLogo(DEFAULT_LOGO); setLogoFile(null); }}
                                     className="flex items-center gap-2 text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors"
                                 >
                                     <RefreshCcw size={14} /> Restaurer le logo par défaut
