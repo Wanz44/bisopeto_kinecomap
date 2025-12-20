@@ -8,7 +8,7 @@ import {
     ShieldCheck, PhoneCall, Phone, FileText, Download, Globe2, Wind, Sparkles, Plus,
     Mail, ShieldAlert, Siren, Zap, Target, UserCheck, ShoppingBag, MessageSquare, Battery,
     ArrowDownRight, ChevronRight, Briefcase, Factory, ShieldEllipsis, History, FileCheck,
-    X, ClipboardList, Camera, Package, Cloud, CloudOff, UserPlus, Bell
+    X, ClipboardList, Camera, Package, Cloud, CloudOff, UserPlus, Bell, Lock
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
@@ -265,14 +265,45 @@ const RefreshCw = ({ className, size }: { className?: string, size?: number }) =
 
 const PendingDashboard: React.FC<DashboardProps> = ({ user }) => {
     return (
-        <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 animate-fade-in">
-            <div className="w-24 h-24 bg-orange-100 dark:bg-orange-900/20 rounded-[2.5rem] flex items-center justify-center text-orange-600 shadow-xl">
-                <Clock size={48} className="animate-pulse" />
+        <div className="flex flex-col items-center justify-center min-h-[100dvh] p-8 md:p-12 text-center space-y-10 animate-fade-in bg-[#F5F7FA] dark:bg-[#050505]">
+            <div className="relative">
+                <div className="w-32 h-32 bg-orange-100 dark:bg-orange-900/20 rounded-[3rem] flex items-center justify-center text-orange-600 shadow-2xl relative z-10 animate-float">
+                    <Lock size={64} />
+                </div>
+                <div className="absolute inset-0 bg-orange-400 blur-3xl opacity-20 animate-pulse"></div>
             </div>
-            <div>
-                <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-2">Compte en attente</h2>
-                <p className="text-gray-500 dark:text-gray-400 font-medium max-w-md mx-auto leading-relaxed">
-                    Mbote {user.firstName}! Votre demande d'accès est en cours de validation par nos équipes d'assainissement. Vous recevrez une notification dès que votre compte sera actif.
+            
+            <div className="space-y-4 max-w-lg">
+                <div className="inline-flex items-center gap-2 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-4 py-2 rounded-full border border-orange-100 dark:border-orange-800">
+                    <ShieldAlert size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Sécurité Biso Peto • Accès Restreint</span>
+                </div>
+                <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Vérification en cours</h2>
+                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                    Mbote {user.firstName}! Votre demande d'adhésion au réseau Biso Peto a bien été reçue. 
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
+                <div className="p-6 bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4 text-left">
+                    <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl flex items-center justify-center shrink-0"><Mail size={24}/></div>
+                    <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Etape 1</p>
+                        <p className="text-sm font-black dark:text-white uppercase">Email de confirmation envoyé</p>
+                    </div>
+                </div>
+                <div className="p-6 bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4 text-left opacity-60">
+                    <div className="w-12 h-12 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-2xl flex items-center justify-center shrink-0 animate-pulse"><UserCheck size={24}/></div>
+                    <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Etape 2</p>
+                        <p className="text-sm font-black dark:text-white uppercase">Qualification du profil par Admin</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-orange-50/50 dark:bg-orange-900/5 border border-orange-100/50 dark:border-orange-900/20 p-6 rounded-[2rem] max-w-md">
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest leading-loose">
+                    Pour des raisons de sécurité et de traçabilité des déchets, chaque compte doit être validé manuellement. Vous recevrez une notification dès que votre zone sera activée.
                 </p>
             </div>
         </div>

@@ -4,7 +4,8 @@ import {
     ChevronRight, ArrowLeft, Home, LogIn, User as UserIcon, Shield, Lock, Phone, 
     Eye, EyeOff, AlertCircle, Loader2, Clock, Globe, ShieldCheck, Mail, 
     MapPin, CheckCircle2, Building2, Truck, UserCheck, ShieldAlert, PhoneCall,
-    Briefcase, UserCog, Sparkles, Map as MapIcon, GraduationCap, ArrowRight, Zap
+    Briefcase, UserCog, Sparkles, Map as MapIcon, GraduationCap, ArrowRight, Zap,
+    Send
 } from 'lucide-react';
 import { UserType, User } from '../types';
 import { UserAPI } from '../services/api';
@@ -174,7 +175,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
             setRegistrationFinished(true);
             
             // Simulation d'envoi d'email automatique
-            if (onToast) onToast(`Mbote ! Un email de confirmation a été envoyé à ${formData.email}`, "success");
+            if (onToast) onToast(`Email de confirmation envoyé à ${formData.email}`, "success");
         } catch (err: any) {
             setError(err.message || "Une erreur est survenue lors de l'inscription.");
         } finally {
@@ -225,25 +226,37 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
 
     if (registrationFinished) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#050505] p-6 text-center">
-                <div className="w-full max-w-md bg-white dark:bg-[#111827] rounded-[3.5rem] p-10 shadow-2xl animate-scale-up border border-gray-100 dark:border-gray-800 relative overflow-hidden">
-                    <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-8 text-primary-light shadow-inner">
-                        <CheckCircle2 size={48} className="animate-bounce" />
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F7FA] dark:bg-[#050505] p-6 text-center">
+                <div className="w-full max-w-lg bg-white dark:bg-[#111827] rounded-[3.5rem] p-10 md:p-14 shadow-2xl animate-scale-up border border-gray-100 dark:border-gray-800 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 text-primary rotate-12"><Send size={150} /></div>
+                    
+                    <div className="w-24 h-24 bg-green-50 dark:bg-green-900/20 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 text-primary-light shadow-inner relative z-10">
+                        <CheckCircle2 size={56} className="animate-bounce" />
                     </div>
-                    <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter">C'est Presque Fini !</h2>
-                    <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-3xl mb-8 border border-gray-100 dark:border-gray-700">
-                        <p className="text-gray-600 dark:text-gray-300 font-bold leading-relaxed italic mb-4">
-                            "Merci pour votre souscription. Notre équipe vous contactera sous peu pour finaliser votre abonnement."
-                        </p>
-                        <div className="flex items-center justify-center gap-2 text-xs font-black text-blue-500 uppercase tracking-widest">
-                            <Mail size={14} /> Email de confirmation envoyé.
+                    
+                    <h2 className="text-4xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter leading-none relative z-10">Demande Reçue !</h2>
+                    
+                    <div className="space-y-6 mb-12 relative z-10">
+                        <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-[2rem] border border-blue-100 dark:border-blue-900/30 flex items-start gap-4 text-left">
+                            <div className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm text-blue-600"><Mail size={24} /></div>
+                            <div>
+                                <p className="text-sm font-black text-blue-700 dark:text-blue-300 uppercase tracking-widest mb-1">Email Envoyé</p>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold leading-relaxed">
+                                    Un accusé de réception automatique a été envoyé à <strong>{formData.email}</strong>. Pensez à vérifier vos spams.
+                                </p>
+                            </div>
                         </div>
+                        
+                        <p className="text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                            Mbote {formData.firstName}! Votre dossier d'assainissement est désormais en file d'attente. Nos administrateurs vont qualifier votre compte sous peu.
+                        </p>
                     </div>
+
                     <button 
                         onClick={() => onComplete(formData as User)} 
-                        className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs shadow-xl"
+                        className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-green-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                     >
-                        Accéder à mon espace
+                        Accéder à mon espace <ChevronRight size={18}/>
                     </button>
                 </div>
             </div>

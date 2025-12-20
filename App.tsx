@@ -27,6 +27,7 @@ import { SplashScreen } from './components/SplashScreen';
 import { User, AppView, Theme, SubscriptionPlan, Language, NotificationItem, SystemSettings, UserType, GlobalImpact } from './types';
 import { SettingsAPI, UserAPI, NotificationsAPI } from './services/api';
 import { NotificationService } from './services/notificationService';
+import { LogOut } from 'lucide-react';
 
 const DEFAULT_PLANS: SubscriptionPlan[] = [
     { id: 'standard', name: 'Standard', priceUSD: 10, schedule: 'Mardi & Samedi', features: ['2 jours / semaine', 'Mardi & Samedi', 'Suivi basique'] },
@@ -210,6 +211,29 @@ function App() {
     };
 
     if (loading) return <SplashScreen appLogo={appLogo} />;
+    
+    // CAS CRITIQUE : Utilisateur non validé (PENDING)
+    // On bloque l'accès au Layout (donc pas de menu, pas de carte, rien)
+    const isPending = user?.type !== UserType.ADMIN && user?.status === 'pending';
+    if (user && isPending) {
+        return (
+            <div className="h-full w-full bg-[#F5F7FA] dark:bg-[#050505] flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto">
+                    <Dashboard user={user} onChangeView={navigateTo} onToast={handleShowToast} />
+                </div>
+                <div className="p-8 bg-white dark:bg-gray-900 border-t dark:border-gray-800 shrink-0">
+                    <button 
+                        onClick={handleLogout}
+                        className="w-full py-5 bg-red-50 dark:bg-red-900/10 text-red-600 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-sm flex items-center justify-center gap-3 transition-all hover:bg-red-600 hover:text-white"
+                    >
+                        <LogOut size={20}/> Quitter la session
+                    </button>
+                    <p className="text-[8px] text-gray-400 font-black uppercase text-center mt-4 tracking-[0.3em]">Biso Peto Security Protocol v1.4</p>
+                </div>
+            </div>
+        );
+    }
+
     if (view === AppView.LANDING || (!user && view === AppView.ONBOARDING)) return renderContent();
 
     return (
