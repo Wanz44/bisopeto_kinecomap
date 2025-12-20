@@ -8,13 +8,13 @@ import {
     ShieldCheck, PhoneCall, Phone, FileText, Download, Globe2, Wind, Sparkles, Plus,
     Mail, ShieldAlert, Siren, Zap, Target, UserCheck, ShoppingBag, MessageSquare, Battery,
     ArrowDownRight, ChevronRight, Briefcase, Factory, ShieldEllipsis, History, FileCheck,
-    X, ClipboardList, Camera, Package, Cloud, CloudOff
+    X, ClipboardList, Camera, Package, Cloud, CloudOff, UserPlus
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
     PieChart, Pie, AreaChart, Area, CartesianGrid, YAxis, Legend
 } from 'recharts';
-import { User, AppView, UserType, WasteReport, MarketplaceItem, AdCampaign } from '../types';
+import { User, AppView, UserType, WasteReport, MarketplaceItem, AdCampaign, NotificationItem } from '../types';
 import { UserAPI, ReportsAPI, MarketplaceAPI, AdsAPI, NotificationsAPI } from '../services/api';
 import { isSupabaseConfigured, testSupabaseConnection } from '../services/supabaseClient';
 
@@ -22,6 +22,7 @@ interface DashboardProps {
     user: User;
     onChangeView: (view: AppView) => void;
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+    notifications?: NotificationItem[];
 }
 
 const ZONE_PERFORMANCE = [
@@ -46,13 +47,11 @@ export const Dashboard: React.FC<DashboardProps> = (props) => {
 
 const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [searchQuery, setSearchQuery] = useState('');
     const [isCloudSynced, setIsCloudSynced] = useState(false);
     
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [allReports, setAllReports] = useState<WasteReport[]>([]);
-    const [allMarketplace, setAllMarketplace] = useState<MarketplaceItem[]>([]);
-    const [allNotifications, setAllNotifications] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -61,34 +60,30 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     }, []);
 
     const loadAllData = async () => {
+        setIsLoading(true);
         try {
             const isLive = await testSupabaseConnection();
             setIsCloudSynced(isLive);
 
-            const [usersData, reportsData, marketplaceData, notifsData] = await Promise.all([
+            const [usersData, reportsData] = await Promise.all([
                 UserAPI.getAll(),
-                ReportsAPI.getAll(),
-                MarketplaceAPI.getAll(),
-                NotificationsAPI.getAll(user.id || '', true)
+                ReportsAPI.getAll()
             ]);
             setAllUsers(usersData);
             setAllReports(reportsData);
-            setAllMarketplace(marketplaceData);
-            setAllNotifications(notifsData);
         } catch (e) {
             console.error(e);
+        } finally {
+            setIsLoading(false);
         }
     };
 
+    const pendingUsers = allUsers.filter(u => u.status === 'pending');
     const countReportsToday = allReports.filter(r => {
         const d = new Date(r.date);
         const today = new Date();
         return d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
     }).length;
-
-    const countPendingUsers = allUsers.filter(u => u.status === 'pending').length;
-    const countInterventions = allReports.filter(r => r.status === 'resolved').length;
-    const totalUsersCount = allUsers.length;
 
     const STATS_CARDS = [
         { 
@@ -101,9 +96,9 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
             targetView: AppView.ADMIN_REPORTS 
         },
         { 
-            label: 'Dossiers à Valider', 
-            value: countPendingUsers.toString(), 
-            trend: countPendingUsers > 0 ? 'Action Requise' : 'À Jour', 
+            label: 'À Valider', 
+            value: pendingUsers.length.toString(), 
+            trend: pendingUsers.length > 0 ? 'Action Requise' : 'À Jour', 
             icon: UserCheck, 
             color: 'text-[#FBC02D]', 
             bg: 'bg-yellow-50',
@@ -111,7 +106,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
         },
         { 
             label: 'Collectes Finies', 
-            value: countInterventions.toString(), 
+            value: allReports.filter(r => r.status === 'resolved').length.toString(), 
             trend: 'Total', 
             icon: CheckCircle, 
             color: 'text-purple-600', 
@@ -119,9 +114,9 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
             targetView: AppView.ADMIN_REPORTS 
         },
         { 
-            label: 'Utilisateurs Totaux', 
-            value: totalUsersCount.toString(), 
-            trend: 'Actifs', 
+            label: 'Utilisateurs', 
+            value: allUsers.length.toString(), 
+            trend: 'Inscrits', 
             icon: Users, 
             color: 'text-orange-600', 
             bg: 'bg-orange-50',
@@ -132,48 +127,36 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     return (
         <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8 max-w-[1600px] mx-auto">
             {/* Sync Header */}
-            <div className={`p-4 rounded-2xl border flex items-center justify-between mb-4 transition-all ${isCloudSynced ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
+            <div className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${isCloudSynced ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
                 <div className="flex items-center gap-3">
                     {isCloudSynced ? <Cloud size={20} className="animate-pulse" /> : <CloudOff size={20} />}
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-widest">Base de données Cloud Supabase</p>
-                        <p className="text-sm font-bold">{isCloudSynced ? 'Synchronisé et opérationnel' : 'Synchronisation échouée - Mode local uniquement'}</p>
+                        <p className="text-sm font-bold">{isCloudSynced ? 'Synchronisé - Temps Réel' : 'Mode local uniquement'}</p>
                     </div>
                 </div>
-                {!isCloudSynced && (
-                    <button onClick={loadAllData} className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-700">Réessayer Sync</button>
-                )}
+                <button onClick={loadAllData} className="p-2 hover:bg-black/5 rounded-xl transition-all">
+                    <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+                </button>
             </div>
 
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-                <div className="w-full xl:w-auto">
+                <div>
                     <div className="flex items-center gap-2 mb-2">
                         <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Biso Peto Control Tower • Live</span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none uppercase">Vue Stratégique</h1>
                 </div>
-
-                <div className="flex flex-wrap gap-3 items-center">
-                    <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-2xl shadow-sm border dark:border-gray-700 hidden md:flex items-center gap-3">
-                        <Clock size={16} className="text-[#2962FF]" />
-                        <span className="text-sm font-black dark:text-white font-mono">
-                            {currentTime.toLocaleTimeString('fr-FR')}
-                        </span>
-                    </div>
-                    <button onClick={() => onChangeView(AppView.ADMIN_REPORTS)} className="bg-[#2962FF] text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:scale-105 transition-all">
-                        SIG Temps Réel
-                    </button>
+                <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-2xl shadow-sm border dark:border-gray-700 flex items-center gap-3">
+                    <Clock size={16} className="text-[#2962FF]" />
+                    <span className="text-sm font-black dark:text-white font-mono">{currentTime.toLocaleTimeString('fr-FR')}</span>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {STATS_CARDS.map((stat, idx) => (
-                    <div 
-                        key={idx} 
-                        onClick={() => onChangeView(stat.targetView)}
-                        className={`bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary transition-all active:scale-95`}
-                    >
+                    <div key={idx} onClick={() => onChangeView(stat.targetView)} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary transition-all active:scale-95">
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} dark:bg-white/5 ${stat.color} flex items-center justify-center mb-6 transition-transform group-hover:scale-110 group-hover:rotate-6`}>
                             <stat.icon size={24} />
                         </div>
@@ -182,62 +165,79 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
                             <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">{stat.value}</h2>
                             <span className={`text-[10px] font-black px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500`}>{stat.trend}</span>
                         </div>
-                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ArrowUpRight size={16} className="text-gray-400" />
-                        </div>
                     </div>
                 ))}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                {/* REFACTORED: Liste réelle des comptes à valider */}
+                <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
                     <div className="flex justify-between items-center mb-8">
-                        <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Validation en attente</h3>
-                        <button onClick={() => onChangeView(AppView.ADMIN_USERS)} className="text-[10px] font-black uppercase text-blue-500 hover:underline">Voir tout</button>
+                        <div className="flex items-center gap-3">
+                            <UserPlus size={24} className="text-orange-500" />
+                            <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Demandes de Qualification</h3>
+                        </div>
+                        <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">{pendingUsers.length} en attente</span>
                     </div>
-                    <div className="space-y-4 max-h-[350px] overflow-y-auto no-scrollbar">
-                        {allNotifications.filter(n => n.targetUserId === 'ADMIN').length === 0 ? (
+                    
+                    <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar max-h-[400px]">
+                        {pendingUsers.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
                                 <ShieldCheck size={48} className="text-green-500 mb-4 opacity-20" />
-                                <p className="text-gray-400 font-bold uppercase text-xs italic">Aucune validation urgente.</p>
+                                <p className="text-gray-400 font-bold uppercase text-xs italic">Aucun dossier en attente de validation.</p>
                             </div>
                         ) : (
-                            allNotifications.filter(n => n.targetUserId === 'ADMIN').map((notif, i) => (
-                                <div key={i} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border dark:border-gray-700 animate-fade-in group">
-                                    <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center shrink-0"><AlertTriangle size={18}/></div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-black dark:text-white uppercase">{notif.title}</p>
-                                        <p className="text-[10px] text-gray-500 font-bold mt-1 leading-relaxed">{notif.message}</p>
+                            pendingUsers.map((pendingUser, i) => (
+                                <div key={pendingUser.id || i} className="flex items-center gap-4 p-5 bg-gray-50 dark:bg-gray-800/50 rounded-[2rem] border-2 border-transparent hover:border-orange-200 transition-all group animate-fade-in">
+                                    <div className="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center font-black text-xl shrink-0 shadow-sm">{pendingUser.firstName[0]}</div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-black dark:text-white uppercase truncate">{pendingUser.firstName} {pendingUser.lastName}</p>
+                                            <span className="text-[8px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-md font-black uppercase">{pendingUser.type}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 mt-1.5">
+                                            <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1"><MapPin size={10}/> {pendingUser.commune || 'Ksh'}</span>
+                                            <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1"><Phone size={10}/> {pendingUser.phone}</span>
+                                        </div>
                                     </div>
-                                    <button onClick={() => onChangeView(AppView.ADMIN_USERS)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><ChevronRight/></button>
+                                    <button 
+                                        onClick={() => onChangeView(AppView.ADMIN_USERS)} 
+                                        className="bg-white dark:bg-gray-700 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 text-orange-500 hover:bg-orange-500 hover:text-white transition-all active:scale-90"
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
                                 </div>
                             ))
                         )}
                     </div>
+                    {pendingUsers.length > 0 && (
+                        <button 
+                            onClick={() => onChangeView(AppView.ADMIN_USERS)}
+                            className="mt-6 w-full py-4 bg-gray-900 text-white dark:bg-white dark:text-black rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all"
+                        >
+                            Gérer tous les utilisateurs
+                        </button>
+                    )}
                 </div>
 
                 <div className="bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
                     <div className="flex justify-between items-center mb-8">
-                        <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Performance Zones</h3>
-                        <button onClick={() => onChangeView(AppView.MAP)} className="text-[10px] font-black uppercase text-blue-500 hover:underline">Carte</button>
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Efficacité Zones</h3>
+                        <PieChart size={20} className="text-blue-500" />
                     </div>
                     <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar">
                         {ZONE_PERFORMANCE.map((zone, i) => {
                              const reportsInZone = allReports.filter(r => r.commune === zone.name).length;
                              const resolvedInZone = allReports.filter(r => r.commune === zone.name && r.status === 'resolved').length;
                              const efficiency = reportsInZone > 0 ? Math.round((resolvedInZone / reportsInZone) * 100) : 0;
-                             
                             return (
                                 <div key={i} className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">{zone.name}</span>
-                                        <span className={`text-[10px] font-black ${efficiency > 0 ? 'text-green-500' : 'text-gray-400'}`}>{efficiency}% Résolu</span>
+                                        <span className={`text-[10px] font-black ${efficiency > 70 ? 'text-green-500' : 'text-orange-500'}`}>{efficiency}%</span>
                                     </div>
                                     <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full rounded-full transition-all duration-1000 ${efficiency > 80 ? 'bg-[#00C853]' : 'bg-[#2962FF]'}`} 
-                                            style={{ width: `${efficiency}%` }}
-                                        ></div>
+                                        <div className={`h-full rounded-full transition-all duration-1000 ${efficiency > 70 ? 'bg-[#00C853]' : 'bg-orange-500'}`} style={{ width: `${efficiency}%` }}></div>
                                     </div>
                                 </div>
                             );
@@ -249,7 +249,10 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
     );
 };
 
-// ... keep other dashboard components unchanged ...
+const RefreshCw = ({ className, size }: { className?: string, size?: number }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+);
+
 const PendingDashboard: React.FC<DashboardProps> = ({ user }) => {
     return (
         <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 animate-fade-in">
