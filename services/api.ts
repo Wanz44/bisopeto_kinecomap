@@ -103,7 +103,6 @@ const mapVehicle = (v: any): Vehicle => ({
 const mapSettings = (s: any): SystemSettings => ({
     maintenanceMode: s.maintenance_mode,
     supportEmail: s.support_email,
-    // Corrected app_version to appVersion to match SystemSettings interface
     appVersion: s.app_version,
     exchangeRate: Number(s.exchange_rate || 2800),
     marketplaceCommission: Number(s.marketplace_commission || 0.05),
@@ -127,14 +126,12 @@ export const PaymentsAPI = {
             id: p.id || `pay-${Date.now()}`,
             user_id: p.userId,
             user_name: p.userName,
-            // Fix: Use amountFC from the Payment interface instead of amount_fc
             amount_fc: p.amountFC,
             currency: p.currency,
             method: p.method,
             period: p.period,
             collector_id: p.collectorId,
             collector_name: p.collectorName,
-            // Fix: Use qrCodeData from the Payment interface instead of qr_code_data
             qr_code_data: p.qrCodeData
         };
         if (isSupabaseConfigured() && supabase) {
@@ -198,7 +195,8 @@ export const UserAPI = {
             const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
             if (!error && data) return data.map(mapUser);
         }
-        return getCollection<User>(KEYS.USERS).map(mapUser);
+        // Redundant mapUser removed for local data which is already mapped to camelCase
+        return getCollection<User>(KEYS.USERS);
     },
     update: async (u: Partial<User> & { id: string, password?: string }) => {
         const dbUpdate: any = {};
@@ -244,7 +242,8 @@ export const ReportsAPI = {
             const { data, error } = await supabase.from('waste_reports').select('*').order('date', { ascending: false });
             if (!error && data) return data.map(mapReport);
         }
-        return getCollection<WasteReport>(KEYS.REPORTS).map(mapReport);
+        // Redundant mapReport removed for local data which is already mapped to camelCase
+        return getCollection<WasteReport>(KEYS.REPORTS);
     },
     add: async (r: WasteReport): Promise<WasteReport> => {
         const dbData = {
@@ -269,9 +268,13 @@ export const ReportsAPI = {
         return r;
     },
     update: async (r: Partial<WasteReport> & { id: string }): Promise<void> => {
-        const dbUpdate: any = { ...r };
+        const dbUpdate: any = {};
         if (r.status) dbUpdate.status = r.status;
         if (r.assignedTo) dbUpdate.assigned_to = r.assignedTo;
+        if (r.wasteType) dbUpdate.waste_type = r.wasteType;
+        if (r.imageUrl) dbUpdate.image_url = r.imageUrl;
+        if (r.urgency) dbUpdate.urgency = r.urgency;
+        if (r.comment) dbUpdate.comment = r.comment;
 
         if (isSupabaseConfigured() && supabase) {
             await supabase.from('waste_reports').update(dbUpdate).eq('id', r.id);
@@ -282,6 +285,14 @@ export const ReportsAPI = {
             reports[idx] = { ...reports[idx], ...r };
             saveCollection(KEYS.REPORTS, reports);
         }
+    },
+    delete: async (id: string): Promise<void> => {
+        if (isSupabaseConfigured() && supabase) {
+            await supabase.from('waste_reports').delete().eq('id', id);
+        }
+        const reports = getCollection<WasteReport>(KEYS.REPORTS);
+        const filtered = reports.filter(r => r.id !== id);
+        saveCollection(KEYS.REPORTS, filtered);
     }
 };
 
@@ -292,7 +303,8 @@ export const VehicleAPI = {
             const { data, error } = await supabase.from('vehicles').select('*');
             if (!error && data) return data.map(mapVehicle);
         }
-        return getCollection<Vehicle>(KEYS.VEHICLES).map(mapVehicle);
+        // Redundant mapVehicle removed for local data which is already mapped to camelCase
+        return getCollection<Vehicle>(KEYS.VEHICLES);
     },
     add: async (v: Vehicle): Promise<Vehicle> => {
         const dbData = {
@@ -328,6 +340,7 @@ export const VehicleAPI = {
             lat: v.lat,
             lng: v.lng,
             driver_id: v.driverId,
+            // Fixed: gps_id must access v.gpsId on a Vehicle typed object
             gps_id: v.gpsId
         };
         if (isSupabaseConfigured() && supabase) {
@@ -357,7 +370,8 @@ export const MarketplaceAPI = {
             const { data, error } = await supabase.from('marketplace_items').select('*').order('created_at', { ascending: false });
             if (!error && data) return data.map(mapMarketplace);
         }
-        return getCollection<MarketplaceItem>(KEYS.MARKETPLACE).map(mapMarketplace);
+        // Redundant mapMarketplace removed for local data which is already mapped to camelCase
+        return getCollection<MarketplaceItem>(KEYS.MARKETPLACE);
     },
     add: async (i: MarketplaceItem): Promise<MarketplaceItem> => {
         const dbData = {

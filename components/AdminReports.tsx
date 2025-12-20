@@ -71,6 +71,9 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
     const [showTraffic, setShowTraffic] = useState(false);
     const [mapCenter, setMapCenter] = useState<[number, number]>([-4.325, 15.322]);
     const [mapZoom, setMapZoom] = useState(12);
+    
+    // États pour l'agrandissement d'image
+    const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
     const canExport = currentUser?.permissions?.includes('export_data') || currentUser?.type === UserType.ADMIN;
 
@@ -118,6 +121,19 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
             }
         } catch (e) {
             if (onToast) onToast("Erreur lors de la mise à jour", "error");
+        }
+    };
+
+    const handleDeleteReport = async (reportId: string) => {
+        if (!window.confirm("Êtes-vous sûr de vouloir supprimer définitivement ce signalement ?")) return;
+        
+        try {
+            await ReportsAPI.delete(reportId);
+            setReports(prev => prev.filter(r => r.id !== reportId));
+            if (selectedReport?.id === reportId) setSelectedReport(null);
+            if (onToast) onToast("Signalement supprimé avec succès", "success");
+        } catch (e) {
+            if (onToast) onToast("Erreur lors de la suppression", "error");
         }
     };
 
@@ -194,6 +210,23 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
 
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 transition-colors duration-300 relative overflow-hidden">
+            {/* Full Screen Image Viewer */}
+            {fullScreenImage && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/95 animate-fade-in">
+                    <button 
+                        onClick={() => setFullScreenImage(null)}
+                        className="absolute top-6 right-6 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-10"
+                    >
+                        <X size={32} />
+                    </button>
+                    <img 
+                        src={fullScreenImage} 
+                        className="max-w-full max-h-full object-contain shadow-2xl animate-scale-up rounded-2xl" 
+                        alt="Zoom" 
+                    />
+                </div>
+            )}
+
             {/* Header Toolbar */}
             <div className="bg-white dark:bg-gray-900 p-4 md:p-6 shadow-sm border-b border-gray-100 dark:border-gray-800 flex flex-col gap-4 shrink-0">
                 <div className="flex items-center justify-between">
@@ -330,10 +363,15 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                     
                                     {/* Media Section */}
                                     <div className="space-y-4">
-                                        <div className="relative aspect-video rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white dark:border-gray-800 group">
-                                            <img src={selectedReport.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700" />
+                                        <div 
+                                            onClick={() => setFullScreenImage(selectedReport.imageUrl)}
+                                            className="relative aspect-video rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white dark:border-gray-800 group cursor-zoom-in"
+                                        >
+                                            <img src={selectedReport.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700" alt="Incident" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                                            <button className="absolute top-4 right-4 p-2 bg-black/50 backdrop-blur-md rounded-xl text-white"><Maximize2 size={16}/></button>
+                                            <button className="absolute top-4 right-4 p-2 bg-black/50 backdrop-blur-md rounded-xl text-white group-hover:bg-blue-600 transition-colors">
+                                                <Maximize2 size={16}/>
+                                            </button>
                                             <div className="absolute bottom-6 left-6 flex items-center gap-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-white/20">
                                                 <div className={`w-2 h-2 rounded-full ${selectedReport.urgency === 'high' ? 'bg-red-500 animate-pulse' : 'bg-orange-500'}`}></div>
                                                 <span className="text-[10px] font-black uppercase text-gray-800 dark:text-white">Alerte {selectedReport.urgency}</span>
@@ -431,22 +469,13 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                                     <Truck size={18}/> Affecter Terrain
                                                 </button>
                                             )}
-                                            {selectedReport.status === 'assigned' && (
-                                                <>
-                                                    <button 
-                                                        onClick={() => handleUpdateStatus(selectedReport, 'resolved')}
-                                                        className="flex-1 py-4 bg-[#00C853] text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-green-500/20 active:scale-95 transition-all"
-                                                    >
-                                                        <CheckCircle2 size={18}/> Résolu
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setShowAssignModal(true)}
-                                                        className="p-4 bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-2xl hover:bg-gray-300 transition-colors"
-                                                        title="Réaffecter"
-                                                    >
-                                                        <UserCog size={18}/>
-                                                    </button>
-                                                </>
+                                            {(selectedReport.status === 'assigned' || selectedReport.status === 'pending') && (
+                                                <button 
+                                                    onClick={() => handleUpdateStatus(selectedReport, 'resolved')}
+                                                    className="flex-1 py-4 bg-[#00C853] text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-green-500/20 active:scale-95 transition-all"
+                                                >
+                                                    <CheckCircle2 size={18}/> Résolu
+                                                </button>
                                             )}
                                             {selectedReport.status === 'resolved' && (
                                                 <button 
@@ -461,12 +490,18 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                             {selectedReport.status !== 'rejected' && (
                                                 <button 
                                                     onClick={() => handleUpdateStatus(selectedReport, 'rejected')}
-                                                    className="flex-1 py-3 border-2 border-red-100 dark:border-red-900/30 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
+                                                    className="flex-1 py-3 border-2 border-orange-100 dark:border-orange-900/30 text-orange-500 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-all"
                                                 >
                                                     <Ban size={14}/> Rejeter (Fausse Alerte)
                                                 </button>
                                             )}
-                                            <button className="p-3 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                                            <button 
+                                                onClick={() => handleDeleteReport(selectedReport.id)}
+                                                className="p-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                title="Supprimer définitivement"
+                                            >
+                                                <Trash2 size={18}/>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
