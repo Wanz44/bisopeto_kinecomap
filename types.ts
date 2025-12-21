@@ -8,7 +8,7 @@ export enum UserType {
 
 export type UserStatus = 'pending' | 'active' | 'suspended';
 export type Theme = 'light' | 'dark';
-export type Language = 'fr' | 'en' | 'ln'; // Ajout de 'ln' pour le Lingala
+export type Language = 'fr' | 'en' | 'ln'; 
 
 export type UserPermission = 
     | 'manage_users' 
@@ -20,10 +20,10 @@ export type UserPermission =
     | 'manage_academy'
     | 'manage_communications'
     | 'manage_pos'
-    | 'manage_recovery'    // Nouveau: Encaissement cash
-    | 'manage_marketplace' // Nouveau: Modération marketplace
-    | 'manage_reports'     // Nouveau: Gestion des signalements SIG
-    | 'manage_subscriptions' // Nouveau: Validation abonnements
+    | 'manage_recovery'    
+    | 'manage_marketplace' 
+    | 'manage_reports'     
+    | 'manage_subscriptions' 
     | 'system_settings';
 
 export interface User {
@@ -47,9 +47,10 @@ export interface User {
     commune?: string;
     housingType?: string;
     permissions?: UserPermission[];
-    totalTonnage?: number;
-    co2Saved?: number;
-    recyclingRate?: number;
+    totalTonnage?: number; // Kg valorisés
+    co2Saved?: number;     // Kg CO2 sauvés
+    recyclingRate?: number; // Pourcentage réel
+    avatarUrl?: string;     // URL vers storage
 }
 
 export interface WasteReport {
@@ -225,7 +226,7 @@ export interface NotificationItem {
     message: string;
     type: 'info' | 'success' | 'warning' | 'alert';
     time: string;
-    date?: string; // ISO String pour le filtrage
+    date?: string; 
     read: boolean;
     targetUserId: string;
 }
