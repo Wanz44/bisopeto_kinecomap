@@ -161,7 +161,11 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
                     type: Type.OBJECT,
                     properties: {
                         title: { type: Type.STRING },
-                        category: { type: Type.STRING },
+                        // Fix: Added enum to category property in schema to match expected return type.
+                        category: { 
+                            type: Type.STRING,
+                            enum: ["electronics", "metal", "plastic", "other"]
+                        },
                         weight: { type: Type.NUMBER },
                         price: { type: Type.NUMBER },
                         description: { type: Type.STRING },
