@@ -1,7 +1,8 @@
 
-import React, { useState, useRef } from 'react';
-import { ArrowLeft, Check, Edit2, DollarSign, Upload, AlertTriangle, Shield, Save, CreditCard, RefreshCw, MessageSquare, Tag, Bell, Sliders, UserCheck, X, FileText, Download, Clock, User as UserIcon, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Check, Edit2, DollarSign, Upload, AlertTriangle, Shield, Save, CreditCard, RefreshCw, MessageSquare, Tag, Bell, Sliders, UserCheck, X, FileText, Download, Clock, User as UserIcon, CheckCircle2, RotateCcw, Loader2 } from 'lucide-react';
 import { SubscriptionPlan, SystemSettings, User, UserType } from '../types';
+import { UserAPI } from '../services/api';
 
 interface AdminSubscriptionsProps {
     onBack: () => void;
@@ -20,12 +21,9 @@ export const AdminSubscriptions: React.FC<AdminSubscriptionsProps> = ({
     onBack, plans, exchangeRate, onUpdatePlan, onUpdateExchangeRate, currentLogo, onUpdateLogo, systemSettings, onUpdateSystemSettings, onToast 
 }) => {
     const [activeTab, setActiveTab] = useState<'requests' | 'finance' | 'system' | 'history'>('requests');
-    const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
-    const [tempPlan, setTempPlan] = useState<Partial<SubscriptionPlan>>({});
-    const [newExchangeRate, setNewExchangeRate] = useState(exchangeRate.toString());
+    const [isResetting, setIsResetting] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
     
-    // Mock des demandes d'abonnement en attente
     const [pendingRequests, setPendingRequests] = useState([
         { id: 'req-1', name: 'Jean Kabeya', type: 'CITIZEN', plan: 'Plus', date: '2024-05-24', commune: 'Ngaliema', phone: '0812345678', status: 'pending' },
         { id: 'req-2', name: 'Hôtel Memling', type: 'BUSINESS', plan: 'Premium', date: '2024-05-23', commune: 'Gombe', phone: '0998765432', status: 'pending' },
@@ -38,9 +36,18 @@ export const AdminSubscriptions: React.FC<AdminSubscriptionsProps> = ({
         setSelectedRequest(null);
     };
 
-    const handleDownloadCert = () => {
-        if (onToast) onToast("Génération du certificat PDF en cours...", "info");
-        setTimeout(() => { if(onToast) onToast("Certificat téléchargé", "success"); }, 1500);
+    const handleResetAllCounters = async () => {
+        if (!window.confirm("ATTENTION : Cette action va remettre à ZÉRO tous les compteurs de collecte (tonnage, points, collections) pour tous les abonnés de la base de données. Continuer ?")) return;
+        
+        setIsResetting(true);
+        try {
+            await UserAPI.resetAllSubscriptionCounters();
+            if (onToast) onToast("Tous les compteurs ont été réinitialisés avec succès !", "success");
+        } catch (e) {
+            if (onToast) onToast("Erreur lors de la réinitialisation", "error");
+        } finally {
+            setIsResetting(false);
+        }
     };
 
     return (
@@ -94,9 +101,6 @@ export const AdminSubscriptions: React.FC<AdminSubscriptionsProps> = ({
                                             </td>
                                         </tr>
                                     ))}
-                                    {pendingRequests.length === 0 && (
-                                        <tr><td colSpan={4} className="p-20 text-center text-gray-400 font-bold uppercase text-xs tracking-widest">Aucune demande en attente</td></tr>
-                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -104,10 +108,10 @@ export const AdminSubscriptions: React.FC<AdminSubscriptionsProps> = ({
                 )}
 
                 {activeTab === 'finance' && (
-                    <div className="space-y-8 animate-fade-in">
+                    <div className="space-y-10 animate-fade-in">
                         <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm">
                              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-6 uppercase">Tarification & Change</h3>
-                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
                                 {plans.map(plan => (
                                     <div key={plan.id} className="p-6 rounded-[2rem] border-2 border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
                                         <div className="flex justify-between items-center mb-4">
@@ -118,6 +122,27 @@ export const AdminSubscriptions: React.FC<AdminSubscriptionsProps> = ({
                                         <p className="text-xs font-bold text-gray-500 mt-1 uppercase">≈ {(plan.priceUSD * exchangeRate).toLocaleString()} FC</p>
                                     </div>
                                 ))}
+                             </div>
+
+                             <div className="bg-red-50 dark:bg-red-900/10 border-2 border-dashed border-red-200 dark:border-red-900/30 p-8 rounded-[2.5rem]">
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="p-3 bg-red-100 text-red-600 rounded-2xl"><AlertTriangle size={24}/></div>
+                                    <div>
+                                        <h4 className="text-lg font-black text-red-700 dark:text-red-400 uppercase tracking-tight leading-none">Actions de Maintenance</h4>
+                                        <p className="text-[10px] text-red-500 font-bold uppercase mt-1">Zone critique - Réservé aux Super-Admins</p>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-red-600 dark:text-red-300 font-medium mb-8 leading-relaxed">
+                                    La réinitialisation des compteurs efface les statistiques de collecte mensuelles pour recommencer une nouvelle période. Cette action impacte tous les abonnés sauf les administrateurs.
+                                </p>
+                                <button 
+                                    onClick={handleResetAllCounters}
+                                    disabled={isResetting}
+                                    className="w-full py-5 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-500/20 hover:bg-red-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                >
+                                    {isResetting ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20}/>}
+                                    {isResetting ? "Réinitialisation..." : "Réinitialiser TOUS les compteurs d'abonnements"}
+                                </button>
                              </div>
                         </div>
                     </div>
@@ -167,11 +192,6 @@ export const AdminSubscriptions: React.FC<AdminSubscriptionsProps> = ({
                                     <div className="flex justify-between text-sm font-bold"><span className="text-gray-500">Commune</span><span className="dark:text-white">{selectedRequest.commune}</span></div>
                                     <div className="flex justify-between text-sm font-bold"><span className="text-gray-500">Plan choisi</span><span className="text-[#2962FF]">{selectedRequest.plan}</span></div>
                                 </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <button onClick={handleDownloadCert} className="py-4 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"><FileText size={16}/> Voir Pièce ID</button>
-                                <button onClick={handleDownloadCert} className="py-4 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"><Download size={16}/> Certificat Eco</button>
                             </div>
                         </div>
 

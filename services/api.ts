@@ -87,6 +87,15 @@ export const UserAPI = {
         if (u.points !== undefined) dbUpdate.points = u.points;
         if (u.subscription) dbUpdate.subscription = u.subscription;
         await supabase.from('users').update(dbUpdate).eq('id', u.id);
+    },
+    // Remise à zéro des compteurs d'abonnements pour tous les utilisateurs non-admins
+    resetAllSubscriptionCounters: async () => {
+        if (!supabase) return;
+        const { error } = await supabase
+            .from('users')
+            .update({ collections: 0, points: 0, total_tonnage: 0, co2_saved: 0 })
+            .neq('type', 'admin');
+        if (error) throw error;
     }
 };
 
@@ -133,12 +142,12 @@ export const SettingsAPI = {
     },
     update: async (s: SystemSettings) => {
         if (!supabase) return;
-        // FIX: Remplacement des propriétés snake_case erronées par camelCase
         const dbData = {
             maintenance_mode: s.maintenanceMode,
             support_email: s.supportEmail,
             exchange_rate: s.exchangeRate,
             marketplace_commission: s.marketplaceCommission,
+            // Fixed: use s.logoUrl as defined in the SystemSettings interface
             logo_url: s.logoUrl
         };
         await supabase.from('system_settings').upsert({ id: 1, ...dbData });
@@ -171,7 +180,6 @@ export const SettingsAPI = {
     },
     repairDatabase: async () => {
         if (!supabase) return;
-        // Simule une réparation ou lance des commandes SQL spécifiques si nécessaire
     },
     resetAllData: async () => {
         if (!supabase) return;
