@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
     User as UserIcon, ArrowLeft, Trophy, Medal, Award, Settings, Bell, LogOut, 
     CreditCard, Moon, Sun, ChevronRight, Camera, Edit2, Mail, 
-    Phone, Lock, Save, X, History, Monitor, Smartphone, 
+    Phone, Lock, Save, X, History, Smartphone, 
     ShieldCheck, Activity, Star, Zap, Trash2, MapPin, 
     ChevronLeft, Loader2, Sparkles, TrendingUp, CheckCircle, Leaf, FileText, Download, Shield,
     Recycle
@@ -24,7 +24,7 @@ interface ProfileProps {
 }
 
 export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, onBack, onLogout, onManageSubscription, onSettings, onUpdateProfile, onToast }) => {
-    const [activeTab, setActiveTab] = useState<'info' | 'impact' | 'cert' | 'security'>('info');
+    const [activeTab, setActiveTab] = useState<'info' | 'impact' | 'cert'>('info');
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -200,13 +200,12 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
                     {[
                         { id: 'info', label: 'Identité', icon: UserIcon },
                         { id: 'impact', label: 'Impact SIG', icon: Activity },
-                        { id: 'cert', label: 'Certificat', icon: FileText },
-                        { id: 'security', label: 'Sessions', icon: Monitor }
+                        { id: 'cert', label: 'Certificat', icon: FileText }
                     ].map(tab => (
                         <button 
                             key={tab.id} 
                             onClick={() => setActiveTab(tab.id as any)} 
-                            className={`flex items-center gap-3 px-8 py-4 rounded-[1.8rem] text-[11px] font-black uppercase tracking-tight transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-gray-900 text-white shadow-2xl scale-105' : 'text-gray-400 hover:bg-white dark:hover:bg-white/5'}`}
+                            className={`flex-1 flex items-center justify-center gap-3 px-8 py-4 rounded-[1.8rem] text-[11px] font-black uppercase tracking-tight transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-gray-900 text-white shadow-2xl scale-105' : 'text-gray-400 hover:bg-white dark:hover:bg-white/5'}`}
                         >
                             <tab.icon size={16}/> {tab.label}
                         </button>
@@ -338,33 +337,6 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
                             <button onClick={() => onToast?.("Génération du PDF en cours...", "info")} className="mt-8 px-10 py-5 bg-gray-900 text-white rounded-3xl font-black uppercase tracking-widest flex items-center gap-3 shadow-2xl hover:scale-105 active:scale-95 transition-all">
                                 <Download size={20}/> Télécharger mon certificat (PDF)
                             </button>
-                        </div>
-                    )}
-
-                    {activeTab === 'security' && (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-8 bg-white dark:bg-gray-900 rounded-[3rem] border border-gray-100 dark:border-white/5 flex items-center justify-between group cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-14 h-14 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors"><Smartphone size={24}/></div>
-                                        <div>
-                                            <p className="font-black dark:text-white uppercase tracking-tight">iPhone 14 Pro Max</p>
-                                            <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Session Active • Kinshasa</p>
-                                        </div>
-                                    </div>
-                                    <span className="text-[9px] font-black text-gray-400 uppercase bg-gray-100 dark:bg-white/5 px-3 py-1 rounded-lg">Actuel</span>
-                                </div>
-                                <div className="p-8 bg-white dark:bg-gray-900 rounded-[3rem] border border-gray-100 dark:border-white/5 flex items-center justify-between group cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-14 h-14 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-red-500 transition-colors"><Monitor size={24}/></div>
-                                        <div>
-                                            <p className="font-black dark:text-white uppercase tracking-tight">Windows 11 Desktop</p>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Vu il y a 2 heures • Gombe</p>
-                                        </div>
-                                    </div>
-                                    <button className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:underline">Déconnecter</button>
-                                </div>
-                            </div>
                         </div>
                     )}
                 </div>
