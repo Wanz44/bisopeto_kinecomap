@@ -3,9 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { 
     Home, Map as MapIcon, GraduationCap, User as UserIcon, LogOut, Settings, RotateCw, 
     Users, ClipboardList, Megaphone, PieChart, CreditCard, Truck, 
-    ShoppingBag, AlertTriangle, X, Shield, Bell, Camera, DollarSign, Lock
+    ShoppingBag, AlertTriangle, X, Shield, Bell, Camera, DollarSign, Lock,
+    Cloud, CloudOff, RefreshCw
 } from 'lucide-react';
 import { AppView, UserType, User as UserInterface, UserPermission } from '../types';
+import { OfflineManager } from '../services/offlineManager';
 
 interface NavItem {
     view: AppView;
@@ -35,6 +37,23 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeView, onLogout, onRefresh, isRefreshing, user, unreadNotifications = 0, appLogo = 'logobisopeto.png', toast, onCloseToast }) => {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [syncQueueSize, setSyncQueueSize] = useState(OfflineManager.getQueueSize());
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+    useEffect(() => {
+        const handleSyncUpdate = (e: any) => setSyncQueueSize(e.detail.size);
+        const handleStatus = () => setIsOnline(navigator.onLine);
+        
+        window.addEventListener('sync_queue_updated', handleSyncUpdate);
+        window.addEventListener('online', handleStatus);
+        window.addEventListener('offline', handleStatus);
+        
+        return () => {
+            window.removeEventListener('sync_queue_updated', handleSyncUpdate);
+            window.removeEventListener('online', handleStatus);
+            window.removeEventListener('offline', handleStatus);
+        };
+    }, []);
 
     // Fonction de vérification de permission STRICTE
     const hasPermission = (perm?: UserPermission): boolean => {
@@ -166,8 +185,30 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                 <header className="h-[80px] px-6 md:px-8 flex items-center justify-between sticky top-0 z-40 shrink-0 bg-white/50 backdrop-blur-sm dark:bg-black/50">
                     <div className="flex items-center gap-3 md:hidden"><div className="w-10 h-10 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg border border-gray-100 p-1"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div><span className="font-black text-xl tracking-tighter text-primary">KIN ECO MAP</span></div>
                     <div className="hidden md:block"><h1 className="font-black text-2xl text-gray-800 dark:text-white tracking-tight flex items-center gap-3">{user?.type === UserType.ADMIN && <Shield size={24} className="text-secondary" />}{flattenedItems.find(n => n.view === currentView)?.label || (currentView === AppView.PROFILE ? 'Mon Profil' : 'Biso Peto')}</h1></div>
-                    <div className="flex items-center gap-4 ml-auto">
+                    
+                    <div className="flex items-center gap-3 ml-auto">
+                        {/* Synchronisation Status Badge */}
+                        <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all ${syncQueueSize > 0 ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 border-orange-100' : 'bg-green-50 dark:bg-green-900/20 text-green-600 border-green-100'}`}>
+                            {syncQueueSize > 0 ? (
+                                <>
+                                    <RefreshCw size={14} className="animate-spin" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">{syncQueueSize} en attente</span>
+                                </>
+                            ) : isOnline ? (
+                                <>
+                                    <Cloud size={14} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Synchronisé</span>
+                                </>
+                            ) : (
+                                <>
+                                    <CloudOff size={14} className="text-gray-400" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Mode Local</span>
+                                </>
+                            )}
+                        </div>
+
                         <button onClick={onRefresh} className={`p-3 rounded-2xl text-gray-500 dark:text-gray-300 bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-white shadow-sm ${isRefreshing ? 'animate-spin text-primary-light' : ''}`}><RotateCw size={20} /></button>
+                        
                         <div className="relative">
                             <button 
                                 onClick={() => onChangeView(AppView.PROFILE)}
@@ -195,6 +236,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                                 <div className={`relative z-10 p-3 rounded-full transition-all duration-300 ${isActive ? 'bg-primary text-white -translate-y-4 shadow-xl scale-110' : 'text-gray-400'}`}>
                                     <item.icon size={20} />
                                 </div>
+                                {item.view === AppView.DASHBOARD && syncQueueSize > 0 && (
+                                    <div className="absolute top-1 right-0 w-4 h-4 bg-orange-500 border-2 border-white dark:border-gray-900 rounded-full animate-bounce"></div>
+                                )}
                             </button>
                         );
                     })}

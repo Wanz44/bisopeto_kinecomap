@@ -4,11 +4,12 @@ import {
     ArrowLeft, Camera, MapPin, Loader2, CheckCircle, 
     AlertTriangle, Info, Send, X, Clock, Check, 
     ChevronRight, Sparkles, Zap, ShieldAlert, Bot,
-    Navigation, Target, Locate
+    Navigation, Target, Locate, WifiOff, Cloud
 } from 'lucide-react';
-import { analyzeTrashReport, chatAboutWasteImage } from '../services/geminiService';
+import { analyzeTrashReport } from '../services/geminiService';
 import { ReportsAPI } from '../services/api';
 import { WasteReport, User } from '../types';
+import { OfflineManager } from '../services/offlineManager';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -44,15 +45,24 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
     const [comment, setComment] = useState('');
     const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
+        const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((pos) => {
                 setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
             }, () => setLocation({ lat: -4.325, lng: 15.322 }), { enableHighAccuracy: true });
         }
+        return () => {
+            window.removeEventListener('online', updateOnlineStatus);
+            window.removeEventListener('offline', updateOnlineStatus);
+        };
     }, []);
 
     const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,21 +72,26 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
             reader.onloadend = async () => {
                 const base64 = reader.result as string;
                 setCapturedImage(base64);
-                setStep('analysis');
-                setIsAnalyzing(true);
                 
-                try {
-                    const result = await analyzeTrashReport(base64);
-                    setAnalysisData(result);
-                    setWasteType(result.wasteType);
-                    setUrgency(result.urgency);
-                    setComment(result.comment);
+                if (navigator.onLine) {
+                    setStep('analysis');
+                    setIsAnalyzing(true);
+                    try {
+                        const result = await analyzeTrashReport(base64);
+                        setAnalysisData(result);
+                        setWasteType(result.wasteType);
+                        setUrgency(result.urgency);
+                        setComment(result.comment);
+                        setStep('location');
+                    } catch (err) {
+                        onToast?.("Analyse IA impossible. Saisie manuelle.", "info");
+                        setStep('location');
+                    } finally {
+                        setIsAnalyzing(false);
+                    }
+                } else {
+                    onToast?.("Mode Hors-ligne : L'analyse IA sera effectuée plus tard.", "info");
                     setStep('location');
-                } catch (err) {
-                    onToast?.("Erreur d'analyse IA. Saisie manuelle.", "error");
-                    setStep('location');
-                } finally {
-                    setIsAnalyzing(false);
                 }
             };
             reader.readAsDataURL(file);
@@ -101,11 +116,18 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
         };
 
         try {
-            await ReportsAPI.add(report);
-            onToast?.("Signalement envoyé ! Merci pour votre action.", "success");
+            if (navigator.onLine) {
+                await ReportsAPI.add(report);
+                onToast?.("Signalement envoyé avec succès !", "success");
+            } else {
+                OfflineManager.addToQueue('ADD_REPORT', report);
+                onToast?.("Signalement enregistré localement. Synchronisation dès retour du réseau.", "info");
+            }
             onBack();
         } catch (e) {
-            onToast?.("Erreur lors de l'envoi.", "error");
+            onToast?.("Erreur de transmission. Enregistré localement par sécurité.", "warning");
+            OfflineManager.addToQueue('ADD_REPORT', report);
+            onBack();
         } finally {
             setIsSubmitting(false);
         }
@@ -114,14 +136,22 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950">
             <div className="bg-white dark:bg-gray-900 p-6 shadow-sm border-b dark:border-gray-800 sticky top-0 z-40 shrink-0">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                        <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase leading-none">Biso Peto Alert</h2>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Intelligence Urbaine</p>
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <button onClick={onBack} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all">
+                            <ArrowLeft size={20} />
+                        </button>
+                        <div>
+                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase leading-none">Biso Peto Alert</h2>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Intelligence Urbaine</p>
+                        </div>
                     </div>
+                    {!isOnline && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-600 rounded-full border border-red-100 animate-pulse">
+                            <WifiOff size={14} />
+                            <span className="text-[10px] font-black uppercase">Hors-ligne</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -135,7 +165,7 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
                             <h3 className="text-2xl font-black dark:text-white uppercase">Identifier l'incident</h3>
                             <p className="text-gray-500 max-w-xs mx-auto">Photographiez le tas de déchets pour une analyse immédiate par l'IA.</p>
                         </div>
-                        <button onClick={() => fileInputRef.current?.click()} className="bg-primary text-white px-10 py-5 rounded-[2rem] font-black uppercase shadow-2xl flex items-center gap-3">
+                        <button onClick={() => fileInputRef.current?.click()} className="bg-primary text-white px-10 py-5 rounded-[2rem] font-black uppercase shadow-2xl flex items-center gap-3 active:scale-95 transition-all">
                             Capturer <Camera size={24} />
                         </button>
                         <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageCapture} />
@@ -146,8 +176,8 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
                     <div className="flex flex-col items-center justify-center h-[60vh] gap-6">
                         <Loader2 size={64} className="text-primary animate-spin" />
                         <div className="text-center">
-                            <h3 className="text-xl font-black dark:text-white uppercase">Analyse Gemini 3 Pro</h3>
-                            <p className="text-gray-400 font-bold uppercase text-[10px] animate-pulse mt-2">Détection des matières et risques...</p>
+                            <h3 className="text-xl font-black dark:text-white uppercase tracking-tighter">Analyse Gemini 3 Pro</h3>
+                            <p className="text-gray-400 font-bold uppercase text-[10px] animate-pulse mt-2 tracking-widest">Identification des matières...</p>
                         </div>
                     </div>
                 )}
@@ -165,8 +195,8 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
                                     <LocationPicker initialPos={location!} onLocationChange={setLocation} />
                                 </MapContainer>
                             </div>
-                            <button onClick={() => setStep('confirm')} className="w-full mt-6 py-5 bg-[#2962FF] text-white rounded-2xl font-black uppercase shadow-xl flex items-center justify-center gap-2">
-                                Suivant <ChevronRight size={20}/>
+                            <button onClick={() => setStep('confirm')} className="w-full mt-6 py-5 bg-[#2962FF] text-white rounded-2xl font-black uppercase shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                Confirmer la position <ChevronRight size={20}/>
                             </button>
                         </div>
                     </div>
@@ -174,26 +204,31 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
 
                 {step === 'confirm' && (
                     <div className="animate-scale-up space-y-6">
-                        <div className="rounded-[3rem] overflow-hidden shadow-2xl h-64 border-4 border-white dark:border-gray-800">
-                            <img src={capturedImage!} className="w-full h-full object-cover" alt="Capture" />
+                        <div className="relative rounded-[3rem] overflow-hidden shadow-2xl h-64 border-4 border-white dark:border-gray-800 group">
+                            <img src={capturedImage!} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-1000" alt="Capture" />
+                            {!isOnline && (
+                                <div className="absolute top-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1.5 shadow-lg">
+                                    <WifiOff size={10} /> Mode Offline
+                                </div>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-white dark:bg-gray-800 p-6 rounded-[2.5rem] shadow-sm border dark:border-gray-700">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Diagnostic IA</label>
+                            <div className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] shadow-sm border dark:border-gray-700">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Diagnostic Local</label>
                                 <div className="flex items-center justify-between mb-4">
-                                    <span className="text-lg font-black dark:text-white uppercase">{wasteType}</span>
-                                    <span className={`px-2 py-1 rounded-lg text-[9px] font-black text-white uppercase ${urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>
+                                    <span className="text-lg font-black dark:text-white uppercase truncate pr-2">{wasteType}</span>
+                                    <span className={`shrink-0 px-2 py-1 rounded-lg text-[9px] font-black text-white uppercase ${urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>
                                         Urgence {urgency}
                                     </span>
                                 </div>
-                                <p className="text-xs text-gray-500 font-bold italic leading-relaxed">"{comment}"</p>
+                                <p className="text-xs text-gray-500 font-bold italic leading-relaxed">"{comment || 'Signalement citoyen'}"</p>
                             </div>
 
-                            <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-[2.5rem] border border-blue-100 dark:border-blue-900/30">
-                                <label className="text-[9px] font-black text-blue-400 uppercase block mb-2 flex items-center gap-2"><ShieldAlert size={12}/> Risques Sanitaires</label>
+                            <div className={`p-6 rounded-[2.5rem] border ${isOnline ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30' : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700'}`}>
+                                <label className="text-[9px] font-black text-blue-400 uppercase block mb-2 flex items-center gap-2"><Bot size={12}/> Assistance IA</label>
                                 <p className="text-xs text-blue-800 dark:text-blue-300 font-bold leading-relaxed">
-                                    {analysisData?.environmentalImpact || "Analyse d'impact en cours..."}
+                                    {isOnline ? (analysisData?.environmentalImpact || "Analyse d'impact environnemental effectuée.") : "L'assistance IA nécessite une connexion internet pour l'analyse d'impact détaillée."}
                                 </p>
                             </div>
                         </div>
@@ -201,10 +236,21 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
                         <button 
                             onClick={handleFinalSubmit}
                             disabled={isSubmitting}
-                            className="w-full py-6 bg-[#00C853] text-white rounded-[2rem] font-black text-xl shadow-2xl flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50 uppercase tracking-widest"
+                            className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-2xl flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50 uppercase tracking-widest transition-all ${isOnline ? 'bg-[#00C853] text-white' : 'bg-blue-600 text-white'}`}
                         >
-                            {isSubmitting ? <Loader2 className="animate-spin" /> : <><Send /> Envoyer l'alerte</>}
+                            {isSubmitting ? (
+                                <Loader2 className="animate-spin" />
+                            ) : isOnline ? (
+                                <><Send /> Envoyer au Cloud</>
+                            ) : (
+                                <><Cloud /> Sauver Localement</>
+                            )}
                         </button>
+                        {!isOnline && (
+                            <p className="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest px-8">
+                                Vos données seront automatiquement envoyées à la base de données dès que vous retrouverez du réseau.
+                            </p>
+                        )}
                     </div>
                 )}
             </div>

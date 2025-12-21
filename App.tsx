@@ -25,6 +25,7 @@ import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
 import { User, AppView, Theme, Language, NotificationItem, SystemSettings, UserType, GlobalImpact } from './types';
 import { SettingsAPI, NotificationsAPI, UserAPI } from './services/api';
+import { OfflineManager } from './services/offlineManager';
 import { NotificationService } from './services/notificationService';
 import { LogOut } from 'lucide-react';
 
@@ -65,6 +66,27 @@ function App() {
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [appLogo, setAppLogo] = useState(DEFAULT_LOGO);
 
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; visible: boolean }>({ message: '', type: 'success', visible: false });
+    const showToast = useCallback((msg: string, type: any = 'success') => {
+        setToast({ message: msg, type, visible: true });
+        setTimeout(() => setToast(p => ({ ...p, visible: false })), 4000);
+    }, []);
+
+    const handleSync = useCallback(async () => {
+        if (navigator.onLine && OfflineManager.getQueueSize() > 0) {
+            await OfflineManager.processQueue((type) => {
+                showToast(`Synchronisation Cloud: ${type} terminé`, 'success');
+            });
+        }
+    }, [showToast]);
+
+    useEffect(() => {
+        window.addEventListener('online', handleSync);
+        // Tentative initiale si en ligne au chargement
+        if (navigator.onLine) handleSync();
+        return () => window.removeEventListener('online', handleSync);
+    }, [handleSync]);
+
     const refreshUserData = useCallback(async () => {
         if (!user?.id) return;
         try {
@@ -104,7 +126,6 @@ function App() {
         loadInitData();
     }, [user?.id]);
 
-    // Rafraîchir les données quand on entre dans le profil
     useEffect(() => {
         if (view === AppView.PROFILE) {
             refreshUserData();
@@ -131,16 +152,10 @@ function App() {
         NotificationService.sendPush(title, message, appLogo);
     };
 
-    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; visible: boolean }>({ message: '', type: 'success', visible: false });
-    const showToast = (msg: string, type: any = 'success') => {
-        setToast({ message: msg, type, visible: true });
-        setTimeout(() => setToast(p => ({ ...p, visible: false })), 3000);
-    };
-
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
-            await refreshUserData();
+            await Promise.all([refreshUserData(), handleSync()]);
             showToast("Données synchronisées", "success");
         } finally {
             setIsRefreshing(false);
