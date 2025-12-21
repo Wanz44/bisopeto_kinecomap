@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-    Home, Map as MapIcon, GraduationCap, User, LogOut, Settings, RotateCw, 
+    Home, Map as MapIcon, GraduationCap, User as UserIcon, LogOut, Settings, RotateCw, 
     Users, ClipboardList, Megaphone, PieChart, CreditCard, Truck, 
     ShoppingBag, AlertTriangle, X, Shield, Bell, Camera, DollarSign, Lock
 } from 'lucide-react';
@@ -93,7 +93,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             if (hasPermission('system_settings')) systemeItems.push({ view: AppView.SETTINGS, icon: Settings, label: 'Config Système', permission: 'system_settings' });
             sections.push({ title: 'Système', items: systemeItems });
 
-            sections.push({ items: [{ view: AppView.PROFILE, icon: User, label: 'Mon Profil' }] });
+            sections.push({ items: [{ view: AppView.PROFILE, icon: UserIcon, label: 'Mon Profil' }] });
             return sections;
         }
 
@@ -102,7 +102,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                 { view: AppView.DASHBOARD, icon: Home, label: 'Accueil' },
                 { view: AppView.COLLECTOR_JOBS, icon: ClipboardList, label: 'Missions' },
                 { view: AppView.MAP, icon: MapIcon, label: 'Carte Live' },
-                { view: AppView.PROFILE, icon: User, label: 'Profil' },
+                { view: AppView.PROFILE, icon: UserIcon, label: 'Profil' },
             ]}];
         }
 
@@ -112,7 +112,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             { view: AppView.MAP, icon: MapIcon, label: 'Points Verts' },
             { view: AppView.MARKETPLACE, icon: ShoppingBag, label: 'Boutique' },
             { view: AppView.ACADEMY, icon: GraduationCap, label: 'Academy' },
-            { view: AppView.PROFILE, icon: User, label: 'Profil' },
+            { view: AppView.PROFILE, icon: UserIcon, label: 'Profil' },
         ]}];
     };
 
@@ -165,20 +165,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative z-10">
                 <header className="h-[80px] px-6 md:px-8 flex items-center justify-between sticky top-0 z-40 shrink-0 bg-white/50 backdrop-blur-sm dark:bg-black/50">
                     <div className="flex items-center gap-3 md:hidden"><div className="w-10 h-10 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg border border-gray-100 p-1"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div><span className="font-black text-xl tracking-tighter text-primary">KIN ECO MAP</span></div>
-                    <div className="hidden md:block"><h1 className="font-black text-2xl text-gray-800 dark:text-white tracking-tight flex items-center gap-3">{user?.type === UserType.ADMIN && <Shield size={24} className="text-secondary" />}{flattenedItems.find(n => n.view === currentView)?.label || 'Biso Peto'}</h1></div>
+                    <div className="hidden md:block"><h1 className="font-black text-2xl text-gray-800 dark:text-white tracking-tight flex items-center gap-3">{user?.type === UserType.ADMIN && <Shield size={24} className="text-secondary" />}{flattenedItems.find(n => n.view === currentView)?.label || (currentView === AppView.PROFILE ? 'Mon Profil' : 'Biso Peto')}</h1></div>
                     <div className="flex items-center gap-4 ml-auto">
                         <button onClick={onRefresh} className={`p-3 rounded-2xl text-gray-500 dark:text-gray-300 bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-white shadow-sm ${isRefreshing ? 'animate-spin text-primary-light' : ''}`}><RotateCw size={20} /></button>
                         <div className="relative">
                             <button 
                                 onClick={() => onChangeView(AppView.PROFILE)}
-                                className="pl-1 pr-1 md:pr-4 md:pl-1 py-1 rounded-full md:rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-sm flex items-center gap-3 transition-all hover:border-primary"
+                                className={`pl-1 pr-1 md:pr-4 md:pl-1 py-1 rounded-full md:rounded-2xl border transition-all ${currentView === AppView.PROFILE ? 'bg-primary border-primary' : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-primary shadow-sm'} flex items-center gap-3`}
                             >
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${user?.type === UserType.ADMIN ? 'bg-gray-900' : 'bg-primary-light'}`}>
-                                    <User size={18} />
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${currentView === AppView.PROFILE ? 'bg-white/20' : (user?.type === UserType.ADMIN ? 'bg-gray-900' : 'bg-primary-light')}`}>
+                                    <UserIcon size={18} />
                                 </div>
                                 <div className="hidden md:block text-left mr-2">
-                                    <p className="text-sm font-bold text-gray-800 dark:text-white leading-none">{user?.firstName}</p>
-                                    <p className="text-[10px] text-gray-500 font-black uppercase mt-0.5 tracking-tighter">{user?.type}</p>
+                                    <p className={`text-sm font-bold leading-none ${currentView === AppView.PROFILE ? 'text-white' : 'text-gray-800 dark:text-white'}`}>{user?.firstName || 'Profil'}</p>
+                                    <p className={`text-[10px] font-black uppercase mt-0.5 tracking-tighter ${currentView === AppView.PROFILE ? 'text-white/70' : 'text-gray-500'}`}>{user?.type}</p>
                                 </div>
                             </button>
                         </div>

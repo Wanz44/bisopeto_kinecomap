@@ -1,12 +1,11 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-    User, ArrowLeft, Trophy, Medal, Award, Settings, Bell, LogOut, 
+    User as UserIcon, ArrowLeft, Trophy, Medal, Award, Settings, Bell, LogOut, 
     CreditCard, Moon, Sun, ChevronRight, Camera, Edit2, Mail, 
     Phone, Lock, Save, X, History, Monitor, Smartphone, 
     ShieldCheck, Activity, Star, Zap, Trash2, MapPin, 
     ChevronLeft, Loader2, Sparkles, TrendingUp, CheckCircle, Leaf, FileText, Download, Shield,
-    // Add missing Recycle icon import
     Recycle
 } from 'lucide-react';
 import { User as UserType, Theme, UserType as UserEnum } from '../types';
@@ -29,25 +28,28 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    
+    // Initialisation sécurisée du formulaire
     const [editForm, setEditForm] = useState({
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email || '',
-        phone: user.phone,
-        address: user.address || ''
+        firstName: user?.firstName || '',
+        lastName: user?.lastName || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        address: user?.address || ''
     });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const ecoPoints = user.points || 0;
+    const ecoPoints = user?.points || 0;
     const currentLevel = Math.floor(ecoPoints / 500) + 1;
     const nextLevelXP = 500;
     const progress = (ecoPoints % 500) / nextLevelXP * 100;
 
     const handleSaveProfile = async () => {
+        if (!user?.id) return;
         setIsSaving(true);
         try {
-            await UserAPI.update({ ...editForm, id: user.id! });
+            await UserAPI.update({ ...editForm, id: user.id });
             onUpdateProfile(editForm);
             setIsEditing(false);
             if (onToast) onToast("Profil mis à jour !", "success");
@@ -84,8 +86,13 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
         </div>
     );
 
+    // Sécurité supplémentaire si l'objet user est corrompu
+    if (!user) return <div className="p-10 text-center font-black uppercase text-gray-400">Erreur de chargement du profil</div>;
+
+    const initialLetter = (user.firstName || user.lastName || 'U')[0].toUpperCase();
+
     return (
-        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-[#050505] transition-colors duration-500 overflow-hidden">
+        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-[#050505] transition-colors duration-500 overflow-hidden min-h-screen">
             {/* Ultra Premium Header */}
             <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-6 border-b dark:border-white/5 flex items-center justify-between sticky top-0 z-50">
                 <div className="flex items-center gap-4">
@@ -96,7 +103,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
                         <h2 className="text-2xl font-black uppercase tracking-tighter dark:text-white leading-none">Espace Privé</h2>
                         <div className="flex items-center gap-2 mt-1.5">
                             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Connecté • v1.4.0</p>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Connecté • v1.4.2</p>
                         </div>
                     </div>
                 </div>
@@ -120,7 +127,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
                         <div className="relative mb-8">
                             <div className="w-40 h-40 bg-gradient-to-br from-primary to-primary-light rounded-[3.5rem] p-1 shadow-[0_20px_50px_rgba(46,125,50,0.3)]">
                                 <div className="w-full h-full bg-white dark:bg-gray-800 rounded-[3.2rem] flex items-center justify-center text-primary text-6xl font-black overflow-hidden relative group/avatar">
-                                    {isUploading ? <Loader2 className="animate-spin" /> : user.firstName[0]}
+                                    {isUploading ? <Loader2 className="animate-spin" /> : initialLetter}
                                     <button 
                                         onClick={handleAvatarClick}
                                         className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-all duration-300 backdrop-blur-sm"
@@ -173,7 +180,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
                 {/* Sub-Navigation Glass Tabs */}
                 <div className="flex p-2 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-[2.5rem] border border-gray-100 dark:border-white/5 overflow-x-auto no-scrollbar gap-2 shadow-sm">
                     {[
-                        { id: 'info', label: 'Identité', icon: User },
+                        { id: 'info', label: 'Identité', icon: UserIcon },
                         { id: 'impact', label: 'Impact SIG', icon: Activity },
                         { id: 'cert', label: 'Certificat', icon: FileText },
                         { id: 'security', label: 'Sessions', icon: Monitor }
