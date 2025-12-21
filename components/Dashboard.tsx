@@ -4,7 +4,8 @@ import {
     Trash2, Map as MapIcon, GraduationCap, Leaf, Users, TrendingUp, AlertTriangle, 
     Activity, Truck, Megaphone, MapPin, Clock, Search, ShieldCheck, Phone, Mail, 
     ShieldAlert, UserCheck, ShoppingBag, Battery, ChevronRight, Briefcase, Lock, 
-    RefreshCw, Camera, PieChart as PieIcon, BarChart3, Calendar, Filter
+    RefreshCw, Camera, PieChart as PieIcon, BarChart3, Calendar, Filter, Database,
+    CheckCircle2
 } from 'lucide-react';
 import { 
     PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -21,7 +22,7 @@ interface DashboardProps {
     notifications?: NotificationItem[];
 }
 
-// --- SUB-COMPONENTS (Déclarés avant ou via function pour hoisting) ---
+// --- SUB-COMPONENTS ---
 
 function AdminDashboard({ onChangeView, onToast }: DashboardProps) {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -43,15 +44,19 @@ function AdminDashboard({ onChangeView, onToast }: DashboardProps) {
             const isLive = await testSupabaseConnection();
             setIsCloudSynced(isLive);
 
-            const [usersData, reportsData] = await Promise.all([
-                UserAPI.getAll(),
-                ReportsAPI.getAll()
-            ]);
-            setAllUsers(usersData);
-            setAllReports(reportsData);
-
+            if (isLive) {
+                const [usersData, reportsData] = await Promise.all([
+                    UserAPI.getAll(),
+                    ReportsAPI.getAll()
+                ]);
+                setAllUsers(usersData);
+                setAllReports(reportsData);
+            } else {
+                if (onToast) onToast("Connexion à la base de données impossible", "error");
+            }
         } catch (e) {
-            console.error(e);
+            console.error("Dashboard Load Error:", e);
+            if (onToast) onToast("Erreur de synchronisation Cloud", "error");
         } finally {
             setIsLoading(false);
         }
@@ -119,12 +124,14 @@ function AdminDashboard({ onChangeView, onToast }: DashboardProps) {
 
     return (
         <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8 max-w-[1600px] mx-auto">
-            {/* Header */}
+            {/* Header / Connection Health */}
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <div className={`w-2 h-2 rounded-full animate-pulse ${isCloudSynced ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Biso Peto Control Tower • {isCloudSynced ? 'Synchronisé' : 'Offline'}</span>
+                        <div className={`px-3 py-1 rounded-full flex items-center gap-2 border ${isCloudSynced ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'} transition-all`}>
+                            <Database size={12} className={isCloudSynced ? 'animate-pulse' : ''} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">{isCloudSynced ? 'Cloud Supabase Connecté' : 'Erreur de Connexion BDD'}</span>
+                        </div>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none uppercase">Tour de Contrôle</h1>
                 </div>

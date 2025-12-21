@@ -125,7 +125,8 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast }) =
             }
             onBack();
         } catch (e) {
-            onToast?.("Erreur de transmission. Enregistré localement par sécurité.", "warning");
+            // Changé de "warning" à "error" pour satisfaire les types TS
+            onToast?.("Erreur de transmission. Enregistré localement par sécurité.", "error");
             OfflineManager.addToQueue('ADD_REPORT', report);
             onBack();
         } finally {

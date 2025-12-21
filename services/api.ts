@@ -1,6 +1,6 @@
 
 import { User, MarketplaceItem, Vehicle, AdCampaign, Partner, UserType, SystemSettings, WasteReport, GlobalImpact, DatabaseHealth, NotificationItem, Payment } from '../types';
-import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { supabase } from './supabaseClient';
 
 // --- MAPPERS ---
 const mapUser = (u: any): User => ({
@@ -30,7 +30,8 @@ const mapReport = (r: any): WasteReport => ({
     imageUrl: r.image_url,
     wasteType: r.waste_type,
     assignedTo: r.assigned_to,
-    commune: r.commune
+    commune: r.commune,
+    date: r.created_at || r.date
 });
 
 const mapSettings = (s: any): SystemSettings => ({
@@ -70,6 +71,7 @@ export const UserAPI = {
     register: async (u: User, password?: string): Promise<User> => {
         if (!supabase) throw new Error("Database offline");
         const { data, error } = await supabase.from('users').insert([{
+            id: crypto.randomUUID(), // Génération forcée pour éviter le NULL violation
             first_name: u.firstName,
             last_name: u.lastName,
             email: u.email,
@@ -128,6 +130,7 @@ export const ReportsAPI = {
     add: async (r: WasteReport): Promise<WasteReport> => {
         if (!supabase) throw new Error("Offline");
         const dbData = {
+            id: crypto.randomUUID(), // Génération forcée
             reporter_id: r.reporterId,
             lat: r.lat,
             lng: r.lng,
@@ -203,7 +206,7 @@ export const SettingsAPI = {
     resetAllData: async () => {
         if (!supabase) return;
         const tables = ['waste_reports', 'payments', 'notifications', 'marketplace_items'];
-        for (const t of tables) await supabase.from(t).delete().neq('id', '0');
+        for (const t of tables) await supabase.from(t).delete().neq('id', '00000000-0000-0000-0000-000000000000');
     }
 };
 
@@ -225,9 +228,10 @@ export const PaymentsAPI = {
     record: async (p: Payment) => {
         if (!supabase) return p;
         const { data } = await supabase.from('payments').insert([{
+            id: p.id || crypto.randomUUID(),
             user_id: p.userId,
             user_name: p.userName,
-            amount_fc: p.amountFC,
+            amount_fc: p.amount_fc,
             currency: p.currency,
             method: p.method,
             period: p.period,
@@ -264,6 +268,7 @@ export const VehicleAPI = {
     add: async (v: Vehicle) => {
         if (!supabase) return v;
         const { data } = await supabase.from('vehicles').insert([{
+            id: crypto.randomUUID(),
             name: v.name,
             type: v.type,
             plate_number: v.plateNumber,
@@ -291,6 +296,7 @@ export const MarketplaceAPI = {
     add: async (i: MarketplaceItem) => {
         if (!supabase) return i;
         const { data } = await supabase.from('marketplace_items').insert([{
+            id: crypto.randomUUID(),
             seller_id: i.sellerId,
             seller_name: i.sellerName,
             title: i.title,
@@ -323,6 +329,7 @@ export const NotificationsAPI = {
     add: async (n: Partial<NotificationItem>) => {
         if (!supabase) return n as NotificationItem;
         const { data } = await supabase.from('notifications').insert([{
+            id: crypto.randomUUID(),
             target_user_id: n.targetUserId || 'ALL',
             title: n.title,
             message: n.message,
@@ -330,21 +337,6 @@ export const NotificationsAPI = {
             read: false
         }]).select().single();
         return { ...data, targetUserId: data.target_user_id, time: 'Maintenant' };
-    }
-};
-
-export const StorageAPI = {
-    uploadImage: async (file: File): Promise<string | null> => {
-        if (!supabase) return null;
-        const name = `${Date.now()}-${file.name}`;
-        const { data } = await supabase.storage.from('images').upload(name, file);
-        return data ? supabase.storage.from('images').getPublicUrl(data.path).data.publicUrl : null;
-    },
-    uploadLogo: async (file: File): Promise<string | null> => {
-        if (!supabase) return null;
-        const name = `branding/${Date.now()}-${file.name}`;
-        const { data } = await supabase.storage.from('branding').upload(name, file);
-        return data ? supabase.storage.from('branding').getPublicUrl(data.path).data.publicUrl : null;
     }
 };
 
@@ -356,7 +348,7 @@ export const PartnersAPI = {
     },
     add: async (p: any) => {
         if (!supabase) return p;
-        const { data } = await supabase.from('partners').insert([p]).select().single();
+        const { data } = await supabase.from('partners').insert([{ id: crypto.randomUUID(), ...p }]).select().single();
         return data;
     },
     update: async (p: any) => {
@@ -376,7 +368,7 @@ export const AdsAPI = {
     },
     add: async (a: any) => {
         if (!supabase) return a;
-        const { data } = await supabase.from('ads').insert([a]).select().single();
+        const { data } = await supabase.from('ads').insert([{ id: crypto.randomUUID(), ...a }]).select().single();
         return data;
     },
     updateStatus: async (id: string, status: string) => {
@@ -384,5 +376,53 @@ export const AdsAPI = {
     },
     delete: async (id: string) => {
         if (supabase) await supabase.from('ads').delete().eq('id', id);
+    }
+};
+
+/**
+ * StorageAPI handles file uploads to Supabase Storage buckets.
+ */
+export const StorageAPI = {
+    /**
+     * Uploads a user or item image to the 'images' bucket.
+     */
+    uploadImage: async (file: File): Promise<string | null> => {
+        if (!supabase) return null;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('images')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            console.error('Error uploading image:', uploadError);
+            return null;
+        }
+
+        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+        return data.publicUrl;
+    },
+    /**
+     * Uploads a branding logo to the 'branding' bucket.
+     */
+    uploadLogo: async (file: File): Promise<string | null> => {
+        if (!supabase) return null;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `logo-${Date.now()}.${fileExt}`;
+        const filePath = `branding/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('branding')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            console.error('Error uploading logo:', uploadError);
+            return null;
+        }
+
+        const { data } = supabase.storage.from('branding').getPublicUrl(filePath);
+        return data.publicUrl;
     }
 };

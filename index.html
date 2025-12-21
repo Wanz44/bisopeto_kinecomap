@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
   <head>
@@ -13,12 +12,6 @@
     <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
 
     <title>KIN ECO MAP - Agir localement, impacter durablement</title>
-    
-    <script>
-      window.process = window.process || {};
-      window.process.env = window.process.env || {};
-      if (!window.process.env.NODE_ENV) window.process.env.NODE_ENV = 'production';
-    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -28,12 +21,17 @@
           extend: {
             colors: {
               primary: {
-                DEFAULT: '#2E7D32', // Vert profond
-                light: '#4CAF50',   // Vert clair confirmation
+                DEFAULT: '#2E7D32',
+                light: '#4CAF50',
               },
-              secondary: '#1976D2', // Bleu confiance
-              action: '#FBC02D',    // Jaune action
-              gray: { 750: '#2d3748', 850: '#1a202c', 900: '#111827', 950: '#0d1117' },
+              secondary: '#1976D2',
+              action: '#FBC02D',
+              gray: { 
+                "750": '#2d3748', 
+                "850": '#1a202c', 
+                "900": '#111827', 
+                "950": '#0d1117' 
+              },
             },
             fontFamily: { 
               sans: ['Poppins', 'Inter', 'sans-serif'], 
@@ -106,10 +104,10 @@
     "react-leaflet": "https://esm.sh/react-leaflet@4.2.1?external=react,react-dom,leaflet",
     "leaflet": "https://esm.sh/leaflet@1.9.4",
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.0",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "react/": "https://esm.sh/react@18.2.0/",
-    "react-dom/": "https://esm.sh/react-dom@18.2.0/"
+    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
