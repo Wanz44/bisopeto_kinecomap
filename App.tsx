@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Onboarding } from './components/Onboarding';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
@@ -65,6 +65,19 @@ function App() {
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [appLogo, setAppLogo] = useState(DEFAULT_LOGO);
 
+    const refreshUserData = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            const freshUser = await UserAPI.getById(user.id);
+            if (freshUser) {
+                setUser(freshUser);
+                localStorage.setItem('kinecomap_user', JSON.stringify(freshUser));
+            }
+        } catch (e) {
+            console.error("Failed to sync profile:", e);
+        }
+    }, [user?.id]);
+
     useEffect(() => {
         const loadInitData = async () => {
             try {
@@ -80,6 +93,7 @@ function App() {
                 if (impact) setImpactData(impact);
 
                 if (user?.id) {
+                    await refreshUserData();
                     const notifs = await NotificationsAPI.getAll(user.id, user.type === UserType.ADMIN);
                     setNotifications(notifs);
                 }
@@ -89,6 +103,13 @@ function App() {
         };
         loadInitData();
     }, [user?.id]);
+
+    // Rafraîchir les données quand on entre dans le profil
+    useEffect(() => {
+        if (view === AppView.PROFILE) {
+            refreshUserData();
+        }
+    }, [view, refreshUserData]);
 
     useEffect(() => {
         document.body.classList.toggle('dark', theme === 'dark');
@@ -114,6 +135,16 @@ function App() {
     const showToast = (msg: string, type: any = 'success') => {
         setToast({ message: msg, type, visible: true });
         setTimeout(() => setToast(p => ({ ...p, visible: false })), 3000);
+    };
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await refreshUserData();
+            showToast("Données synchronisées", "success");
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
     if (loading) return <SplashScreen appLogo={appLogo} />;
@@ -162,7 +193,7 @@ function App() {
     if (view === AppView.LANDING || (!user && view === AppView.ONBOARDING)) return renderContent();
 
     return (
-        <Layout currentView={view} onChangeView={navigateTo} onLogout={handleLogout} onRefresh={() => window.location.reload()} isRefreshing={isRefreshing} user={user} unreadNotifications={notifications.filter(n => !n.read).length} appLogo={appLogo} toast={toast} onCloseToast={() => setToast(p => ({...p, visible: false}))}>
+        <Layout currentView={view} onChangeView={navigateTo} onLogout={handleLogout} onRefresh={handleRefresh} isRefreshing={isRefreshing} user={user} unreadNotifications={notifications.filter(n => !n.read).length} appLogo={appLogo} toast={toast} onCloseToast={() => setToast(p => ({...p, visible: false}))}>
             {renderContent()}
         </Layout>
     );

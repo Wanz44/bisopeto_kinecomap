@@ -5,8 +5,11 @@ import { supabase, isSupabaseConfigured } from './supabaseClient';
 // --- MAPPERS ---
 const mapUser = (u: any): User => ({
     ...u,
-    firstName: u.first_name,
-    lastName: u.last_name,
+    id: u.id,
+    firstName: u.first_name || '',
+    lastName: u.last_name || '',
+    email: u.email || '',
+    phone: u.phone || '',
     totalTonnage: Number(u.total_tonnage || 0),
     co2Saved: Number(u.co2_saved || 0),
     recyclingRate: Number(u.recycling_rate || 0),
@@ -14,7 +17,11 @@ const mapUser = (u: any): User => ({
     collections: u.collections || 0,
     badges: u.badges || 0,
     subscription: u.subscription || 'standard',
-    permissions: u.permissions || [] 
+    permissions: u.permissions || [],
+    status: u.status || 'active',
+    type: u.type || UserType.CITIZEN,
+    address: u.address || '',
+    commune: u.commune || ''
 });
 
 const mapReport = (r: any): WasteReport => ({
@@ -51,6 +58,15 @@ export const UserAPI = {
             .maybeSingle();
         return (data && !error) ? mapUser(data) : null;
     },
+    getById: async (id: string): Promise<User | null> => {
+        if (!supabase) return null;
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+        return (data && !error) ? mapUser(data) : null;
+    },
     register: async (u: User, password?: string): Promise<User> => {
         if (!supabase) throw new Error("Database offline");
         const { data, error } = await supabase.from('users').insert([{
@@ -79,16 +95,20 @@ export const UserAPI = {
     update: async (u: Partial<User> & { id: string }) => {
         if (!supabase) return;
         const dbUpdate: any = {};
-        if (u.firstName) dbUpdate.first_name = u.firstName;
-        if (u.lastName) dbUpdate.last_name = u.lastName;
-        if (u.status) dbUpdate.status = u.status;
-        if (u.type) dbUpdate.type = u.type;
-        if (u.permissions) dbUpdate.permissions = u.permissions; 
+        if (u.firstName !== undefined) dbUpdate.first_name = u.firstName;
+        if (u.lastName !== undefined) dbUpdate.last_name = u.lastName;
+        if (u.status !== undefined) dbUpdate.status = u.status;
+        if (u.type !== undefined) dbUpdate.type = u.type;
+        if (u.permissions !== undefined) dbUpdate.permissions = u.permissions; 
         if (u.points !== undefined) dbUpdate.points = u.points;
-        if (u.subscription) dbUpdate.subscription = u.subscription;
-        await supabase.from('users').update(dbUpdate).eq('id', u.id);
+        if (u.subscription !== undefined) dbUpdate.subscription = u.subscription;
+        if (u.address !== undefined) dbUpdate.address = u.address;
+        if (u.email !== undefined) dbUpdate.email = u.email;
+        if (u.phone !== undefined) dbUpdate.phone = u.phone;
+        
+        const { error } = await supabase.from('users').update(dbUpdate).eq('id', u.id);
+        if (error) throw error;
     },
-    // Remise à zéro des compteurs d'abonnements pour tous les utilisateurs non-admins
     resetAllSubscriptionCounters: async () => {
         if (!supabase) return;
         const { error } = await supabase
@@ -147,7 +167,6 @@ export const SettingsAPI = {
             support_email: s.supportEmail,
             exchange_rate: s.exchangeRate,
             marketplace_commission: s.marketplaceCommission,
-            // Fixed: use s.logoUrl as defined in the SystemSettings interface
             logo_url: s.logoUrl
         };
         await supabase.from('system_settings').upsert({ id: 1, ...dbData });

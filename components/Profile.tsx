@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
     User as UserIcon, ArrowLeft, Trophy, Medal, Award, Settings, Bell, LogOut, 
     CreditCard, Moon, Sun, ChevronRight, Camera, Edit2, Mail, 
@@ -29,14 +29,26 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     
-    // Initialisation sécurisée du formulaire
+    // Initialisation sécurisée du formulaire à chaque fois que 'user' change
     const [editForm, setEditForm] = useState({
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
-        email: user?.email || '',
-        phone: user?.phone || '',
-        address: user?.address || ''
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        address: ''
     });
+
+    useEffect(() => {
+        if (user) {
+            setEditForm({
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                address: user.address || ''
+            });
+        }
+    }, [user]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,10 +98,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
         </div>
     );
 
-    // Sécurité supplémentaire si l'objet user est corrompu
-    if (!user) return <div className="p-10 text-center font-black uppercase text-gray-400">Erreur de chargement du profil</div>;
+    if (!user) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-gray-400">
+                <Loader2 className="animate-spin" size={32} />
+                <p className="font-black uppercase text-xs">Chargement du profil réel...</p>
+            </div>
+        );
+    }
 
-    const initialLetter = (user.firstName || user.lastName || 'U')[0].toUpperCase();
+    const initialLetter = (user.firstName?.[0] || user.lastName?.[0] || user.email?.[0] || 'U').toUpperCase();
 
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-[#050505] transition-colors duration-500 overflow-hidden min-h-screen">
@@ -211,15 +229,15 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom complet</label>
                                         <div className="flex gap-4">
-                                            <input disabled={!isEditing} className="flex-1 bg-gray-50 dark:bg-white/5 p-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})}/>
-                                            <input disabled={!isEditing} className="flex-1 bg-gray-50 dark:bg-white/5 p-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})}/>
+                                            <input disabled={!isEditing} className="flex-1 bg-gray-50 dark:bg-white/5 p-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} placeholder="Prénom" />
+                                            <input disabled={!isEditing} className="flex-1 bg-gray-50 dark:bg-white/5 p-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} placeholder="Nom" />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email vérifié</label>
                                         <div className="relative group">
                                             <Mail className="absolute left-5 top-5 text-gray-300 group-focus-within:text-primary" size={20}/>
-                                            <input disabled={!isEditing} className="w-full bg-gray-50 dark:bg-white/5 pl-14 pr-5 py-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})}/>
+                                            <input disabled={!isEditing} className="w-full bg-gray-50 dark:bg-white/5 pl-14 pr-5 py-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="email@exemple.com" />
                                         </div>
                                     </div>
                                 </div>
@@ -229,14 +247,14 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Contact Mobile</label>
                                         <div className="relative group">
                                             <Phone className="absolute left-5 top-5 text-gray-300 group-focus-within:text-primary" size={20}/>
-                                            <input disabled={!isEditing} className="w-full bg-gray-50 dark:bg-white/5 pl-14 pr-5 py-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})}/>
+                                            <input disabled={!isEditing} className="w-full bg-gray-50 dark:bg-white/5 pl-14 pr-5 py-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} placeholder="Téléphone" />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Lieu de résidence</label>
                                         <div className="relative group">
                                             <MapPin className="absolute left-5 top-5 text-red-400" size={20}/>
-                                            <input disabled={!isEditing} className="w-full bg-gray-50 dark:bg-white/5 pl-14 pr-5 py-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})}/>
+                                            <input disabled={!isEditing} className="w-full bg-gray-50 dark:bg-white/5 pl-14 pr-5 py-5 rounded-2xl font-bold dark:text-white outline-none border-none focus:ring-2 ring-primary/20" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Adresse" />
                                         </div>
                                     </div>
                                 </div>
