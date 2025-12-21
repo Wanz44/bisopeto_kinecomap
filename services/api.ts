@@ -14,7 +14,7 @@ const mapUser = (u: any): User => ({
     collections: u.collections || 0,
     badges: u.badges || 0,
     subscription: u.subscription || 'standard',
-    permissions: u.permissions || [] // Récupération réelle du tableau de permissions
+    permissions: u.permissions || [] 
 });
 
 const mapReport = (r: any): WasteReport => ({
@@ -51,9 +51,8 @@ export const UserAPI = {
             .maybeSingle();
         return (data && !error) ? mapUser(data) : null;
     },
-    // Fix: Added register method to handle user creation in Onboarding.tsx
     register: async (u: User, password?: string): Promise<User> => {
-        if (!supabase) throw new Error("Offline");
+        if (!supabase) throw new Error("Database offline");
         const { data, error } = await supabase.from('users').insert([{
             first_name: u.firstName,
             last_name: u.lastName,
@@ -84,7 +83,7 @@ export const UserAPI = {
         if (u.lastName) dbUpdate.last_name = u.lastName;
         if (u.status) dbUpdate.status = u.status;
         if (u.type) dbUpdate.type = u.type;
-        if (u.permissions) dbUpdate.permissions = u.permissions; // Sauvegarde réelle des privilèges
+        if (u.permissions) dbUpdate.permissions = u.permissions; 
         if (u.points !== undefined) dbUpdate.points = u.points;
         if (u.subscription) dbUpdate.subscription = u.subscription;
         await supabase.from('users').update(dbUpdate).eq('id', u.id);
@@ -134,12 +133,13 @@ export const SettingsAPI = {
     },
     update: async (s: SystemSettings) => {
         if (!supabase) return;
+        // FIX: Remplacement des propriétés snake_case erronées par camelCase
         const dbData = {
             maintenance_mode: s.maintenanceMode,
-            support_email: s.support_email,
-            exchange_rate: s.exchange_rate,
+            support_email: s.supportEmail,
+            exchange_rate: s.exchangeRate,
             marketplace_commission: s.marketplaceCommission,
-            logo_url: s.logo_url
+            logo_url: s.logoUrl
         };
         await supabase.from('system_settings').upsert({ id: 1, ...dbData });
     },
@@ -169,7 +169,10 @@ export const SettingsAPI = {
             lastAudit: new Date().toISOString()
         };
     },
-    repairDatabase: async () => {},
+    repairDatabase: async () => {
+        if (!supabase) return;
+        // Simule une réparation ou lance des commandes SQL spécifiques si nécessaire
+    },
     resetAllData: async () => {
         if (!supabase) return;
         const tables = ['waste_reports', 'payments', 'notifications', 'marketplace_items'];
@@ -274,7 +277,11 @@ export const MarketplaceAPI = {
     },
     update: async (i: Partial<MarketplaceItem> & { id: string }) => {
         if (!supabase) return;
-        await supabase.from('marketplace_items').update(i).eq('id', i.id);
+        const dbUpdate: any = { ...i };
+        if (i.sellerId) { dbUpdate.seller_id = i.sellerId; delete dbUpdate.sellerId; }
+        if (i.sellerName) { dbUpdate.seller_name = i.sellerName; delete dbUpdate.sellerName; }
+        if (i.imageUrl) { dbUpdate.image_url = i.imageUrl; delete dbUpdate.imageUrl; }
+        await supabase.from('marketplace_items').update(dbUpdate).eq('id', i.id);
     }
 };
 
