@@ -38,11 +38,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
 
     // Fonction de vérification de permission STRICTE
     const hasPermission = (perm?: UserPermission): boolean => {
+        // La vue Profil (AppView.PROFILE) est toujours accessible
+        if (currentView === AppView.PROFILE) return true;
         if (!perm) return true;
         if (!user) return false;
         
         // Un admin n'a accès qu'à ce qui est dans son tableau de permissions
-        // S'il n'a AUCUNE permission (tableau vide), il ne voit que le Dashboard par défaut
         return user.permissions?.includes(perm) || false;
     };
 
@@ -50,6 +51,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
     useEffect(() => {
         const checkCurrentAccess = () => {
             if (!user) return;
+            // Toujours autoriser le profil et le dashboard
+            if (currentView === AppView.PROFILE || currentView === AppView.DASHBOARD) return;
+
             const sections = getNavSections();
             const allPossibleItems = sections.flatMap(s => s.items);
             const currentItem = allPossibleItems.find(i => i.view === currentView);
@@ -164,7 +168,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                     <div className="hidden md:block"><h1 className="font-black text-2xl text-gray-800 dark:text-white tracking-tight flex items-center gap-3">{user?.type === UserType.ADMIN && <Shield size={24} className="text-secondary" />}{flattenedItems.find(n => n.view === currentView)?.label || 'Biso Peto'}</h1></div>
                     <div className="flex items-center gap-4 ml-auto">
                         <button onClick={onRefresh} className={`p-3 rounded-2xl text-gray-500 dark:text-gray-300 bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-white shadow-sm ${isRefreshing ? 'animate-spin text-primary-light' : ''}`}><RotateCw size={20} /></button>
-                        <div className="relative"><button className="pl-1 pr-1 md:pr-4 md:pl-1 py-1 rounded-full md:rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-sm flex items-center gap-3 transition-all hover:border-primary"><div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${user?.type === UserType.ADMIN ? 'bg-gray-900' : 'bg-primary-light'}`}><User size={18} /></div><div className="hidden md:block text-left mr-2"><p className="text-sm font-bold text-gray-800 dark:text-white leading-none">{user?.firstName}</p><p className="text-[10px] text-gray-500 font-black uppercase mt-0.5 tracking-tighter">{user?.type}</p></div></button></div>
+                        <div className="relative">
+                            <button 
+                                onClick={() => onChangeView(AppView.PROFILE)}
+                                className="pl-1 pr-1 md:pr-4 md:pl-1 py-1 rounded-full md:rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-sm flex items-center gap-3 transition-all hover:border-primary"
+                            >
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${user?.type === UserType.ADMIN ? 'bg-gray-900' : 'bg-primary-light'}`}>
+                                    <User size={18} />
+                                </div>
+                                <div className="hidden md:block text-left mr-2">
+                                    <p className="text-sm font-bold text-gray-800 dark:text-white leading-none">{user?.firstName}</p>
+                                    <p className="text-[10px] text-gray-500 font-black uppercase mt-0.5 tracking-tighter">{user?.type}</p>
+                                </div>
+                            </button>
+                        </div>
                     </div>
                 </header>
                 <main className="flex-1 overflow-y-auto relative pb-28 md:pb-0 h-full w-full">{children}</main>
