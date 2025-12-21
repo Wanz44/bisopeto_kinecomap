@@ -21,23 +21,11 @@ interface DashboardProps {
     notifications?: NotificationItem[];
 }
 
-export const Dashboard: React.FC<DashboardProps> = (props) => {
-    if (props.user.type !== UserType.ADMIN && props.user.status === 'pending') {
-        return <PendingDashboard {...props} />;
-    }
+// --- SUB-COMPONENTS (Déclarés avant ou via function pour hoisting) ---
 
-    switch (props.user.type) {
-        case UserType.ADMIN: return <AdminDashboard {...props} />;
-        case UserType.COLLECTOR: return <CollectorDashboard {...props} />;
-        case UserType.BUSINESS: return <BusinessDashboard {...props} />;
-        default: return <CitizenDashboard {...props} />;
-    }
-};
-
-const AdminDashboard: React.FC<DashboardProps> = ({ onChangeView, onToast }) => {
+function AdminDashboard({ onChangeView, onToast }: DashboardProps) {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isCloudSynced, setIsCloudSynced] = useState(false);
-    // Fix: replaced undefined name 'AppUser' with the correct 'User' type from types.ts
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [allReports, setAllReports] = useState<WasteReport[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -270,7 +258,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onChangeView, onToast }) => 
                     </div>
                 </div>
 
-                {/* Performance Zones (Original with logic) */}
+                {/* Performance Zones */}
                 <div className="bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col group overflow-hidden">
                     <div className="flex justify-between items-center mb-10">
                         <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Satisfaction Zones</h3>
@@ -292,7 +280,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onChangeView, onToast }) => 
                 </div>
             </div>
 
-            {/* KYC Section (Original) */}
+            {/* KYC Section */}
             <div className="bg-white dark:bg-[#111827] p-8 rounded-[3rem] border-2 border-orange-100 dark:border-orange-900/40 shadow-2xl flex flex-col relative overflow-hidden group">
                 <div className="flex justify-between items-center mb-10 relative z-10">
                     <div className="flex items-center gap-4">
@@ -326,4 +314,114 @@ const AdminDashboard: React.FC<DashboardProps> = ({ onChangeView, onToast }) => 
             </div>
         </div>
     );
+}
+
+function PendingDashboard({ user }: DashboardProps) {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-[100dvh] p-8 md:p-12 text-center space-y-10 animate-fade-in bg-[#F5F7FA] dark:bg-[#050505]">
+            <div className="relative">
+                <div className="w-32 h-32 bg-orange-100 dark:bg-orange-900/20 rounded-[3rem] flex items-center justify-center text-orange-600 shadow-2xl relative z-10 animate-float"><Lock size={64} /></div>
+                <div className="absolute inset-0 bg-orange-400 blur-3xl opacity-20 animate-pulse"></div>
+            </div>
+            <div className="space-y-4 max-w-lg">
+                <div className="inline-flex items-center gap-2 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-4 py-2 rounded-full border border-orange-100 dark:border-orange-800">
+                    <ShieldAlert size={14} /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Sécurité Biso Peto • Accès Restreint</span>
+                </div>
+                <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Vérification en cours</h2>
+                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed">Mbote {user.firstName}! Votre demande d'adhésion au réseau Biso Peto a bien été reçue.</p>
+            </div>
+        </div>
+    );
+}
+
+function CollectorDashboard({ user, onChangeView }: DashboardProps) {
+    return (
+        <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8">
+            <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-orange-500 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-orange-500/20"><Truck size={32} /></div>
+                <div>
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Espace Collecte</h1>
+                    <p className="text-sm font-bold text-gray-400 mt-1">Prêt pour votre mission, {user.firstName}?</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <button onClick={() => onChangeView(AppView.COLLECTOR_JOBS)} className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center gap-6 group hover:shadow-xl transition-all">
+                    <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-[2rem] flex items-center justify-center text-[#2962FF] transition-transform group-hover:scale-110 group-hover:rotate-6"><Activity size={36} /></div>
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Missions du jour</h3>
+                </button>
+                <button onClick={() => onChangeView(AppView.MAP)} className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center gap-6 group hover:shadow-xl transition-all">
+                    <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-[2rem] flex items-center justify-center text-[#00C853] transition-transform group-hover:scale-110 group-hover:-rotate-6"><MapIcon size={36} /></div>
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Carte SIG Live</h3>
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function BusinessDashboard({ user }: DashboardProps) {
+    return (
+        <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8">
+            <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20"><Briefcase size={32} /></div>
+                <div>
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">{user.companyName || 'Espace Entreprise'}</h1>
+                    <p className="text-sm font-bold text-gray-400 mt-1">Pilotage RSE & Gestion des Déchets</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function CitizenDashboard({ user, onChangeView }: DashboardProps) {
+    return (
+        <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Mbote, {user.firstName}!</h1>
+                    <div className="text-sm font-bold text-gray-500 mt-3 flex items-center gap-2">
+                        <div className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center"><Leaf size={12} /></div> Kinshasa devient plus propre grâce à vous.
+                    </div>
+                </div>
+                <div className="bg-white dark:bg-[#111827] p-5 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm text-center min-w-[120px]">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Eco Points</p>
+                    <div className="text-3xl font-black text-[#2962FF]">{user.points}</div>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button onClick={() => onChangeView(AppView.REPORTING)} className="relative group overflow-hidden bg-[#2962FF] p-8 rounded-[3rem] shadow-2xl shadow-blue-500/20 flex flex-col gap-8 transition-transform hover:scale-[1.02] active:scale-95">
+                    <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:rotate-12 transition-transform duration-500"><Camera size={120} /></div>
+                    <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-white"><Camera size={28} /></div>
+                    <div>
+                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Biso Peto Alert</h3>
+                        <p className="text-white/70 text-xs font-bold uppercase mt-2 tracking-widest">Signaler des déchets maintenant</p>
+                    </div>
+                </button>
+                <div className="grid grid-cols-2 gap-4">
+                    <button onClick={() => onChangeView(AppView.ACADEMY)} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all">
+                        <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-[1.5rem] flex items-center justify-center text-[#00C853] transition-transform group-hover:scale-110"><GraduationCap size={32} /></div>
+                        <span className="text-[10px] font-black text-gray-800 dark:text-white uppercase tracking-widest text-center leading-tight">Eco Academy</span>
+                    </button>
+                    <button onClick={() => onChangeView(AppView.MARKETPLACE)} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all">
+                        <div className="w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-[1.5rem] flex items-center justify-center text-purple-600 transition-transform group-hover:scale-110"><ShoppingBag size={32} /></div>
+                        <span className="text-[10px] font-black text-gray-800 dark:text-white uppercase tracking-widest text-center leading-tight">Marketplace</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- MAIN EXPORT ---
+
+export const Dashboard: React.FC<DashboardProps> = (props) => {
+    if (props.user.type !== UserType.ADMIN && props.user.status === 'pending') {
+        return <PendingDashboard {...props} />;
+    }
+
+    switch (props.user.type) {
+        case UserType.ADMIN: return <AdminDashboard {...props} />;
+        case UserType.COLLECTOR: return <CollectorDashboard {...props} />;
+        case UserType.BUSINESS: return <BusinessDashboard {...props} />;
+        default: return <CitizenDashboard {...props} />;
+    }
 };
