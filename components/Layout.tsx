@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     Home, Map as MapIcon, GraduationCap, User, LogOut, Settings, RotateCw, 
     Users, ClipboardList, Megaphone, PieChart, CreditCard, Truck, 
-    ShoppingBag, AlertTriangle, X, Shield, Bell, Camera, DollarSign
+    ShoppingBag, AlertTriangle, X, Shield, Bell, Camera, DollarSign, Lock
 } from 'lucide-react';
 import { AppView, UserType, User as UserInterface, UserPermission } from '../types';
 
@@ -36,12 +36,31 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeView, onLogout, onRefresh, isRefreshing, user, unreadNotifications = 0, appLogo = 'logobisopeto.png', toast, onCloseToast }) => {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+    // Fonction de vérification de permission STRICTE
     const hasPermission = (perm?: UserPermission): boolean => {
         if (!perm) return true;
         if (!user) return false;
-        if (user.type === UserType.ADMIN && (!user.permissions || user.permissions.length === 0)) return true;
+        
+        // Un admin n'a accès qu'à ce qui est dans son tableau de permissions
+        // S'il n'a AUCUNE permission (tableau vide), il ne voit que le Dashboard par défaut
         return user.permissions?.includes(perm) || false;
     };
+
+    // Sécurité supplémentaire : Si la vue actuelle demande une permission que l'utilisateur n'a pas
+    useEffect(() => {
+        const checkCurrentAccess = () => {
+            if (!user) return;
+            const sections = getNavSections();
+            const allPossibleItems = sections.flatMap(s => s.items);
+            const currentItem = allPossibleItems.find(i => i.view === currentView);
+            
+            if (currentItem && currentItem.permission && !hasPermission(currentItem.permission)) {
+                console.warn(`Accès refusé à ${currentView}. Permission ${currentItem.permission} manquante.`);
+                onChangeView(AppView.DASHBOARD);
+            }
+        };
+        checkCurrentAccess();
+    }, [currentView, user?.permissions]);
 
     const getNavSections = (): NavSection[] => {
         const type = user?.type;
@@ -52,21 +71,22 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             ];
 
             const gestionItems: NavItem[] = [];
-            if (hasPermission('manage_reports')) gestionItems.push({ view: AppView.ADMIN_REPORTS, icon: AlertTriangle, label: 'Signalements SIG' });
-            if (hasPermission('manage_users')) gestionItems.push({ view: AppView.ADMIN_USERS, icon: Users, label: 'Utilisateurs' });
-            if (hasPermission('manage_recovery')) gestionItems.push({ view: AppView.ADMIN_RECOVERY, icon: DollarSign, label: 'Recouvrement' });
-            if (hasPermission('manage_subscriptions')) gestionItems.push({ view: AppView.ADMIN_SUBSCRIPTIONS, icon: CreditCard, label: 'Abonnements' });
+            if (hasPermission('manage_reports')) gestionItems.push({ view: AppView.ADMIN_REPORTS, icon: AlertTriangle, label: 'Signalements SIG', permission: 'manage_reports' });
+            if (hasPermission('manage_users')) gestionItems.push({ view: AppView.ADMIN_USERS, icon: Users, label: 'Utilisateurs', permission: 'manage_users' });
+            if (hasPermission('manage_recovery')) gestionItems.push({ view: AppView.ADMIN_RECOVERY, icon: DollarSign, label: 'Recouvrement', permission: 'manage_recovery' });
+            if (hasPermission('manage_subscriptions')) gestionItems.push({ view: AppView.ADMIN_SUBSCRIPTIONS, icon: CreditCard, label: 'Abonnements', permission: 'manage_subscriptions' });
             if (gestionItems.length > 0) sections.push({ title: 'Opérations', items: gestionItems });
 
             const contenuItems: NavItem[] = [];
-            if (hasPermission('manage_marketplace')) contenuItems.push({ view: AppView.ADMIN_MARKETPLACE, icon: ShoppingBag, label: 'Marketplace' });
-            if (hasPermission('manage_academy')) contenuItems.push({ view: AppView.ADMIN_ACADEMY, icon: GraduationCap, label: 'Academy' });
-            if (hasPermission('manage_ads')) contenuItems.push({ view: AppView.ADMIN_ADS, icon: Megaphone, label: 'Régie Pub' });
+            if (hasPermission('manage_marketplace')) contenuItems.push({ view: AppView.ADMIN_MARKETPLACE, icon: ShoppingBag, label: 'Marketplace', permission: 'manage_marketplace' });
+            if (hasPermission('manage_academy')) contenuItems.push({ view: AppView.ADMIN_ACADEMY, icon: GraduationCap, label: 'Academy', permission: 'manage_academy' });
+            if (hasPermission('manage_ads')) contenuItems.push({ view: AppView.ADMIN_ADS, icon: Megaphone, label: 'Régie Pub', permission: 'manage_ads' });
             if (contenuItems.length > 0) sections.push({ title: 'Contenu', items: contenuItems });
 
             const systemeItems: NavItem[] = [{ view: AppView.NOTIFICATIONS, icon: Bell, label: 'Notifications' }];
-            if (hasPermission('manage_fleet')) systemeItems.push({ view: AppView.ADMIN_VEHICLES, icon: Truck, label: 'Flotte GPS' });
-            if (hasPermission('system_settings')) systemeItems.push({ view: AppView.ADMIN_PERMISSIONS, icon: Settings, label: 'Paramètres' });
+            if (hasPermission('manage_fleet')) systemeItems.push({ view: AppView.ADMIN_VEHICLES, icon: Truck, label: 'Flotte GPS', permission: 'manage_fleet' });
+            if (hasPermission('system_settings')) systemeItems.push({ view: AppView.ADMIN_PERMISSIONS, icon: Shield, label: 'Privilèges', permission: 'system_settings' });
+            if (hasPermission('system_settings')) systemeItems.push({ view: AppView.SETTINGS, icon: Settings, label: 'Config Système', permission: 'system_settings' });
             sections.push({ title: 'Système', items: systemeItems });
 
             sections.push({ items: [{ view: AppView.PROFILE, icon: User, label: 'Mon Profil' }] });
@@ -95,7 +115,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
     const navSections = getNavSections();
     const flattenedItems = navSections.flatMap(s => s.items);
 
-    // Priorité mobile pour Admin
     const mobileItems = user?.type === UserType.ADMIN 
         ? [
             flattenedItems.find(i => i.view === AppView.DASHBOARD),
@@ -103,7 +122,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             flattenedItems.find(i => i.view === AppView.ADMIN_USERS),
             flattenedItems.find(i => i.view === AppView.NOTIFICATIONS),
             flattenedItems.find(i => i.view === AppView.PROFILE),
-        ].filter(Boolean)
+        ].filter(Boolean) as NavItem[]
         : flattenedItems.slice(0, 5);
 
     return (

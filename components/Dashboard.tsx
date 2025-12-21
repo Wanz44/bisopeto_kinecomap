@@ -1,23 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-    Trash2, Recycle, Star, Award, Map as MapIcon, Calendar, CreditCard, 
-    GraduationCap, Leaf, Users, User as UserIcon, TrendingUp, AlertTriangle, 
-    Activity, Truck, CheckCircle, Navigation, Megaphone, Weight, Share2, 
-    MapPin, ArrowUpRight, BarChart3, Clock, Search, Filter, DollarSign, 
-    ShieldCheck, PhoneCall, Phone, FileText, Download, Globe2, Wind, Sparkles, Plus,
-    Mail, ShieldAlert, Siren, Zap, Target, UserCheck, ShoppingBag, MessageSquare, Battery,
-    ArrowDownRight, ChevronRight, Briefcase, Factory, ShieldEllipsis, History, FileCheck,
-    X, ClipboardList, Camera, Package, Cloud, CloudOff, UserPlus, Bell, Lock, PieChart as PieIcon,
-    RefreshCw
+    Trash2, Map as MapIcon, GraduationCap, Leaf, Users, TrendingUp, AlertTriangle, 
+    Activity, Truck, Megaphone, MapPin, Clock, Search, ShieldCheck, Phone, Mail, 
+    ShieldAlert, UserCheck, ShoppingBag, Battery, ChevronRight, Briefcase, Lock, 
+    RefreshCw, Camera, PieChart as PieIcon
 } from 'lucide-react';
 import { 
-    BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, 
-    PieChart as RechartsPieChart, Pie, AreaChart, Area, CartesianGrid, YAxis, Legend
+    PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip
 } from 'recharts';
-import { User, AppView, UserType, WasteReport, MarketplaceItem, AdCampaign, NotificationItem } from '../types';
-import { UserAPI, ReportsAPI, MarketplaceAPI, AdsAPI, NotificationsAPI } from '../services/api';
-import { isSupabaseConfigured, testSupabaseConnection } from '../services/supabaseClient';
+import { User, AppView, UserType, WasteReport, NotificationItem } from '../types';
+import { UserAPI, ReportsAPI } from '../services/api';
+import { testSupabaseConnection } from '../services/supabaseClient';
 
 interface DashboardProps {
     user: User;
@@ -25,13 +19,6 @@ interface DashboardProps {
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
     notifications?: NotificationItem[];
 }
-
-const ZONE_PERFORMANCE = [
-    { name: 'Gombe', active: 45, reports: 12, cleaned: 10 },
-    { name: 'Limete', active: 32, reports: 28, cleaned: 15 },
-    { name: 'Ngaliema', active: 58, reports: 42, cleaned: 40 },
-    { name: 'Kintambo', active: 15, reports: 8, cleaned: 7 },
-];
 
 export const Dashboard: React.FC<DashboardProps> = (props) => {
     if (props.user.type !== UserType.ADMIN && props.user.status === 'pending') {
@@ -46,10 +33,9 @@ export const Dashboard: React.FC<DashboardProps> = (props) => {
     }
 };
 
-const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView, onToast }) => {
+const AdminDashboard: React.FC<DashboardProps> = ({ onChangeView, onToast }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isCloudSynced, setIsCloudSynced] = useState(false);
-    
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [allReports, setAllReports] = useState<WasteReport[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -68,15 +54,11 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView, onToast 
 
             const [usersData, reportsData] = await Promise.all([
                 UserAPI.getAll(),
-                UserAPI.getAll() // Simplifié pour la démo
+                ReportsAPI.getAll()
             ]);
             setAllUsers(usersData);
-            setAllReports([]); // Placeholder
+            setAllReports(reportsData);
 
-            const pending = usersData.filter(u => u.status === 'pending');
-            if (pending.length > 0 && onToast) {
-                onToast(`Urgent : ${pending.length} dossiers d'assainissement en attente de qualification KYC.`, "info");
-            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -85,51 +67,26 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView, onToast 
     };
 
     const pendingUsers = allUsers.filter(u => u.status === 'pending');
-    const countReportsToday = allReports.length; // Placeholder
+    const todayReports = allReports.filter(r => new Date(r.date).toDateString() === new Date().toDateString());
+    
+    // Calcul de performance réelle par zone
+    const communes = ['Gombe', 'Limete', 'Ngaliema', 'Kintambo'];
+    const zoneData = communes.map(name => {
+        const zoneReports = allReports.filter(r => r.commune === name);
+        const resolved = zoneReports.filter(r => r.status === 'resolved').length;
+        const efficiency = zoneReports.length > 0 ? Math.round((resolved / zoneReports.length) * 100) : 0;
+        return { name, efficiency, count: zoneReports.length };
+    });
 
     const STATS_CARDS = [
-        { 
-            label: 'Alertes Jour', 
-            value: countReportsToday.toString(), 
-            trend: countReportsToday > 0 ? 'Action Requis' : 'OK', 
-            icon: Megaphone, 
-            color: 'text-blue-600', 
-            bg: 'bg-blue-50',
-            targetView: AppView.ADMIN_REPORTS 
-        },
-        { 
-            label: 'Files KYC', 
-            value: pendingUsers.length.toString(), 
-            trend: pendingUsers.length > 0 ? 'CRITIQUE' : 'À Jour', 
-            icon: UserCheck, 
-            color: 'text-[#FBC02D]', 
-            bg: 'bg-yellow-50',
-            targetView: AppView.ADMIN_USERS,
-            urgent: pendingUsers.length > 0
-        },
-        { 
-            label: 'Tonnage Nettoyé', 
-            value: '42.5t', 
-            trend: '+12%', 
-            icon: Trash2, 
-            color: 'text-green-600', 
-            bg: 'bg-green-50',
-            targetView: AppView.ADMIN_REPORTS 
-        },
-        { 
-            label: 'Utilisateurs', 
-            value: allUsers.length.toString(), 
-            trend: 'Réseau', 
-            icon: Users, 
-            color: 'text-orange-600', 
-            bg: 'bg-orange-50',
-            targetView: AppView.ADMIN_USERS 
-        }
+        { label: 'Alertes Jour', value: todayReports.length.toString(), trend: 'Action Requis', icon: Megaphone, color: 'text-blue-600', bg: 'bg-blue-50', targetView: AppView.ADMIN_REPORTS },
+        { label: 'Files KYC', value: pendingUsers.length.toString(), trend: pendingUsers.length > 0 ? 'PRIORITAIRE' : 'À Jour', icon: UserCheck, color: 'text-[#FBC02D]', bg: 'bg-yellow-50', targetView: AppView.ADMIN_USERS, urgent: pendingUsers.length > 0 },
+        { label: 'Incidents SIG', value: allReports.length.toString(), trend: 'Total', icon: Trash2, color: 'text-green-600', bg: 'bg-green-50', targetView: AppView.ADMIN_REPORTS },
+        { label: 'Membres', value: allUsers.length.toString(), trend: 'Réseau', icon: Users, color: 'text-orange-600', bg: 'bg-orange-50', targetView: AppView.ADMIN_USERS }
     ];
 
     return (
         <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8 max-w-[1600px] mx-auto">
-            {/* Header / Sync Info */}
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
@@ -149,7 +106,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView, onToast 
                 </div>
             </div>
 
-            {/* Main Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {STATS_CARDS.map((stat, idx) => (
                     <div key={idx} onClick={() => onChangeView(stat.targetView)} className={`bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border-2 transition-all active:scale-95 cursor-pointer relative overflow-hidden group shadow-sm ${stat.urgent ? 'border-orange-400 animate-pulse-slow shadow-orange-100' : 'border-gray-100 dark:border-gray-800 hover:border-primary'}`}>
@@ -166,84 +122,55 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onChangeView, onToast 
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Section Spéciale "Qualification Citoyenne" */}
                 <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-8 rounded-[3rem] border-2 border-orange-100 dark:border-orange-900/40 shadow-2xl flex flex-col relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-5 text-orange-500 rotate-12 group-hover:rotate-45 transition-transform duration-1000"><ShieldAlert size={150} /></div>
                     <div className="flex justify-between items-center mb-10 relative z-10">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200/50 animate-bounce"><UserCheck size={24} /></div>
+                            <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center shadow-lg animate-bounce"><UserCheck size={24} /></div>
                             <div>
                                 <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Qualification Réseau</h3>
                                 <p className="text-xs text-orange-600 font-bold uppercase tracking-widest mt-1">Dossiers KYC prioritaires</p>
                             </div>
                         </div>
-                        <div className="bg-orange-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-lg shadow-orange-500/20">
-                           {pendingUsers.length} en attente
-                        </div>
                     </div>
                     
                     <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar max-h-[400px] relative z-10">
                         {pendingUsers.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-24 text-center">
-                                <ShieldCheck size={56} className="text-green-500 mb-4 opacity-10" />
-                                <p className="text-gray-400 font-bold uppercase text-[11px] tracking-widest italic">Base de données qualifiée. Félicitations.</p>
-                            </div>
+                            <div className="flex flex-col items-center justify-center py-24 text-center text-gray-400 font-bold uppercase text-[11px] tracking-widest italic">Aucun dossier en attente.</div>
                         ) : (
-                            pendingUsers.map((pendingUser, i) => (
-                                <div key={pendingUser.id || i} className="flex items-center gap-5 p-5 bg-orange-50/30 dark:bg-orange-900/10 rounded-[2.2rem] border-2 border-transparent hover:border-orange-200 transition-all group animate-fade-in">
-                                    <div className="w-16 h-16 bg-white dark:bg-gray-800 text-orange-600 rounded-3xl flex items-center justify-center font-black text-2xl shrink-0 shadow-sm group-hover:scale-105 transition-transform">{pendingUser.firstName[0]}</div>
+                            pendingUsers.map(u => (
+                                <div key={u.id} className="flex items-center gap-5 p-5 bg-orange-50/30 dark:bg-orange-900/10 rounded-[2.2rem] border-2 border-transparent hover:border-orange-200 transition-all group">
+                                    <div className="w-16 h-16 bg-white dark:bg-gray-800 text-orange-600 rounded-3xl flex items-center justify-center font-black text-2xl shrink-0 shadow-sm">{u.firstName[0]}</div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-base font-black dark:text-white uppercase truncate">{pendingUser.firstName} {pendingUser.lastName}</p>
-                                            <span className="text-[8px] bg-orange-500 text-white px-2 py-0.5 rounded-md font-black uppercase shadow-sm">{pendingUser.type}</span>
-                                        </div>
-                                        <div className="flex items-center gap-4 mt-2">
-                                            <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1.5"><MapPin size={12} className="text-red-500"/> {pendingUser.commune || 'Kinshasa'}</span>
-                                            <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1.5"><Calendar size={12}/> Inscrit le {new Date().toLocaleDateString('fr-FR')}</span>
-                                        </div>
+                                        <p className="text-base font-black dark:text-white uppercase truncate">{u.firstName} {u.lastName}</p>
+                                        <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1.5 mt-1 uppercase"><MapPin size={12}/> {u.commune}</span>
                                     </div>
-                                    <button 
-                                        onClick={() => onChangeView(AppView.ADMIN_USERS)} 
-                                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-2xl shadow-xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
-                                    >
-                                        Analyser
-                                    </button>
+                                    <button onClick={() => onChangeView(AppView.ADMIN_USERS)} className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-2xl shadow-xl font-black text-[10px] uppercase tracking-widest">Analyser</button>
                                 </div>
                             ))
                         )}
                     </div>
                     {pendingUsers.length > 0 && (
-                        <button 
-                            onClick={() => onChangeView(AppView.ADMIN_USERS)}
-                            className="mt-8 w-full py-5 bg-[#2962FF] text-white rounded-[1.8rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 hover:scale-[1.01] transition-all flex items-center justify-center gap-3"
-                        >
-                            Ouvrir l'Annuaire Complet <ChevronRight size={18}/>
-                        </button>
+                        <button onClick={() => onChangeView(AppView.ADMIN_USERS)} className="mt-8 w-full py-5 bg-[#2962FF] text-white rounded-[1.8rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl flex items-center justify-center gap-3">Ouvrir l'Annuaire Complet <ChevronRight size={18}/></button>
                     )}
                 </div>
 
                 <div className="bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col group overflow-hidden">
                     <div className="flex justify-between items-center mb-10">
                         <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Performance Zones</h3>
-                        <PieIcon size={24} className="text-blue-500 group-hover:rotate-90 transition-transform duration-1000" />
+                        <PieIcon size={24} className="text-blue-500" />
                     </div>
                     <div className="flex-1 space-y-8 overflow-y-auto no-scrollbar">
-                        {ZONE_PERFORMANCE.map((zone, i) => {
-                             const reportsInZone = 10 + i * 5; // Placeholder
-                             const resolvedInZone = 8 + i * 4; // Placeholder
-                             const efficiency = Math.round((resolvedInZone / reportsInZone) * 100);
-                            return (
-                                <div key={i} className="space-y-3">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">{zone.name}</span>
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${efficiency > 70 ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>{efficiency}%</span>
-                                    </div>
-                                    <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-inner">
-                                        <div className={`h-full rounded-full transition-all duration-1000 ${efficiency > 70 ? 'bg-primary' : 'bg-orange-500'}`} style={{ width: `${efficiency}%` }}></div>
-                                    </div>
+                        {zoneData.map((zone, i) => (
+                            <div key={i} className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">{zone.name}</span>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded ${zone.efficiency > 70 ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>{zone.efficiency}%</span>
                                 </div>
-                            );
-                        })}
+                                <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-inner">
+                                    <div className={`h-full rounded-full transition-all duration-1000 ${zone.efficiency > 70 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${zone.efficiency}%` }}></div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -255,139 +182,87 @@ const PendingDashboard: React.FC<DashboardProps> = ({ user }) => {
     return (
         <div className="flex flex-col items-center justify-center min-h-[100dvh] p-8 md:p-12 text-center space-y-10 animate-fade-in bg-[#F5F7FA] dark:bg-[#050505]">
             <div className="relative">
-                <div className="w-32 h-32 bg-orange-100 dark:bg-orange-900/20 rounded-[3rem] flex items-center justify-center text-orange-600 shadow-2xl relative z-10 animate-float">
-                    <Lock size={64} />
-                </div>
+                <div className="w-32 h-32 bg-orange-100 dark:bg-orange-900/20 rounded-[3rem] flex items-center justify-center text-orange-600 shadow-2xl relative z-10 animate-float"><Lock size={64} /></div>
                 <div className="absolute inset-0 bg-orange-400 blur-3xl opacity-20 animate-pulse"></div>
             </div>
-            
             <div className="space-y-4 max-w-lg">
                 <div className="inline-flex items-center gap-2 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-4 py-2 rounded-full border border-orange-100 dark:border-orange-800">
-                    <ShieldAlert size={14} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Sécurité Biso Peto • Accès Restreint</span>
+                    <ShieldAlert size={14} /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Sécurité Biso Peto • Accès Restreint</span>
                 </div>
                 <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Vérification en cours</h2>
-                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
-                    Mbote {user.firstName}! Votre demande d'adhésion au réseau Biso Peto a bien été reçue. 
+                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed">Mbote {user.firstName}! Votre demande d'adhésion au réseau Biso Peto a bien été reçue.</p>
+            </div>
+        </div>
+    );
+};
+
+const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => (
+    <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8">
+        <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-orange-500 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-orange-500/20"><Truck size={32} /></div>
+            <div>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Espace Collecte</h1>
+                <p className="text-sm font-bold text-gray-400 mt-1">Prêt pour votre mission, {user.firstName}?</p>
+            </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <button onClick={() => onChangeView(AppView.COLLECTOR_JOBS)} className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center gap-6 group hover:shadow-xl transition-all">
+                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-[2rem] flex items-center justify-center text-[#2962FF] transition-transform group-hover:scale-110 group-hover:rotate-6"><Activity size={36} /></div>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Missions du jour</h3>
+            </button>
+            <button onClick={() => onChangeView(AppView.MAP)} className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center gap-6 group hover:shadow-xl transition-all">
+                <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-[2rem] flex items-center justify-center text-[#00C853] transition-transform group-hover:scale-110 group-hover:-rotate-6"><MapIcon size={36} /></div>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Carte SIG Live</h3>
+            </button>
+        </div>
+    </div>
+);
+
+const BusinessDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => (
+    <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8">
+        <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20"><Briefcase size={32} /></div>
+            <div>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">{user.companyName || 'Espace Entreprise'}</h1>
+                <p className="text-sm font-bold text-gray-400 mt-1">Pilotage RSE & Gestion des Déchets</p>
+            </div>
+        </div>
+    </div>
+);
+
+const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => (
+    <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8">
+        <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Mbote, {user.firstName}!</h1>
+                <p className="text-sm font-bold text-gray-500 mt-3 flex items-center gap-2">
+                    <div className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center"><Leaf size={12} /></div> Kinshasa devient plus propre grâce à vous.
                 </p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-                <div className="p-6 bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4 text-left">
-                    <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl flex items-center justify-center shrink-0"><Mail size={24}/></div>
-                    <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Etape 1</p>
-                        <p className="text-sm font-black dark:text-white uppercase">Email de confirmation envoyé</p>
-                    </div>
-                </div>
-                <div className="p-6 bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4 text-left">
-                    <div className="w-12 h-12 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-2xl flex items-center justify-center shrink-0 animate-pulse"><UserCheck size={24}/></div>
-                    <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Etape 2</p>
-                        <p className="text-sm font-black dark:text-white uppercase">Qualification KYC par Admin</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-orange-50/50 dark:bg-orange-900/5 border border-orange-100/50 dark:border-orange-900/20 p-6 rounded-[2rem] max-w-md">
-                <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] leading-loose">
-                    Pour des raisons de sécurité et de traçabilité, chaque compte doit être qualifié manuellement. Vous recevrez une notification dès que votre zone sera activée.
-                </p>
+            <div className="bg-white dark:bg-[#111827] p-5 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm text-center min-w-[120px]">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Eco Points</p>
+                <div className="text-3xl font-black text-[#2962FF]">{user.points}</div>
             </div>
         </div>
-    );
-};
-
-const CollectorDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
-    return (
-        <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8">
-            <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-orange-500 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-orange-500/20">
-                    <Truck size={32} />
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <button onClick={() => onChangeView(AppView.REPORTING)} className="relative group overflow-hidden bg-[#2962FF] p-8 rounded-[3rem] shadow-2xl shadow-blue-500/20 flex flex-col gap-8 transition-transform hover:scale-[1.02] active:scale-95">
+                <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:rotate-12 transition-transform duration-500"><Camera size={120} /></div>
+                <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-white"><Camera size={28} /></div>
                 <div>
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Espace Collecte</h1>
-                    <p className="text-sm font-bold text-gray-400 mt-1">Prêt pour votre mission, {user.firstName}?</p>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Biso Peto Alert</h3>
+                    <p className="text-white/70 text-xs font-bold uppercase mt-2 tracking-widest">Signaler des déchets maintenant</p>
                 </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <button onClick={() => onChangeView(AppView.COLLECTOR_JOBS)} className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center gap-6 group hover:shadow-xl transition-all">
-                    <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-[2rem] flex items-center justify-center text-[#2962FF] transition-transform group-hover:scale-110 group-hover:rotate-6">
-                        <ClipboardList size={36} />
-                    </div>
-                    <div className="text-center">
-                        <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Missions du jour</h3>
-                        <p className="text-xs text-gray-400 font-bold uppercase mt-1 tracking-widest">Voir planning</p>
-                    </div>
+            </button>
+            <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => onChangeView(AppView.ACADEMY)} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all">
+                    <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-[1.5rem] flex items-center justify-center text-[#00C853] transition-transform group-hover:scale-110"><GraduationCap size={32} /></div>
+                    <span className="text-[10px] font-black text-gray-800 dark:text-white uppercase tracking-widest text-center leading-tight">Eco Academy</span>
                 </button>
-                <button onClick={() => onChangeView(AppView.MAP)} className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 border-gray-700 shadow-sm flex flex-col items-center gap-6 group hover:shadow-xl transition-all">
-                    <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-[2rem] flex items-center justify-center text-[#00C853] transition-transform group-hover:scale-110 group-hover:-rotate-6">
-                        <MapIcon size={36} />
-                    </div>
-                    <div className="text-center">
-                        <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Carte temps réel</h3>
-                        <p className="text-xs text-gray-400 font-bold uppercase mt-1 tracking-widest">Itinéraires & SIG</p>
-                    </div>
+                <button onClick={() => onChangeView(AppView.MARKETPLACE)} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all">
+                    <div className="w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-[1.5rem] flex items-center justify-center text-purple-600 transition-transform group-hover:scale-110"><ShoppingBag size={32} /></div>
+                    <span className="text-[10px] font-black text-gray-800 dark:text-white uppercase tracking-widest text-center leading-tight">Marketplace</span>
                 </button>
             </div>
         </div>
-    );
-};
-
-const BusinessDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
-    return (
-        <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
-                        <Briefcase size={32} />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">{user.companyName || 'Espace Entreprise'}</h1>
-                        <p className="text-sm font-bold text-gray-400 mt-1">Pilotage RSE & Gestion des Déchets</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const CitizenDashboard: React.FC<DashboardProps> = ({ user, onChangeView }) => {
-    return (
-        <div className="p-5 md:p-8 space-y-8 animate-fade-in pb-24 md:pb-8">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Mbote, {user.firstName}!</h1>
-                    <p className="text-sm font-bold text-gray-500 mt-3 flex items-center gap-2">
-                        <div className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center"><Leaf size={12} /></div> 
-                        Kinshasa devient plus propre grâce à vous.
-                    </p>
-                </div>
-                <div className="bg-white dark:bg-[#111827] p-5 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm text-center min-w-[120px]">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Eco Points</p>
-                    <div className="text-3xl font-black text-[#2962FF]">{user.points}</div>
-                </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <button onClick={() => onChangeView(AppView.REPORTING)} className="relative group overflow-hidden bg-[#2962FF] p-8 rounded-[3rem] shadow-2xl shadow-blue-500/20 flex flex-col gap-8 transition-transform hover:scale-[1.02] active:scale-95">
-                    <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:rotate-12 transition-transform duration-500"><Camera size={120} /></div>
-                    <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-white"><Camera size={28} /></div>
-                    <div>
-                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Biso Peto Alert</h3>
-                        <p className="text-white/70 text-xs font-bold uppercase mt-2 tracking-widest">Signaler des déchets maintenant</p>
-                    </div>
-                </button>
-                <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => onChangeView(AppView.ACADEMY)} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all">
-                        <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-[1.5rem] flex items-center justify-center text-[#00C853] transition-transform group-hover:scale-110"><GraduationCap size={32} /></div>
-                        <span className="text-[10px] font-black text-gray-800 dark:text-white uppercase tracking-widest">Eco Academy</span>
-                    </button>
-                    <button onClick={() => onChangeView(AppView.MARKETPLACE)} className="bg-white dark:bg-[#111827] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all">
-                        <div className="w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-[1.5rem] flex items-center justify-center text-purple-600 transition-transform group-hover:scale-110"><ShoppingBag size={32} /></div>
-                        <span className="text-[10px] font-black text-gray-800 dark:text-white uppercase tracking-widest">Marketplace</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
+    </div>
+);
