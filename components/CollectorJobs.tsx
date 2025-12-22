@@ -2,9 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, MapPin, CheckCircle, Navigation, Clock, Trash2, Scale, Calculator, Plus, Save, Search, X, ChevronRight, QrCode, Camera, AlertTriangle, Zap, ZapOff, Image as ImageIcon, Bell, Siren, WifiOff, RefreshCw, Loader2, ThumbsUp, ThumbsDown, ScanLine, Calendar, Cloud, Eye, CloudOff } from 'lucide-react';
 import { User as UserType, WasteReport } from '../types';
-import { ReportsAPI } from '../services/api';
+import { ReportsAPI, AuditAPI, StorageAPI } from '../services/api';
 import { OfflineManager } from '../services/offlineManager';
-import { validateCleanliness } from '../services/geminiService';
+import { compareBeforeAfter } from '../services/geminiService';
+import { ImageService } from '../services/imageService';
 
 interface CollectorJobsProps {
     user: UserType;
@@ -13,227 +14,136 @@ interface CollectorJobsProps {
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
-const TODAY = new Date().toISOString().split('T')[0];
-
 export const CollectorJobs: React.FC<CollectorJobsProps> = ({ user, onBack, onNotify, onToast }) => {
-    const [activeTab, setActiveTab] = useState<'route' | 'special' | 'history'>('route');
     const [reports, setReports] = useState<WasteReport[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-    // AI Validation State
     const [isValidatingAI, setIsValidatingAI] = useState(false);
-    const [validationResult, setValidationResult] = useState<{isClean: boolean, comment: string} | null>(null);
-    const [jobToValidate, setJobToValidate] = useState<string | null>(null);
+    const [validationResult, setValidationResult] = useState<any>(null);
+    const [jobToValidate, setJobToValidate] = useState<WasteReport | null>(null);
     const [proofPhoto, setProofPhoto] = useState<string | null>(null);
+    const [proofFile, setProofFile] = useState<File | null>(null);
     const proofInputRef = useRef<HTMLInputElement>(null);
 
-    // History State
-    const [historyDate, setHistoryDate] = useState(TODAY);
-    const [selectedProofImage, setSelectedProofImage] = useState<string | null>(null);
-
-    useEffect(() => {
-        loadMyReports();
-        const handleStatusChange = () => setIsOnline(navigator.onLine);
-        window.addEventListener('online', handleStatusChange);
-        window.addEventListener('offline', handleStatusChange);
-        return () => {
-            window.removeEventListener('online', handleStatusChange);
-            window.removeEventListener('offline', handleStatusChange);
-        };
-    }, []);
+    useEffect(() => { loadMyReports(); }, []);
 
     const loadMyReports = async () => {
         setIsLoading(true);
         try {
             const all = await ReportsAPI.getAll();
-            // Filtrer les rapports assignés à ce collecteur ou en attente dans sa commune
-            const myJobs = all.filter(r => r.assignedTo === user.id || (r.status === 'pending' && r.commune === user.commune));
-            setReports(myJobs);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const initiateValidation = (jobId: string) => {
-        setJobToValidate(jobId);
-        setProofPhoto(null);
-        setValidationResult(null);
-        proofInputRef.current?.click();
+            setReports(all.filter(r => r.assignedTo === user.id || (r.status === 'pending' && r.commune === user.commune)));
+        } finally { setIsLoading(false); }
     };
 
     const handleProofCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file && jobToValidate !== null) {
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64 = reader.result as string;
+        if (file && jobToValidate) {
+            setIsValidatingAI(true);
+            try {
+                // Compression
+                const compressed = await ImageService.compressImage(file);
+                setProofFile(compressed);
+                const base64 = await ImageService.fileToBase64(compressed);
                 setProofPhoto(base64);
                 
                 if (navigator.onLine) {
-                    setIsValidatingAI(true);
-                    try {
-                        const result = await validateCleanliness(base64);
-                        setValidationResult(result);
-                    } catch (err) {
-                        setValidationResult({ isClean: true, comment: "Validation IA indisponible (Erreur)" });
-                    } finally {
-                        setIsValidatingAI(false);
-                    }
+                    // COMPARISON IA ENTERPRISE
+                    const result = await compareBeforeAfter(jobToValidate.imageUrl, base64);
+                    setValidationResult(result);
                 } else {
-                    setValidationResult({ isClean: true, comment: "Mode hors ligne : Validation manuelle." });
+                    setValidationResult({ isCleaned: true, comment: "Mode Offline. Validé localement." });
                 }
-            };
-            reader.readAsDataURL(file);
+            } finally { setIsValidatingAI(false); }
         }
     };
 
     const confirmValidation = async () => {
-        if (jobToValidate !== null) {
-            const report = reports.find(r => r.id === jobToValidate);
-            if (!report) return;
-
-            try {
-                if (navigator.onLine) {
-                    await ReportsAPI.update({ ...report, status: 'resolved' });
-                    onToast?.("Mission validée avec succès !", "success");
-                    onNotify('ADMIN', 'Mission Terminée ✅', `Collecteur ${user.firstName} a nettoyé une zone à ${report.commune}`, 'success');
-                } else {
-                    OfflineManager.addToQueue('ADD_REPORT', { ...report, status: 'resolved' });
-                    onToast?.("Validé localement. Sync au retour réseau.", "info");
-                }
-                setReports(prev => prev.map(r => r.id === jobToValidate ? { ...r, status: 'resolved' } : r));
-            } catch (e) {
-                onToast?.("Erreur de mise à jour", "error");
+        if (!jobToValidate) return;
+        try {
+            let proofUrl = proofPhoto;
+            if (navigator.onLine && proofFile) {
+                const url = await StorageAPI.uploadImage(proofFile);
+                if (url) proofUrl = url;
             }
+
+            const updateData = { id: jobToValidate.id, status: 'resolved' as const, proofUrl: proofUrl || undefined };
+            await ReportsAPI.update(updateData);
+            
+            await AuditAPI.log({ userId: user.id, action: 'JOB_RESOLVED', entity: 'REPORT', entityId: jobToValidate.id, metadata: { aiResult: validationResult } });
+
+            setReports(prev => prev.map(r => r.id === jobToValidate.id ? { ...r, ...updateData } : r));
+            onToast?.("Mission validée !", "success");
             setJobToValidate(null);
-            setProofPhoto(null);
-            setValidationResult(null);
-        }
+        } catch (e) { onToast?.("Erreur validation", "error"); }
     };
 
-    const myRouteJobs = reports.filter(r => r.status !== 'resolved');
-    const myHistoryJobs = reports.filter(r => r.status === 'resolved' && new Date(r.date).toISOString().split('T')[0] === historyDate);
-
     return (
-        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-900 transition-colors duration-300 relative">
+        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-900">
             <input type="file" ref={proofInputRef} accept="image/*" capture="environment" className="hidden" onChange={handleProofCapture} />
 
-            <div className="bg-white dark:bg-gray-800 p-4 shadow-sm flex flex-col gap-4 sticky top-0 z-10 border-b border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                        <button onClick={() => onBack()} className="mr-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-                            <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
-                        </button>
-                        <div>
-                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter flex items-center gap-2">
-                                Missions Live
-                                {!isOnline && <WifiOff size={16} className="text-red-500" />}
-                            </h2>
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Secteur: {user.commune || 'KINSHASA'}</p>
+            <div className="p-6 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 z-30">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="p-3 hover:bg-gray-100 rounded-2xl"><ArrowLeft/></button>
+                    <h2 className="text-xl font-black uppercase tracking-tighter dark:text-white">Missions Terrain</h2>
+                </div>
+                <button onClick={loadMyReports} className="text-blue-500"><RefreshCw className={isLoading ? 'animate-spin' : ''}/></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar pb-32">
+                {reports.filter(r => r.status !== 'resolved').map(job => (
+                    <div key={job.id} className="bg-white dark:bg-gray-800 p-6 rounded-[2.5rem] border-2 border-gray-100 dark:border-gray-700 shadow-sm">
+                        <div className="flex gap-6 mb-6">
+                            <img src={job.imageUrl} className="w-20 h-20 rounded-2xl object-cover" />
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-black text-gray-900 dark:text-white uppercase truncate">{job.wasteType}</h4>
+                                <p className="text-[10px] text-gray-400 font-bold flex items-center gap-1 mt-1 uppercase"><MapPin size={10}/> {job.commune}</p>
+                            </div>
                         </div>
+                        <button onClick={() => { setJobToValidate(job); setProofPhoto(null); setValidationResult(null); proofInputRef.current?.click(); }} className="w-full py-4 bg-[#00C853] text-white rounded-2xl font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95"><Camera size={18}/> Valider Collecte</button>
                     </div>
-                    <button onClick={loadMyReports} className="p-2 text-blue-500"><RefreshCw size={20} className={isLoading ? 'animate-spin' : ''}/></button>
-                </div>
-
-                <div className="flex p-1 bg-gray-50 dark:bg-gray-700 rounded-2xl">
-                    <button onClick={() => setActiveTab('route')} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'route' ? 'bg-white dark:bg-gray-600 text-[#2962FF] shadow-sm' : 'text-gray-500'}`}>Ma Route</button>
-                    <button onClick={() => setActiveTab('history')} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-white dark:bg-gray-600 text-[#2962FF] shadow-sm' : 'text-gray-500'}`}>Historique</button>
-                </div>
+                ))}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 pb-24 space-y-4 no-scrollbar">
-                {isLoading ? (
-                    <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-500" /></div>
-                ) : activeTab === 'route' ? (
-                    myRouteJobs.length === 0 ? (
-                        <div className="text-center py-20 text-gray-400 font-black uppercase text-[10px] tracking-widest">Aucune mission en cours.</div>
-                    ) : (
-                        myRouteJobs.map(job => (
-                            <div key={job.id} className={`bg-white dark:bg-gray-800 p-5 rounded-[2.5rem] border shadow-sm ${job.urgency === 'high' ? 'border-red-200' : 'border-gray-100'}`}>
-                                <div className="flex gap-4 mb-4">
-                                    <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-gray-100">
-                                        <img src={job.imageUrl} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start">
-                                            <h4 className="font-black text-gray-900 dark:text-white uppercase text-sm truncate">{job.wasteType}</h4>
-                                            <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-md ${job.urgency === 'high' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>{job.urgency}</span>
-                                        </div>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 line-clamp-1"><MapPin size={10} className="inline mr-1"/> {job.commune}</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${job.lat},${job.lng}`)} className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2"><Navigation size={14}/> Itinéraire</button>
-                                    <button onClick={() => initiateValidation(job.id)} className="flex-[1.5] py-3 bg-[#00C853] text-white rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"><Camera size={14}/> Valider Propreté</button>
-                                </div>
-                            </div>
-                        ))
-                    )
-                ) : (
-                    <div className="space-y-4">
-                        <input type="date" value={historyDate} onChange={e => setHistoryDate(e.target.value)} className="w-full p-4 bg-white dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-[10px] uppercase tracking-widest shadow-sm" />
-                        {myHistoryJobs.map(job => (
-                            <div key={job.id} className="p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-green-50 text-green-600 rounded-xl"><CheckCircle size={18}/></div>
-                                    <div>
-                                        <p className="font-black text-gray-900 dark:text-white uppercase text-xs">{job.wasteType}</p>
-                                        <p className="text-[9px] text-gray-400 font-bold uppercase">{job.commune}</p>
-                                    </div>
-                                </div>
-                                <span className="text-[10px] font-black text-gray-300">{new Date(job.date).toLocaleTimeString()}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* AI VALIDATION MODAL */}
-            {jobToValidate !== null && (
+            {/* AI COMPARISON MODAL */}
+            {jobToValidate && proofPhoto && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setJobToValidate(null)}></div>
-                    <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl p-6 relative z-10 shadow-2xl animate-fade-in-up flex flex-col items-center">
-                        <h3 className="text-lg font-black text-gray-800 dark:text-white mb-6 uppercase tracking-tighter">Validation IA Biso Peto</h3>
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setJobToValidate(null)}></div>
+                    <div className="bg-white dark:bg-gray-950 rounded-[3.5rem] w-full max-w-lg p-8 relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800">
+                        <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-8 text-center">Preuve de Collecte IA</h3>
                         
-                        {proofPhoto ? (
-                            <div className="relative w-full aspect-video bg-black rounded-3xl overflow-hidden mb-6 shadow-lg border-4 border-white">
-                                <img src={proofPhoto} alt="Preuve" className="w-full h-full object-cover" />
-                                {isValidatingAI && (
-                                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white">
-                                        <Loader2 size={32} className="animate-spin mb-2 text-[#2962FF]" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Analyse visuelle...</p>
-                                    </div>
-                                )}
+                        <div className="grid grid-cols-2 gap-4 mb-8">
+                            <div className="space-y-2">
+                                <p className="text-[9px] font-black text-gray-400 uppercase text-center tracking-widest">Avant</p>
+                                <img src={jobToValidate.imageUrl} className="aspect-square rounded-2xl object-cover border-2 border-gray-100" />
                             </div>
-                        ) : (
-                            <div className="w-full aspect-video bg-gray-100 dark:bg-gray-700 rounded-3xl flex items-center justify-center mb-6 border-2 border-dashed border-gray-300">
-                                <p className="text-[10px] font-black uppercase text-gray-400">Capture requise</p>
+                            <div className="space-y-2">
+                                <p className="text-[9px] font-black text-blue-400 uppercase text-center tracking-widest">Après</p>
+                                <img src={proofPhoto} className="aspect-square rounded-2xl object-cover border-2 border-blue-100" />
                             </div>
-                        )}
+                        </div>
 
-                        {validationResult && (
-                            <div className={`w-full p-4 rounded-2xl mb-6 border-2 ${validationResult.isClean ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                                <div className={`flex items-center gap-2 font-black text-xs uppercase mb-1 ${validationResult.isClean ? 'text-green-700' : 'text-red-700'}`}>
-                                    {validationResult.isClean ? <ThumbsUp size={16} /> : <ThumbsDown size={16} />}
-                                    {validationResult.isClean ? "Validé par IA" : "Zone encore sale"}
+                        {isValidatingAI ? (
+                            <div className="p-8 text-center bg-gray-50 dark:bg-white/5 rounded-3xl mb-8">
+                                <Loader2 className="animate-spin text-blue-500 mx-auto mb-3" />
+                                <p className="text-xs font-black text-gray-400 uppercase tracking-widest animate-pulse">Comparaison des zones...</p>
+                            </div>
+                        ) : validationResult && (
+                            <div className={`p-6 rounded-[2rem] border-2 mb-8 ${validationResult.isCleaned ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
+                                <div className="flex items-center gap-3 mb-2">
+                                    {validationResult.isCleaned ? <ThumbsUp size={24}/> : <ThumbsDown size={24}/>}
+                                    <span className="font-black uppercase tracking-tight">{validationResult.isCleaned ? 'Collecte Confirmée' : 'Résidus Détectés'}</span>
                                 </div>
-                                <p className="text-[10px] text-gray-500 font-bold italic">"{validationResult.comment}"</p>
+                                <p className="text-xs font-bold italic opacity-70 leading-relaxed">"{validationResult.comment}"</p>
                             </div>
                         )}
 
-                        <div className="flex gap-3 w-full">
-                            <button onClick={() => proofInputRef.current?.click()} className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Reprendre</button>
+                        <div className="flex gap-3">
+                            <button onClick={() => proofInputRef.current?.click()} className="flex-1 py-4 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-2xl font-black uppercase tracking-widest text-[10px]">Reprendre</button>
                             <button 
                                 onClick={confirmValidation}
-                                disabled={!validationResult?.isClean && !isValidatingAI} 
-                                className={`flex-1 py-4 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg flex items-center justify-center gap-2 ${
-                                    !validationResult ? 'bg-gray-300' : validationResult.isClean ? 'bg-[#00C853]' : 'bg-red-500'
-                                }`}
+                                disabled={isValidatingAI}
+                                className={`flex-1 py-4 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl flex items-center justify-center gap-2 ${validationResult?.isCleaned ? 'bg-[#00C853] shadow-green-500/20' : 'bg-orange-500 shadow-orange-500/20'}`}
                             >
-                                <CheckCircle size={16} /> Confirmer
+                                <CheckCircle size={14}/> Finaliser Mission
                             </button>
                         </div>
                     </div>

@@ -27,6 +27,7 @@ import { User, AppView, Theme, Language, NotificationItem, SystemSettings, UserT
 import { SettingsAPI, NotificationsAPI, UserAPI } from './services/api';
 import { OfflineManager } from './services/offlineManager';
 import { NotificationService } from './services/notificationService';
+import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 import { LogOut } from 'lucide-react';
 
 const DEFAULT_LOGO = 'https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/logo-1766239701120-logo_bisopeto.png';
@@ -53,7 +54,7 @@ function App() {
     const [systemSettings, setSystemSettings] = useState<SystemSettings>({
         maintenanceMode: false,
         supportEmail: 'support@kinecomap.cd',
-        appVersion: '1.4.2',
+        appVersion: '1.5.0',
         force2FA: false,
         sessionTimeout: 60,
         passwordPolicy: 'strong',
@@ -72,6 +73,55 @@ function App() {
         setTimeout(() => setToast(p => ({ ...p, visible: false })), 4000);
     }, []);
 
+    const refreshUserData = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            const freshUser = await UserAPI.getById(user.id);
+            if (freshUser) {
+                setUser(freshUser);
+                localStorage.setItem('kinecomap_user', JSON.stringify(freshUser));
+                if (freshUser.status === 'active' && user.status === 'pending') {
+                    showToast("Votre compte a été activé ! Mbote !", "success");
+                }
+            }
+        } catch (e) {
+            console.error("Failed to sync profile:", e);
+        }
+    }, [user?.id, user?.status, showToast]);
+
+    // REAL-TIME LISTENER FOR USER ACTIVATION
+    useEffect(() => {
+        if (user?.id && isSupabaseConfigured() && supabase) {
+            const channel = supabase.channel(`user_status_${user.id}`)
+                .on('postgres_changes', { 
+                    event: 'UPDATE', 
+                    schema: 'public', 
+                    table: 'users',
+                    filter: `id=eq.${user.id}`
+                }, (payload) => {
+                    console.log('[Realtime] User profile updated:', payload.new);
+                    // Transformation directe du payload MapUser vers interface User
+                    const updated = payload.new;
+                    const mapped: User = {
+                        ...updated,
+                        firstName: updated.first_name,
+                        lastName: updated.last_name,
+                        totalTonnage: updated.total_tonnage,
+                        co2Saved: updated.co2_saved,
+                        recyclingRate: updated.recycling_rate
+                    };
+                    setUser(mapped);
+                    localStorage.setItem('kinecomap_user', JSON.stringify(mapped));
+                    if (mapped.status === 'active' && user.status === 'pending') {
+                        showToast("Activation confirmée en temps réel !", "success");
+                    }
+                })
+                .subscribe();
+
+            return () => { supabase.removeChannel(channel); };
+        }
+    }, [user?.id, user?.status, showToast]);
+
     const handleSync = useCallback(async () => {
         if (navigator.onLine && OfflineManager.getQueueSize() > 0) {
             await OfflineManager.processQueue((type) => {
@@ -82,23 +132,9 @@ function App() {
 
     useEffect(() => {
         window.addEventListener('online', handleSync);
-        // Tentative initiale si en ligne au chargement
         if (navigator.onLine) handleSync();
         return () => window.removeEventListener('online', handleSync);
     }, [handleSync]);
-
-    const refreshUserData = useCallback(async () => {
-        if (!user?.id) return;
-        try {
-            const freshUser = await UserAPI.getById(user.id);
-            if (freshUser) {
-                setUser(freshUser);
-                localStorage.setItem('kinecomap_user', JSON.stringify(freshUser));
-            }
-        } catch (e) {
-            console.error("Failed to sync profile:", e);
-        }
-    }, [user?.id]);
 
     useEffect(() => {
         const loadInitData = async () => {
@@ -168,7 +204,7 @@ function App() {
     if (user && isPending) {
         return (
             <div className="h-full w-full bg-[#F5F7FA] dark:bg-[#050505] flex flex-col overflow-hidden">
-                <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} />
+                <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} onRefresh={refreshUserData} />
                 <div className="p-8 bg-white dark:bg-gray-900 border-t dark:border-gray-800 shrink-0">
                     <button onClick={handleLogout} className="w-full py-5 bg-red-50 dark:bg-red-900/10 text-red-600 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3"><LogOut size={20}/> Quitter</button>
                 </div>
@@ -184,7 +220,7 @@ function App() {
         }
 
         switch (view) {
-            case AppView.DASHBOARD: return <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} />;
+            case AppView.DASHBOARD: return <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} onRefresh={refreshUserData} />;
             case AppView.REPORTING: return <Reporting user={user} onBack={goBack} onToast={showToast} />;
             case AppView.MAP: return <MapView user={user} onBack={goBack} />;
             case AppView.ACADEMY: return <Academy onBack={goBack} />;
@@ -201,7 +237,7 @@ function App() {
             case AppView.ADMIN_RECOVERY: return <AdminRecovery onBack={goBack} currentUser={user} onToast={showToast} />;
             case AppView.ADMIN_PERMISSIONS: return <AdminPermissions onBack={goBack} onToast={showToast} />;
             case AppView.ADMIN_ACADEMY: return <AdminAcademy onBack={goBack} onToast={showToast} />;
-            default: return <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} />;
+            default: return <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} onRefresh={refreshUserData} />;
         }
     };
 

@@ -24,7 +24,18 @@ export type UserPermission =
     | 'manage_marketplace' 
     | 'manage_reports'     
     | 'manage_subscriptions' 
-    | 'system_settings';
+    | 'system_settings'
+    | 'view_audit_logs';
+
+export interface AuditLog {
+    id: string;
+    userId: string;
+    action: string;
+    entity: string;
+    entityId: string;
+    timestamp: string;
+    metadata?: any;
+}
 
 export interface User {
     id?: string; 
@@ -47,10 +58,10 @@ export interface User {
     commune?: string;
     housingType?: string;
     permissions?: UserPermission[];
-    totalTonnage?: number; // Kg valorisés
-    co2Saved?: number;     // Kg CO2 sauvés
-    recyclingRate?: number; // Pourcentage réel
-    avatarUrl?: string;     // URL vers storage
+    totalTonnage?: number;
+    co2Saved?: number;
+    recyclingRate?: number;
+    avatarUrl?: string;
 }
 
 export interface WasteReport {
@@ -59,13 +70,40 @@ export interface WasteReport {
     lat: number;
     lng: number;
     imageUrl: string;
+    proofUrl?: string; // Photo "Après" prise par le collecteur
     wasteType: string;
     urgency: 'low' | 'medium' | 'high';
-    status: 'pending' | 'assigned' | 'resolved' | 'rejected';
+    status: 'pending' | 'assigned' | 'resolved' | 'rejected' | 'disputed';
     assignedTo?: string;
     date: string;
     comment: string;
     commune?: string;
+}
+
+export interface MarketplaceItem {
+    id: string;
+    sellerId: string;
+    sellerName: string;
+    title: string;
+    category: 'electronics' | 'metal' | 'plastic' | 'other';
+    description: string;
+    weight: number;
+    price: number;
+    imageUrl: string;
+    date: string;
+    status: 'available' | 'pending_delivery' | 'sold' | 'disputed';
+    buyerId?: string;
+}
+
+export interface EcoVoucher {
+    id: string;
+    title: string;
+    partnerName: string;
+    discountValue: string;
+    pointCost: number;
+    expiryDate: string;
+    code: string;
+    category: 'food' | 'service' | 'energy';
 }
 
 export enum AppView {
@@ -90,6 +128,7 @@ export enum AppView {
     ADMIN_REPORTS = 'ADMIN_REPORTS',
     ADMIN_MARKETPLACE = 'ADMIN_MARKETPLACE',
     ADMIN_RECOVERY = 'ADMIN_RECOVERY',
+    ADMIN_AUDIT = 'ADMIN_AUDIT',
     COLLECTOR_JOBS = 'COLLECTOR_JOBS'
 }
 
@@ -105,6 +144,7 @@ export interface Payment {
     collectorName: string;
     createdAt: string;
     qrCodeData: string;
+    status: 'escrow' | 'released' | 'refunded';
 }
 
 export interface SystemSettings {
@@ -177,20 +217,6 @@ export interface Course {
     icon: string;
     color: string;
     videoUrl?: string;
-}
-
-export interface MarketplaceItem {
-    id: string;
-    sellerId: string;
-    sellerName: string;
-    title: string;
-    category: 'electronics' | 'metal' | 'plastic' | 'other';
-    description: string;
-    weight: number;
-    price: number;
-    imageUrl: string;
-    date: string;
-    status: 'available' | 'pending_delivery' | 'sold';
 }
 
 export interface AdCampaign {

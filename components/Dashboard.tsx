@@ -5,7 +5,7 @@ import {
     Activity, Truck, Megaphone, MapPin, Clock, Search, ShieldCheck, Phone, Mail, 
     ShieldAlert, UserCheck, ShoppingBag, Battery, ChevronRight, Briefcase, Lock, 
     RefreshCw, Camera, PieChart as PieIcon, BarChart3, Calendar, Filter, Database,
-    CheckCircle2
+    CheckCircle2, RefreshCcw
 } from 'lucide-react';
 import { 
     PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -19,6 +19,7 @@ interface DashboardProps {
     user: User;
     onChangeView: (view: AppView) => void;
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+    onRefresh?: () => Promise<void>;
     notifications?: NotificationItem[];
 }
 
@@ -187,12 +188,10 @@ function AdminDashboard({ onChangeView, onToast }: DashboardProps) {
                     <div className="h-[350px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData}>
-                                <defs>
-                                    <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#2962FF" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#2962FF" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
+                                <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#2962FF" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="#2962FF" stopOpacity={0}/>
+                                </linearGradient>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.1)" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} dy={10} />
                                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} />
@@ -323,7 +322,17 @@ function AdminDashboard({ onChangeView, onToast }: DashboardProps) {
     );
 }
 
-function PendingDashboard({ user }: DashboardProps) {
+function PendingDashboard({ user, onRefresh }: DashboardProps) {
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        if (onRefresh) {
+            setIsRefreshing(true);
+            await onRefresh();
+            setIsRefreshing(false);
+        }
+    };
+
     return (
         <div className="flex flex-col items-center justify-center min-h-[100dvh] p-8 md:p-12 text-center space-y-10 animate-fade-in bg-[#F5F7FA] dark:bg-[#050505]">
             <div className="relative">
@@ -335,7 +344,19 @@ function PendingDashboard({ user }: DashboardProps) {
                     <ShieldAlert size={14} /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Sécurité Biso Peto • Accès Restreint</span>
                 </div>
                 <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Vérification en cours</h2>
-                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed">Mbote {user.firstName}! Votre demande d'adhésion au réseau Biso Peto a bien été reçue.</p>
+                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed">Mbote {user.firstName}! Votre demande d'adhésion au réseau Biso Peto a bien été reçue. Un administrateur valide actuellement votre dossier.</p>
+            </div>
+            
+            <div className="flex flex-col items-center gap-4 w-full max-w-xs">
+                <button 
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="w-full bg-white dark:bg-gray-900 border-2 border-orange-100 dark:border-orange-900/40 text-orange-600 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-orange-50 transition-all active:scale-95"
+                >
+                    <RefreshCcw size={18} className={isRefreshing ? 'animate-spin' : ''} />
+                    {isRefreshing ? 'Vérification...' : 'Vérifier mon statut'}
+                </button>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">L'activation est généralement immédiate après validation</p>
             </div>
         </div>
     );

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
     ArrowLeft, Search, User, DollarSign, Check, X, Printer, 
@@ -57,6 +56,8 @@ export const AdminRecovery: React.FC<AdminRecoveryProps> = ({ onBack, currentUse
             const amountNum = parseFloat(amount);
             const invoiceId = `BISO-${Date.now().toString().slice(-8)}`;
             
+            // Fix: Added missing 'status' property to the paymentData object to satisfy the Payment interface.
+            // For immediate cash recovery, we mark the payment status as 'released'.
             const paymentData: Payment = {
                 id: invoiceId,
                 userId: selectedUser.id!,
@@ -68,7 +69,8 @@ export const AdminRecovery: React.FC<AdminRecoveryProps> = ({ onBack, currentUse
                 collectorId: currentUser.id!,
                 collectorName: `${currentUser.firstName} ${currentUser.lastName}`,
                 createdAt: new Date().toISOString(),
-                qrCodeData: `VALIDATE:${invoiceId}:${selectedUser.id}:${amountNum}`
+                qrCodeData: `VALIDATE:${invoiceId}:${selectedUser.id}:${amountNum}`,
+                status: 'released'
             };
 
             const saved = await PaymentsAPI.record(paymentData);
