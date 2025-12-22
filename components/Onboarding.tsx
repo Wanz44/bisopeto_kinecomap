@@ -19,6 +19,13 @@ interface OnboardingProps {
     onNotifyAdmin?: (title: string, message: string) => void;
 }
 
+const KINSHASA_COMMUNES = [
+    "Barumbu", "Bumbu", "Bandalungwa", "Gombe", "Kalamu", "Kasa-Vubu", 
+    "Kinshasa", "Kintambo", "Lingwala", "Lemba", "Limete", "Makala", 
+    "Maluku", "Masina", "Matete", "Mont Ngafula", "Mbinza", "Ngaba", 
+    "Ngaliema", "N’djili", "Nsele", "Selembao", "Kimbanseke", "Kisenso"
+];
+
 const ONBOARDING_SLIDES = [
     {
         title: "Bienvenue sur Kin Eco Map",
@@ -113,7 +120,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
     const [registerPassword, setRegisterPassword] = useState('');
     const [formData, setFormData] = useState<Partial<User>>({
         firstName: '', lastName: '', phone: '', email: '',
-        type: UserType.CITIZEN, status: 'pending', address: '', subscription: 'standard', commune: 'Gombe'
+        type: UserType.CITIZEN, status: 'pending', address: '', neighborhood: '', subscription: 'standard', commune: 'Gombe'
     });
 
     const handleNextSlide = () => {
@@ -159,23 +166,22 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
     };
 
     const handleRegisterSubmit = async () => {
-        if (!formData.address) { setError("L'adresse est requise pour la collecte."); return; }
+        if (!formData.commune) { setError("Veuillez sélectionner votre commune."); return; }
+        if (!formData.neighborhood) { setError("Veuillez renseigner votre quartier."); return; }
+        if (!formData.address) { setError("L'adresse précise est requise pour la collecte."); return; }
         setIsLoading(true);
         try {
             const registeredUser = await UserAPI.register({ ...formData, status: 'pending' } as User, registerPassword);
             
-            // Envoyer une notification aux admins
             if (onNotifyAdmin) {
                 onNotifyAdmin(
                     "Nouvelle Inscription 👤", 
-                    `${formData.firstName} ${formData.lastName} (${formData.type}) en attente de validation dans la commune de ${formData.commune}.`
+                    `${formData.firstName} ${formData.lastName} (${formData.type}) en attente de validation. Zone: ${formData.commune}, ${formData.neighborhood}.`
                 );
             }
             
             setRegistrationFinished(true);
-            
-            // Simulation d'envoi d'email automatique
-            if (onToast) onToast(`Email de confirmation envoyé à ${formData.email}`, "success");
+            if (onToast) onToast(`Demande envoyée avec succès`, "success");
         } catch (err: any) {
             setError(err.message || "Une erreur est survenue lors de l'inscription.");
         } finally {
@@ -207,7 +213,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                     <div className="flex flex-col gap-4">
                         <button 
                             onClick={handleNextSlide}
-                            className="w-full bg-primary hover:bg-primary-DEFAULT/90 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
+                            className="w-full bg-primary hover:bg-primary-light text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
                             {activeSlide === ONBOARDING_SLIDES.length - 1 ? "C'est parti !" : "Suivant"}
                             <ArrowRight size={20} />
@@ -240,15 +246,15 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                         <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-[2rem] border border-blue-100 dark:border-blue-900/30 flex items-start gap-4 text-left">
                             <div className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm text-blue-600"><Mail size={24} /></div>
                             <div>
-                                <p className="text-sm font-black text-blue-700 dark:text-blue-300 uppercase tracking-widest mb-1">Email Envoyé</p>
+                                <p className="text-sm font-black text-blue-700 dark:text-blue-300 uppercase tracking-widest mb-1">Dossier en file d'attente</p>
                                 <p className="text-xs text-blue-600 dark:text-blue-400 font-bold leading-relaxed">
-                                    Un accusé de réception automatique a été envoyé à <strong>{formData.email}</strong>. Pensez à vérifier vos spams.
+                                    Nos administrateurs analysent votre demande pour la commune de <strong>{formData.commune}</strong>. Vous serez averti dès l'activation.
                                 </p>
                             </div>
                         </div>
                         
                         <p className="text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
-                            Mbote {formData.firstName}! Votre dossier d'assainissement est désormais en file d'attente. Nos administrateurs vont qualifier votre compte sous peu.
+                            Mbote {formData.firstName}! Préparez-vous à impacter votre quartier (**{formData.neighborhood}**) dès que votre compte sera validé.
                         </p>
                     </div>
 
@@ -256,7 +262,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                         onClick={() => onComplete(formData as User)} 
                         className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-green-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                     >
-                        Accéder à mon espace <ChevronRight size={18}/>
+                        Accéder à mon espace d'attente <ChevronRight size={18}/>
                     </button>
                 </div>
             </div>
@@ -355,16 +361,19 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                                         <button onClick={() => setFormData({...formData, type: UserType.CITIZEN})} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs transition-all ${formData.type === UserType.CITIZEN ? 'border-primary-light bg-green-50 text-primary-light' : 'border-transparent bg-gray-100 text-gray-500'}`}>Particulier</button>
                                         <button onClick={() => setFormData({...formData, type: UserType.BUSINESS})} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs transition-all ${formData.type === UserType.BUSINESS ? 'border-secondary bg-blue-50 text-secondary' : 'border-transparent bg-gray-100 text-gray-500'}`}>Entreprise</button>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ma Commune</label>
-                                        <select className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-bold text-xs uppercase" value={formData.commune} onChange={e => setFormData({...formData, commune: e.target.value})}>
-                                            <option value="Gombe">Gombe</option>
-                                            <option value="Ngaliema">Ngaliema</option>
-                                            <option value="Limete">Limete</option>
-                                            <option value="Kintambo">Kintambo</option>
-                                        </select>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ma Commune</label>
+                                            <select className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-bold text-xs uppercase appearance-none" value={formData.commune} onChange={e => setFormData({...formData, commune: e.target.value})}>
+                                                {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Mon Quartier</label>
+                                            <input placeholder="ex: Quartier Latin" className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-bold text-xs uppercase" value={formData.neighborhood} onChange={e => setFormData({...formData, neighborhood: e.target.value})} />
+                                        </div>
                                     </div>
-                                    <textarea rows={3} placeholder="Adresse précise pour la collecte..." className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold text-gray-900 dark:text-white outline-none resize-none" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+                                    <textarea rows={3} placeholder="Adresse précise (N°, Avenue, Référence)..." className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold text-gray-900 dark:text-white outline-none resize-none" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
                                 </div>
                             )}
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
     ArrowLeft, Search, User, DollarSign, Check, X, Printer, 
@@ -6,6 +7,13 @@ import {
 } from 'lucide-react';
 import { User as AppUser, Payment, UserType } from '../types';
 import { UserAPI, PaymentsAPI } from '../services/api';
+
+const KINSHASA_COMMUNES = [
+    "Barumbu", "Bumbu", "Bandalungwa", "Gombe", "Kalamu", "Kasa-Vubu", 
+    "Kinshasa", "Kintambo", "Lingwala", "Lemba", "Limete", "Makala", 
+    "Maluku", "Masina", "Matete", "Mont Ngafula", "Mbinza", "Ngaba", 
+    "Ngaliema", "N’djili", "Nsele", "Selembao", "Kimbanseke", "Kisenso"
+];
 
 interface AdminRecoveryProps {
     onBack: () => void;
@@ -56,8 +64,6 @@ export const AdminRecovery: React.FC<AdminRecoveryProps> = ({ onBack, currentUse
             const amountNum = parseFloat(amount);
             const invoiceId = `BISO-${Date.now().toString().slice(-8)}`;
             
-            // Fix: Added missing 'status' property to the paymentData object to satisfy the Payment interface.
-            // For immediate cash recovery, we mark the payment status as 'released'.
             const paymentData: Payment = {
                 id: invoiceId,
                 userId: selectedUser.id!,
@@ -76,8 +82,6 @@ export const AdminRecovery: React.FC<AdminRecoveryProps> = ({ onBack, currentUse
             const saved = await PaymentsAPI.record(paymentData);
             setPayments([saved, ...payments]);
             setGeneratedInvoice(saved);
-            
-            // On pourrait aussi mettre à jour le statut de l'utilisateur ici
             
             if (onToast) onToast("Paiement encaissé et facture générée", "success");
             setAmount('');
@@ -125,26 +129,32 @@ export const AdminRecovery: React.FC<AdminRecoveryProps> = ({ onBack, currentUse
 
             <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                 {/* Left: User Selection */}
-                <div className="w-full md:w-1/2 flex flex-col border-r dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+                <div className="w-full md:w-1/3 flex flex-col border-r dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
                     <div className="p-6 space-y-4 shrink-0">
                         <div className="relative">
                             <Search size={18} className="absolute left-4 top-3.5 text-gray-400" />
                             <input 
                                 type="text" 
-                                placeholder="Rechercher client (Nom ou Tél)..." 
+                                placeholder="Rechercher client..." 
                                 className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-bold text-sm dark:text-white focus:ring-2 ring-blue-500"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
                         </div>
                         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                            {['all', 'Gombe', 'Limete', 'Ngaliema', 'Kintambo'].map(c => (
+                            <button 
+                                onClick={() => setFilterCommune('all')}
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${filterCommune === 'all' ? 'bg-gray-900 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}
+                            >
+                                Toutes
+                            </button>
+                            {KINSHASA_COMMUNES.map(c => (
                                 <button 
                                     key={c} 
                                     onClick={() => setFilterCommune(c)}
                                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${filterCommune === c ? 'bg-gray-900 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}
                                 >
-                                    {c === 'all' ? 'Toutes Communes' : c}
+                                    {c}
                                 </button>
                             ))}
                         </div>
@@ -160,7 +170,7 @@ export const AdminRecovery: React.FC<AdminRecoveryProps> = ({ onBack, currentUse
                                 <div 
                                     key={user.id} 
                                     onClick={() => setSelectedUser(user)}
-                                    className={`p-5 rounded-[2rem] border transition-all cursor-pointer flex items-center justify-between group ${selectedUser?.id === user.id ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-800 hover:border-blue-100'}`}
+                                    className={`p-5 rounded-[2rem] border transition-all cursor-pointer flex items-center justify-between group ${selectedUser?.id === user.id ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-blue-100'}`}
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white ${selectedUser?.id === user.id ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}>
@@ -196,6 +206,7 @@ export const AdminRecovery: React.FC<AdminRecoveryProps> = ({ onBack, currentUse
                                     <div>
                                         <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Client sélectionné</p>
                                         <p className="font-black text-gray-900 dark:text-white uppercase">{selectedUser.firstName} {selectedUser.lastName}</p>
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase">{selectedUser.commune} • {selectedUser.neighborhood}</p>
                                     </div>
                                     <button type="button" onClick={() => setSelectedUser(null)} className="absolute top-4 right-4 p-1 hover:bg-white rounded-full text-gray-400"><X size={16}/></button>
                                 </div>
@@ -221,7 +232,7 @@ export const AdminRecovery: React.FC<AdminRecoveryProps> = ({ onBack, currentUse
                                             <Calendar size={18} className="absolute left-4 top-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                                             <input 
                                                 required
-                                                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-black text-sm dark:text-white focus:ring-2 ring-blue-500/20"
+                                                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-black text-sm dark:text-white focus:ring-2 ring-green-500/20"
                                                 value={period}
                                                 onChange={e => setPeriod(e.target.value)}
                                             />

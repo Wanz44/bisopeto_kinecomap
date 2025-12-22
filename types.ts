@@ -46,6 +46,7 @@ export interface User {
     type: UserType;
     status: UserStatus;
     address: string;
+    neighborhood?: string; // Quartier
     points: number;
     collections: number;
     badges: number;

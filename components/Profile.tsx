@@ -89,7 +89,11 @@ export const Profile: React.FC<ProfileProps> = ({ user, theme, onToggleTheme, on
                         <div className="p-8 bg-white dark:bg-gray-900 rounded-[3rem] border dark:border-white/5 space-y-6">
                             <div className="space-y-4">
                                 <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Contact</p><p className="font-bold dark:text-white">{user.phone}</p></div>
-                                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Commune</p><p className="font-bold dark:text-white">{user.commune}</p></div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Commune</p><p className="font-bold dark:text-white">{user.commune}</p></div>
+                                    <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Quartier</p><p className="font-bold dark:text-white">{user.neighborhood || 'Non renseigné'}</p></div>
+                                </div>
+                                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Adresse précise</p><p className="font-bold dark:text-white">{user.address}</p></div>
                             </div>
                         </div>
                     )}
