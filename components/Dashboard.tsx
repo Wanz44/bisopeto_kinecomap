@@ -328,6 +328,8 @@ function PendingDashboard({ user, onRefresh }: DashboardProps) {
     const handleRefresh = async () => {
         if (onRefresh) {
             setIsRefreshing(true);
+            // On ajoute un délai artificiel pour donner une sensation de travail réel au serveur
+            await new Promise(r => setTimeout(r, 800));
             await onRefresh();
             setIsRefreshing(false);
         }
@@ -351,12 +353,14 @@ function PendingDashboard({ user, onRefresh }: DashboardProps) {
                 <button 
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    className="w-full bg-white dark:bg-gray-900 border-2 border-orange-100 dark:border-orange-900/40 text-orange-600 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-orange-50 transition-all active:scale-95"
+                    className="w-full bg-white dark:bg-gray-900 border-2 border-orange-100 dark:border-orange-900/40 text-orange-600 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-orange-50 transition-all active:scale-95 disabled:opacity-50"
                 >
                     <RefreshCcw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-                    {isRefreshing ? 'Vérification...' : 'Vérifier mon statut'}
+                    {isRefreshing ? 'Interrogation du serveur...' : 'Vérifier mon statut'}
                 </button>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">L'activation est généralement immédiate après validation</p>
+                <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    <CheckCircle2 size={12} className="text-green-500" /> Activation automatique dès validation
+                </div>
             </div>
         </div>
     );

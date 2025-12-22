@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Onboarding } from './components/Onboarding';
 import { LandingPage } from './components/LandingPage';
@@ -77,35 +78,37 @@ function App() {
         try {
             const freshUser = await UserAPI.getById(user.id);
             if (freshUser) {
+                // Si l'utilisateur vient d'être activé
+                if (freshUser.status === 'active' && user.status === 'pending') {
+                    showToast("Votre compte est désormais actif ! Mbote !", "success");
+                    setHistory([AppView.DASHBOARD]); // On réinitialise la vue pour débloquer le Layout
+                }
                 setUser(freshUser);
                 localStorage.setItem('kinecomap_user', JSON.stringify(freshUser));
-                if (freshUser.status === 'active' && user.status === 'pending') {
-                    showToast("Votre compte a été activé ! Mbote !", "success");
-                }
             }
         } catch (e) {
-            console.error("Failed to sync profile:", e);
+            console.error("Failed to refresh user profile:", e);
         }
     }, [user?.id, user?.status, showToast]);
 
-    // REAL-TIME LISTENER FOR USER ACTIVATION
+    // REAL-TIME LISTENER POUR L'ACTIVATION DU COMPTE
     useEffect(() => {
         if (user?.id && isSupabaseConfigured() && supabase) {
-            const channel = supabase.channel(`user_status_${user.id}`)
+            const channel = supabase.channel(`user_activation_${user.id}`)
                 .on('postgres_changes', { 
                     event: 'UPDATE', 
                     schema: 'public', 
                     table: 'users',
                     filter: `id=eq.${user.id}`
                 }, (payload) => {
-                    console.log('[Realtime] User profile updated:', payload.new);
-                    // FIX: Utilisation du mapper centralisé pour garantir que l'objet respecte l'interface User
                     const mapped = mapUser(payload.new);
+                    // Détection du changement de statut
+                    if (mapped.status === 'active' && user.status === 'pending') {
+                        showToast("Activation confirmée ! Bienvenue dans le réseau.", "success");
+                        setHistory([AppView.DASHBOARD]); // Débloque l'interface instantanément
+                    }
                     setUser(mapped);
                     localStorage.setItem('kinecomap_user', JSON.stringify(mapped));
-                    if (mapped.status === 'active' && user.status === 'pending') {
-                        showToast("Activation confirmée en temps réel !", "success");
-                    }
                 })
                 .subscribe();
 
@@ -183,7 +186,6 @@ function App() {
         setIsRefreshing(true);
         try {
             await Promise.all([refreshUserData(), handleSync()]);
-            showToast("Données synchronisées", "success");
         } finally {
             setIsRefreshing(false);
         }
@@ -192,17 +194,20 @@ function App() {
     if (loading) return <SplashScreen appLogo={appLogo} />;
 
     const isPending = user?.type !== UserType.ADMIN && user?.status === 'pending';
+    
+    // ÉCRAN D'ATTENTE (S'affiche si le statut est 'pending')
     if (user && isPending) {
         return (
             <div className="h-full w-full bg-[#F5F7FA] dark:bg-[#050505] flex flex-col overflow-hidden">
                 <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} onRefresh={refreshUserData} />
                 <div className="p-8 bg-white dark:bg-gray-900 border-t dark:border-gray-800 shrink-0">
-                    <button onClick={handleLogout} className="w-full py-5 bg-red-50 dark:bg-red-900/10 text-red-600 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3"><LogOut size={20}/> Quitter</button>
+                    <button onClick={handleLogout} className="w-full py-5 bg-red-50 dark:bg-red-900/10 text-red-600 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 transition-all"><LogOut size={20}/> Quitter la session</button>
                 </div>
             </div>
         );
     }
 
+    // INTERFACE PRINCIPALE (S'affiche si 'active' ou ADMIN)
     const renderContent = () => {
         if (!user) {
             if (view === AppView.LANDING) return <LandingPage onStart={() => navigateTo(AppView.ONBOARDING)} onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} appLogo={appLogo} impactData={impactData} />;
