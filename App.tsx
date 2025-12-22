@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Onboarding } from './components/Onboarding';
 import { LandingPage } from './components/LandingPage';
@@ -24,7 +23,7 @@ import { CollectorJobs } from './components/CollectorJobs';
 import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
 import { User, AppView, Theme, Language, NotificationItem, SystemSettings, UserType, GlobalImpact } from './types';
-import { SettingsAPI, NotificationsAPI, UserAPI } from './services/api';
+import { SettingsAPI, NotificationsAPI, UserAPI, mapUser } from './services/api';
 import { OfflineManager } from './services/offlineManager';
 import { NotificationService } from './services/notificationService';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
@@ -100,16 +99,8 @@ function App() {
                     filter: `id=eq.${user.id}`
                 }, (payload) => {
                     console.log('[Realtime] User profile updated:', payload.new);
-                    // Transformation directe du payload MapUser vers interface User
-                    const updated = payload.new;
-                    const mapped: User = {
-                        ...updated,
-                        firstName: updated.first_name,
-                        lastName: updated.last_name,
-                        totalTonnage: updated.total_tonnage,
-                        co2Saved: updated.co2_saved,
-                        recyclingRate: updated.recycling_rate
-                    };
+                    // FIX: Utilisation du mapper centralisé pour garantir que l'objet respecte l'interface User
+                    const mapped = mapUser(payload.new);
                     setUser(mapped);
                     localStorage.setItem('kinecomap_user', JSON.stringify(mapped));
                     if (mapped.status === 'active' && user.status === 'pending') {

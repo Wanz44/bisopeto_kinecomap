@@ -2,7 +2,7 @@ import { User, MarketplaceItem, Vehicle, AdCampaign, Partner, UserType, SystemSe
 import { supabase } from './supabaseClient';
 
 // --- MAPPERS ---
-const mapUser = (u: any): User => ({
+export const mapUser = (u: any): User => ({
     ...u,
     id: u.id,
     firstName: u.first_name || '',
@@ -23,7 +23,7 @@ const mapUser = (u: any): User => ({
     commune: u.commune || ''
 });
 
-const mapReport = (r: any): WasteReport => ({
+export const mapReport = (r: any): WasteReport => ({
     ...r,
     id: r.id,
     reporterId: r.reporter_id,
@@ -198,7 +198,6 @@ export const SettingsAPI = {
     },
     update: async (s: SystemSettings) => {
         if (!supabase) return;
-        // Fix: Use correct property names from SystemSettings interface (maintenanceMode, supportEmail, exchangeRate, marketplaceCommission)
         const dbData = {
             maintenance_mode: s.maintenanceMode,
             support_email: s.supportEmail,
@@ -217,10 +216,8 @@ export const SettingsAPI = {
         if (!supabase) return { status: 'critical', totalSizeKB: 0, tables: [], supabaseConnected: false, lastAudit: '' };
         return { status: 'healthy', totalSizeKB: 1024, tables: [], supabaseConnected: true, lastAudit: new Date().toISOString() };
     },
-    // Fix: Added missing repairDatabase method to SettingsAPI to resolve the error in Settings.tsx
     repairDatabase: async () => {
         if (!supabase) return;
-        // Mock audit log for the repair action in the demo context
         await AuditAPI.log({ userId: 'ADMIN', action: 'REPAIR_DATABASE', entity: 'SYSTEM', entityId: 'SCHEMA' });
     },
     resetAllData: async () => {
