@@ -156,13 +156,25 @@ export const UserAPI = {
 };
 
 export const ReportsAPI = {
-    getAll: async (page = 0, pageSize = 50, filters?: { commune?: string, status?: string }): Promise<WasteReport[]> => {
+    getAll: async (page = 0, pageSize = 50, filters?: { commune?: string, status?: string, wasteType?: string, dateFrom?: string, dateTo?: string }): Promise<WasteReport[]> => {
         if (!supabase) return [];
         const from = page * pageSize;
         const to = from + pageSize - 1;
         let query = supabase.from('waste_reports').select('*');
-        if (filters?.commune) query = query.eq('commune', filters.commune);
-        if (filters?.status) query = query.eq('status', filters.status);
+        
+        if (filters?.commune && filters.commune !== 'all') query = query.eq('commune', filters.commune);
+        if (filters?.status && filters.status !== 'all') query = query.eq('status', filters.status);
+        if (filters?.wasteType && filters.wasteType !== 'all') query = query.eq('waste_type', filters.wasteType);
+        
+        if (filters?.dateFrom) {
+            // On s'assure d'inclure le début de la journée
+            query = query.gte('created_at', `${filters.dateFrom}T00:00:00`);
+        }
+        if (filters?.dateTo) {
+            // On s'assure d'inclure la fin de la journée
+            query = query.lte('created_at', `${filters.dateTo}T23:59:59`);
+        }
+        
         const { data } = await query.order('created_at', { ascending: false }).range(from, to);
         return data ? data.map(mapReport) : [];
     },
