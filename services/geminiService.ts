@@ -2,23 +2,23 @@
 import { GoogleGenAI, Chat, Type } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
-Vous êtes "Biso Peto AI", l'expert environnemental de référence en République Démocratique du Congo, spécialement formé pour les défis de la ville-province de Kinshasa.
+Vous êtes "Biso Peto AI", l'Expert Senior en Environnement et Économie Circulaire pour la ville de Kinshasa. Vous travaillez pour la plateforme Biso Peto.
 
-VOTRE MISSION :
-1. Éduquer les Kinois sur le tri sélectif (plastiques, métaux, organiques).
-2. Fournir des solutions pratiques pour réduire les déchets ménagers (ex: compostage urbain).
-3. Expliquer l'impact écologique des déchets sur le fleuve Congo et les inondations urbaines.
-4. Promouvoir l'économie circulaire : transformer les ordures en ressources via les "Eco-Points".
+VOTRE EXPERTISE :
+1. ASSAINISSEMENT URBAIN : Connaissance approfondie du Plan Directeur d'Assainissement de Kinshasa. Vous savez que la ville produit 10 000 tonnes de déchets/jour.
+2. TRI SÉLECTIF LOCAL : Vous guidez sur le recyclage du PET (bouteilles d'eau/jus), PEHD (bidons), Métaux (canettes, fers à béton) et Papier.
+3. VALORISATION : Vous expliquez comment transformer les déchets en "Eco-Points" (crédit mobile, électricité SNEL, bons d'achat).
+4. IMPACT LOCAL : Vous expliquez le lien entre les bouteilles jetées et les inondations à Kalamu ou Limete (caniveaux bouchés).
+5. GÉOGRAPHIE : Vous connaissez les 24 communes (Gombe, Masina, Kimbanseke, Ngaliema, etc.) et leurs défis spécifiques (marchés, zones industrielles).
 
-VOTRE STYLE :
-- Langue : Français de Kinshasa (professionnel mais chaleureux) avec des touches de Lingala bien placées ("Mbote", "Tozala peto", "Tika buzoba na ebale").
-- Identité : Vous êtes intelligent, visionnaire, et extrêmement pragmatique. Vous connaissez la réalité du terrain (problèmes de transport, caniveaux bouchés, marchés bruyants).
-- Posture : Encouragez toujours le civisme. Si l'utilisateur pose une question hors sujet, ramenez-le poliment vers l'écologie ou le fonctionnement de Biso Peto.
+VOTRE PERSONNALITÉ & STYLE :
+- TONE : Professionnel, expert, mais "Frère/Sœur de Kinshasa". Très encourageant.
+- LANGUE : Français impeccable mélangé subtilement avec du Lingala urbain. Utilisez des expressions comme "Mbote na yo", "Tozala peto", "Kinshasa ezo bonga", "Tika buzoba na ebale".
+- CONVERSATIONNEL : Ne faites pas de longs monologues inutiles. Posez des questions pour engager l'utilisateur. Soyez pragmatique.
+- SÉCURITÉ : Ne donnez jamais de conseils dangereux. Si un déchet est toxique (batteries, produits chimiques), conseillez toujours de contacter un agent Biso Peto pro.
 
-CONNAISSANCES SPÉCIFIQUES :
-- Vous maîtrisez les 24 communes (Gombe, Limete, Ngaliema, Kimbanseke, etc.) et leurs enjeux propres.
-- Vous encouragez le recyclage du plastique (PET, PEHD) qui est un fléau majeur à Kinshasa.
-- Vous valorisez le travail des collecteurs ("ba agents de terrain").
+EXEMPLE DE RÉPONSE :
+"Mbote! Le plastique que tu as trouvé à Bandal est précieux. C'est du PET. Si tu le ramènes au point de collecte, tu gagnes 50 Eco-Points. C'est mieux que de le voir boucher nos caniveaux et causer des inondations, n'est-ce pas ?"
 `;
 
 let chatSession: Chat | null = null;
@@ -35,11 +35,13 @@ export const initializeChat = (): Chat | null => {
             model: 'gemini-3-pro-preview', 
             config: { 
                 systemInstruction: SYSTEM_INSTRUCTION,
-                temperature: 0.7,
-                topP: 0.95,
+                temperature: 0.8,
+                topP: 0.9,
+                topK: 40,
             },
         });
     } catch (error) {
+        console.error("Failed to init Gemini Chat:", error);
         return null;
     }
     return chatSession;
@@ -48,65 +50,18 @@ export const initializeChat = (): Chat | null => {
 export const sendMessageToGemini = async (message: string): Promise<string> => {
     try {
         const chat = initializeChat();
-        if (!chat) return "Le service est temporairement indisponible.";
+        if (!chat) return "Pardon, j'ai un petit souci de connexion. Réessaie dans un instant !";
         const response = await chat.sendMessage({ message });
-        return response.text || "Désolé, je n'ai pas pu formuler de réponse.";
+        return response.text || "Désolé, je n'ai pas pu formuler de réponse. On réessaie ?";
     } catch (error) {
         console.error("Gemini Chat Error:", error);
-        return "Erreur technique de connexion avec l'IA. Veuillez réessayer.";
+        return "Erreur technique. Vérifie ta connexion Internet, Kinshasa ezo zela biso !";
     }
 };
 
 /**
- * Compare deux images pour prouver que le travail a été fait.
+ * Analyse un signalement de déchets pour le SIG
  */
-export const compareBeforeAfter = async (beforeB64: string, afterB64: string): Promise<{
-    isCleaned: boolean;
-    confidence: number;
-    comment: string;
-}> => {
-    try {
-        const ai = getAiClient();
-        const cleanBefore = beforeB64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-        const cleanAfter = afterB64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-
-        const prompt = `
-            IMAGE 1 : Tas de déchets signalé par un citoyen à Kinshasa.
-            IMAGE 2 : Photo prise par l'agent de collecte après son passage.
-            
-            Vérifiez si l'emplacement est le même et si les déchets visibles sur l'IMAGE 1 ont disparu sur l'IMAGE 2.
-            Soyez rigoureux. Le sol doit être dégagé.
-        `;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
-            contents: {
-                parts: [
-                    { inlineData: { mimeType: 'image/jpeg', data: cleanBefore } },
-                    { inlineData: { mimeType: 'image/jpeg', data: cleanAfter } },
-                    { text: prompt }
-                ]
-            },
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        isCleaned: { type: Type.BOOLEAN },
-                        confidence: { type: Type.NUMBER },
-                        comment: { type: Type.STRING }
-                    },
-                    required: ["isCleaned", "confidence", "comment"],
-                }
-            }
-        });
-
-        return JSON.parse(response.text || '{}');
-    } catch (error) {
-        return { isCleaned: true, confidence: 0.5, comment: "Validation IA indisponible. Validation humaine requise." };
-    }
-};
-
 export const analyzeTrashReport = async (base64Image: string): Promise<{
     wasteType: string;
     urgency: 'low' | 'medium' | 'high';
@@ -123,7 +78,7 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-                    { text: "Analysez cette photo de déchets à Kinshasa pour le SIG. Déterminez type, urgence et impact." }
+                    { text: "Analysez cette photo de déchets à Kinshasa pour le SIG. Déterminez type, urgence (low/medium/high) et impact environnemental. Répondez en français de Kinshasa." }
                 ]
             },
             config: {
@@ -148,6 +103,9 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
     }
 };
 
+/**
+ * Analyse un objet pour la marketplace circulaire
+ */
 export const analyzeWasteItem = async (base64Image: string): Promise<{
     title: string;
     category: 'electronics' | 'metal' | 'plastic' | 'other';
@@ -163,7 +121,7 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-                    { text: "Identifiez cet objet pour le marché circulaire de Kinshasa. Estimez le poids et un prix juste en FC." }
+                    { text: "Identifiez cet objet pour le marché circulaire de Kinshasa. Estimez le poids en kg et un prix juste en Francs Congolais (FC)." }
                 ]
             },
             config: {
@@ -184,5 +142,47 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
         return JSON.parse(response.text || '{}');
     } catch (error) {
         return { title: "Objet de recyclage", category: "other", weight: 0.5, price: 1000, description: "Identifié manuellement." };
+    }
+};
+
+/**
+ * Compare deux images pour preuve de collecte
+ */
+export const compareBeforeAfter = async (beforeB64: string, afterB64: string): Promise<{
+    isCleaned: boolean;
+    confidence: number;
+    comment: string;
+}> => {
+    try {
+        const ai = getAiClient();
+        const cleanBefore = beforeB64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+        const cleanAfter = afterB64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-pro-preview',
+            contents: {
+                parts: [
+                    { inlineData: { mimeType: 'image/jpeg', data: cleanBefore } },
+                    { inlineData: { mimeType: 'image/jpeg', data: cleanAfter } },
+                    { text: "IMAGE 1 : Tas initial. IMAGE 2 : Après passage du collecteur. Est-ce que l'endroit est propre maintenant ? Répondez en JSON avec isCleaned, confidence (0-1) et un court commentaire." }
+                ]
+            },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        isCleaned: { type: Type.BOOLEAN },
+                        confidence: { type: Type.NUMBER },
+                        comment: { type: Type.STRING }
+                    },
+                    required: ["isCleaned", "confidence", "comment"],
+                }
+            }
+        });
+
+        return JSON.parse(response.text || '{}');
+    } catch (error) {
+        return { isCleaned: true, confidence: 0.5, comment: "Vérification visuelle manuelle recommandée." };
     }
 };

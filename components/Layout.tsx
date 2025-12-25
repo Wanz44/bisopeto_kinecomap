@@ -4,7 +4,8 @@ import {
     Home, Map as MapIcon, GraduationCap, User as UserIcon, LogOut, Settings, RotateCw, 
     Users, ClipboardList, Megaphone, PieChart, CreditCard, Truck, 
     ShoppingBag, AlertTriangle, X, Shield, Bell, Camera, DollarSign, Lock,
-    Cloud, CloudOff, RefreshCw
+    Cloud, CloudOff, RefreshCw, ShieldAlert, BookOpen, BarChart3, Database,
+    Key, Receipt, Check, Info
 } from 'lucide-react';
 import { AppView, UserType, User as UserInterface, UserPermission } from '../types';
 import { OfflineManager } from '../services/offlineManager';
@@ -47,6 +48,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
         };
     }, []);
 
+    // Vues qui gèrent leur propre Header/Bouton Retour
     const viewsWithInternalHeader = [
         AppView.REPORTING, 
         AppView.MAP, 
@@ -54,6 +56,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
         AppView.MARKETPLACE, 
         AppView.PROFILE, 
         AppView.SETTINGS,
+        AppView.SUBSCRIPTION,
         AppView.COLLECTOR_JOBS,
         AppView.ADMIN_USERS,
         AppView.ADMIN_VEHICLES,
@@ -67,101 +70,152 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
 
     const showGlobalHeader = !viewsWithInternalHeader.includes(currentView);
 
-    const getMobileNavItems = (): NavItem[] => {
+    // --- LOGIQUE DE NAVIGATION COMPLÈTE ---
+    
+    const getNavItems = (isMobile: boolean): NavItem[] => {
         if (user?.type === UserType.ADMIN) {
-            return [
+            const adminFull = [
                 { view: AppView.DASHBOARD, icon: Home, label: 'Dashboard' },
-                { view: AppView.ADMIN_REPORTS, icon: AlertTriangle, label: 'SIG' },
-                { view: AppView.NOTIFICATIONS, icon: Bell, label: 'Alertes' },
-                { view: AppView.PROFILE, icon: UserIcon, label: 'Admin' },
+                { view: AppView.ADMIN_REPORTS, icon: AlertTriangle, label: 'SIG Alertes' },
+                { view: AppView.ADMIN_USERS, icon: Users, label: 'Utilisateurs' },
+                { view: AppView.ADMIN_VEHICLES, icon: Truck, label: 'Flotte GPS' },
+                { view: AppView.ADMIN_SUBSCRIPTIONS, icon: CreditCard, label: 'Finance' },
+                { view: AppView.ADMIN_RECOVERY, icon: Receipt, label: 'Recouvrement' },
+                { view: AppView.ADMIN_ADS, icon: Megaphone, label: 'Régie Pub' },
+                { view: AppView.ADMIN_ACADEMY, icon: GraduationCap, label: 'Académie CMS' },
+                { view: AppView.ADMIN_MARKETPLACE, icon: ShoppingBag, label: 'Marketplace' },
+                { view: AppView.ADMIN_PERMISSIONS, icon: Key, label: 'Privilèges' },
+                { view: AppView.NOTIFICATIONS, icon: Bell, label: 'Notifications' },
+                { view: AppView.PROFILE, icon: UserIcon, label: 'Profil Admin' },
             ];
+            // Sur mobile, on limite aux 5 plus importants
+            return isMobile ? adminFull.filter(i => [AppView.DASHBOARD, AppView.ADMIN_REPORTS, AppView.ADMIN_SUBSCRIPTIONS, AppView.NOTIFICATIONS, AppView.PROFILE].includes(i.view)) : adminFull;
         }
+
         if (user?.type === UserType.COLLECTOR) {
             return [
                 { view: AppView.DASHBOARD, icon: Home, label: 'Accueil' },
                 { view: AppView.COLLECTOR_JOBS, icon: ClipboardList, label: 'Missions' },
-                { view: AppView.MAP, icon: MapIcon, label: 'Carte' },
+                { view: AppView.MAP, icon: MapIcon, label: 'Carte SIG' },
+                { view: AppView.NOTIFICATIONS, icon: Bell, label: 'Alertes' },
                 { view: AppView.PROFILE, icon: UserIcon, label: 'Profil' },
             ];
         }
-        return [
+
+        // CITOYEN / BUSINESS
+        const citizenFull = [
             { view: AppView.DASHBOARD, icon: Home, label: 'Accueil' },
-            { view: AppView.REPORTING, icon: Camera, label: 'Alerte' },
+            { view: AppView.REPORTING, icon: Camera, label: 'Signaler' },
             { view: AppView.MAP, icon: MapIcon, label: 'Carte' },
+            { view: AppView.ACADEMY, icon: GraduationCap, label: 'Académie' },
             { view: AppView.MARKETPLACE, icon: ShoppingBag, label: 'Boutique' },
+            { view: AppView.SUBSCRIPTION, icon: CreditCard, label: 'Abonnement' },
             { view: AppView.PROFILE, icon: UserIcon, label: 'Profil' },
         ];
+        
+        return isMobile ? citizenFull.filter(i => [AppView.DASHBOARD, AppView.REPORTING, AppView.MAP, AppView.ACADEMY, AppView.PROFILE].includes(i.view)) : citizenFull;
     };
 
-    const mobileItems = getMobileNavItems();
+    const sidebarItems = getNavItems(false);
+    const mobileTabItems = getNavItems(true);
 
     return (
         <div className="w-full h-[100dvh] flex bg-[#F5F5F5] dark:bg-[#050505] transition-colors duration-500 overflow-hidden relative font-sans">
-            {/* Sidebar (Desktop) - Largeur ajustée à la nouvelle échelle */}
-            <aside className="hidden md:flex flex-col w-[16rem] h-[calc(100vh-3rem)] m-6 rounded-[2rem] bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl border border-gray-100 dark:border-white/5 shadow-2xl transition-all duration-300 relative z-50 shrink-0">
-                <div className="p-6 flex flex-col gap-1 text-center items-center">
-                    <div className="w-12 h-12 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg border border-gray-100 p-1.5 shrink-0 mb-2"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
-                    <div className="flex flex-col"><span className="font-black text-lg text-primary tracking-tighter leading-none uppercase">KIN ECO MAP</span></div>
+            
+            {/* SIDEBAR (Desktop) - Liste complète et scrollable */}
+            <aside className="hidden md:flex flex-col w-[18rem] h-[calc(100vh-3rem)] m-6 rounded-[2.5rem] bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl border border-gray-100 dark:border-white/5 shadow-2xl transition-all duration-300 relative z-50 shrink-0">
+                <div className="p-8 flex flex-col gap-1 text-center items-center">
+                    <div className="w-14 h-14 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg border border-gray-100 p-1.5 shrink-0 mb-3"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
+                    <div className="flex flex-col">
+                        <span className="font-black text-xl text-primary tracking-tighter leading-none uppercase">BISO PETO</span>
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.3em] mt-1">Plateforme SIG</span>
+                    </div>
                 </div>
-                <nav className="flex-1 px-4 space-y-1.5 mt-4 overflow-y-auto no-scrollbar">
-                    {mobileItems.map((item) => {
+                
+                <nav className="flex-1 px-4 space-y-1.5 mt-2 overflow-y-auto no-scrollbar pb-10">
+                    {sidebarItems.map((item) => {
                         const isActive = currentView === item.view;
                         return (
-                            <button key={item.view} onClick={() => onChangeView(item.view)} className={`w-full flex items-center gap-3 p-3.5 rounded-xl transition-all duration-300 ${isActive ? 'bg-primary text-white shadow-xl' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
-                                <item.icon className="w-4.5 h-4.5" />
-                                <span className="font-bold text-[0.8rem] uppercase tracking-tight">{item.label}</span>
+                            <button 
+                                key={item.view} 
+                                onClick={() => onChangeView(item.view)} 
+                                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 group ${isActive ? 'bg-primary text-white shadow-xl scale-[1.02]' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                            >
+                                <item.icon size={18} className={`${isActive ? 'text-white' : 'text-gray-400 group-hover:text-primary'}`} />
+                                <span className={`font-black text-[0.75rem] uppercase tracking-tight ${isActive ? 'opacity-100' : 'opacity-80'}`}>{item.label}</span>
                             </button>
                         );
                     })}
                 </nav>
+
+                <div className="p-6 border-t dark:border-white/5">
+                    <button onClick={onLogout} className="w-full flex items-center gap-3 p-4 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all font-black uppercase text-[0.7rem] tracking-widest">
+                        <LogOut size={16} /> Quitter
+                    </button>
+                </div>
             </aside>
 
-            {/* Main Content View */}
+            {/* MAIN CONTENT */}
             <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative z-10">
-                {/* Entête Global Slim Condensé */}
+                {/* Global Slim Header */}
                 {showGlobalHeader && (
-                    <header className="min-h-[2.8rem] md:min-h-[3.8rem] px-5 md:px-8 flex items-center justify-between sticky top-0 z-40 shrink-0 bg-white/70 backdrop-blur-xl dark:bg-black/70 border-b dark:border-white/5 animate-fade-in">
-                        <div className="flex items-center gap-2.5 md:hidden">
-                            <div className="w-6 h-6 bg-white dark:bg-black rounded-lg flex items-center justify-center shadow-md border border-gray-100 p-1"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
-                            <span className="font-black text-[0.9rem] tracking-tighter text-primary uppercase">BISO PETO</span>
+                    <header className="min-h-[3.5rem] md:min-h-[4.5rem] px-6 md:px-10 flex items-center justify-between sticky top-0 z-40 shrink-0 bg-white/70 backdrop-blur-xl dark:bg-black/70 border-b dark:border-white/5 animate-fade-in">
+                        <div className="flex items-center gap-3 md:hidden">
+                            <div className="w-8 h-8 bg-white dark:bg-black rounded-lg flex items-center justify-center shadow-md border border-gray-100 p-1"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
+                            <span className="font-black text-[1rem] tracking-tighter text-primary uppercase leading-none">BISO PETO</span>
                         </div>
-                        <div className="hidden md:block"><h1 className="font-black text-base text-gray-800 dark:text-white tracking-tight uppercase">Tableau de bord</h1></div>
                         
-                        <div className="flex items-center gap-2">
-                            <button onClick={onRefresh} className={`p-2 rounded-lg text-gray-500 bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 ${isRefreshing ? 'animate-spin' : ''}`}><RotateCw className="w-4 h-4" /></button>
-                            <button onClick={() => onChangeView(AppView.NOTIFICATIONS)} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 relative">
-                                <Bell className="w-4 h-4" />
-                                {unreadNotifications > 0 && <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 text-white text-[6px] font-black rounded-full flex items-center justify-center border border-white dark:border-black">{unreadNotifications}</span>}
+                        <div className="hidden md:block">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Console de gestion</p>
+                            <h1 className="font-black text-lg text-gray-800 dark:text-white tracking-tight uppercase leading-none mt-1">Tableau de bord</h1>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            {syncQueueSize > 0 && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-full border border-orange-100 dark:border-orange-800 animate-pulse">
+                                    <CloudOff size={14} />
+                                    <span className="text-[9px] font-black uppercase">{syncQueueSize} en attente</span>
+                                </div>
+                            )}
+                            <button onClick={onRefresh} className={`p-2.5 rounded-xl text-gray-500 bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:scale-105 transition-all ${isRefreshing ? 'animate-spin' : ''}`}><RotateCw size={18} /></button>
+                            <button onClick={() => onChangeView(AppView.NOTIFICATIONS)} className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 relative hover:scale-105 transition-all">
+                                <Bell size={18} />
+                                {unreadNotifications > 0 && <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[7px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-black shadow-lg">{unreadNotifications}</span>}
                             </button>
                         </div>
                     </header>
                 )}
 
-                <main className={`flex-1 overflow-y-auto relative h-full w-full no-scrollbar transition-all duration-500 ${showGlobalHeader ? 'pb-24' : 'pb-16'}`}>
+                <main className={`flex-1 overflow-y-auto relative h-full w-full no-scrollbar transition-all duration-500 ${showGlobalHeader ? 'pb-28' : 'pb-20'}`}>
                     {children}
                 </main>
                 
-                {/* Tab Bar (Mobile) - Icons Only (Taille condensée) */}
-                <nav className="md:hidden fixed bottom-5 inset-x-6 h-14 bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl border border-gray-100 dark:border-white/10 rounded-full shadow-[0_15px_40px_rgba(0,0,0,0.2)] z-[100] flex items-center justify-evenly px-2">
-                    {mobileItems.map((item) => {
+                {/* TAB BAR (Mobile) - Accès aux fonctions vitales */}
+                <nav className="md:hidden fixed bottom-6 inset-x-6 h-16 bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl border border-gray-100 dark:border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-[100] flex items-center justify-evenly px-4">
+                    {mobileTabItems.map((item) => {
                         const isActive = currentView === item.view;
                         return (
-                            <button key={item.view} onClick={() => onChangeView(item.view)} className="flex items-center justify-center h-full relative flex-1">
-                                <div className={`relative z-10 p-3 rounded-full transition-all duration-500 ${isActive ? 'bg-primary text-white -translate-y-4 shadow-2xl scale-110' : 'text-gray-400 hover:text-primary/50'}`}>
-                                    <item.icon className="w-5 h-5" />
+                            <button key={item.view} onClick={() => onChangeView(item.view)} className="flex flex-col items-center justify-center h-full relative flex-1">
+                                <div className={`relative z-10 p-3.5 rounded-2xl transition-all duration-500 ${isActive ? 'bg-primary text-white -translate-y-5 shadow-2xl scale-110 rotate-[10deg]' : 'text-gray-400 hover:text-primary/50'}`}>
+                                    <item.icon size={22} />
                                 </div>
+                                <span className={`absolute bottom-2 text-[7px] font-black uppercase tracking-widest transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>{item.label}</span>
                             </button>
                         );
                     })}
                 </nav>
             </div>
 
-            {/* Toasts */}
+            {/* Toasts de Notification */}
             {toast && toast.visible && (
-                <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[88%] max-w-xs">
-                    <div className={`px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border backdrop-blur-xl ${toast.type === 'success' ? 'bg-primary/90 text-white' : 'bg-red-500/90 text-white'} `}>
-                        <span className="font-bold text-[0.8rem] leading-tight flex-1">{toast.message}</span>
-                        <button onClick={onCloseToast} className="p-1 hover:bg-white/20 rounded-lg"><X className="w-3 h-3" /></button>
+                <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[90%] max-w-xs">
+                    <div className={`px-6 py-4 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] flex items-center gap-4 border backdrop-blur-2xl ${toast.type === 'success' ? 'bg-[#00C853]/90 text-white border-green-400/20' : toast.type === 'error' ? 'bg-red-500/90 text-white border-red-400/20' : 'bg-blue-600/90 text-white border-blue-400/20'}`}>
+                        {/* Fix: Added missing Check and Info to the imports from lucide-react above */}
+                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                           {toast.type === 'success' ? <Check size={16} strokeWidth={4}/> : <Info size={16} strokeWidth={4}/>}
+                        </div>
+                        <span className="font-black text-[0.8rem] leading-tight flex-1 uppercase tracking-tight">{toast.message}</span>
+                        <button onClick={onCloseToast} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"><X size={14} /></button>
                     </div>
                 </div>
             )}
