@@ -78,13 +78,19 @@ function App() {
         try {
             const freshUser = await UserAPI.getById(user.id);
             if (freshUser) {
-                // Si l'utilisateur vient d'être activé
-                if (freshUser.status === 'active' && user.status === 'pending') {
-                    showToast("Votre compte est désormais actif ! Mbote !", "success");
-                    setHistory([AppView.DASHBOARD]); // On réinitialise la vue pour débloquer le Layout
+                // Si l'utilisateur vient d'être activé ou a changé de statut
+                if (freshUser.status !== user.status) {
+                    if (freshUser.status === 'active') {
+                        showToast("Activation confirmée ! Bienvenue dans le réseau.", "success");
+                        setHistory([AppView.DASHBOARD]); 
+                    }
+                    setUser(freshUser);
+                    localStorage.setItem('kinecomap_user', JSON.stringify(freshUser));
+                } else {
+                    // Mise à jour classique des points/tonnage sans changer l'historique
+                    setUser(freshUser);
+                    localStorage.setItem('kinecomap_user', JSON.stringify(freshUser));
                 }
-                setUser(freshUser);
-                localStorage.setItem('kinecomap_user', JSON.stringify(freshUser));
             }
         } catch (e) {
             console.error("Failed to refresh user profile:", e);
@@ -94,7 +100,8 @@ function App() {
     // REAL-TIME LISTENER POUR L'ACTIVATION DU COMPTE
     useEffect(() => {
         if (user?.id && isSupabaseConfigured() && supabase) {
-            const channel = supabase.channel(`user_activation_${user.id}`)
+            const channelId = `user_activation_${user.id}`;
+            const channel = supabase.channel(channelId)
                 .on('postgres_changes', { 
                     event: 'UPDATE', 
                     schema: 'public', 
@@ -102,13 +109,16 @@ function App() {
                     filter: `id=eq.${user.id}`
                 }, (payload) => {
                     const mapped = mapUser(payload.new);
-                    // Détection du changement de statut
+                    // On force le rafraîchissement si le statut change vers 'active'
                     if (mapped.status === 'active' && user.status === 'pending') {
-                        showToast("Activation confirmée ! Bienvenue dans le réseau.", "success");
-                        setHistory([AppView.DASHBOARD]); // Débloque l'interface instantanément
+                        showToast("Compte débloqué ! Mbote !", "success");
+                        setUser(mapped);
+                        localStorage.setItem('kinecomap_user', JSON.stringify(mapped));
+                        setHistory([AppView.DASHBOARD]);
+                    } else if (mapped.status !== user.status) {
+                        setUser(mapped);
+                        localStorage.setItem('kinecomap_user', JSON.stringify(mapped));
                     }
-                    setUser(mapped);
-                    localStorage.setItem('kinecomap_user', JSON.stringify(mapped));
                 })
                 .subscribe();
 
@@ -198,9 +208,9 @@ function App() {
     // ÉCRAN D'ATTENTE (S'affiche si le statut est 'pending')
     if (user && isPending) {
         return (
-            <div className="h-full w-full bg-[#F5F7FA] dark:bg-[#050505] flex flex-col overflow-hidden">
+            <div className="h-full w-full bg-[#F5F7FA] dark:bg-[#050505] flex flex-col overflow-hidden animate-fade-in">
                 <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} onRefresh={refreshUserData} />
-                <div className="p-8 bg-white dark:bg-gray-900 border-t dark:border-gray-800 shrink-0">
+                <div className="p-8 bg-white dark:bg-gray-900 border-t dark:border-gray-800 shrink-0 pb-12">
                     <button onClick={handleLogout} className="w-full py-5 bg-red-50 dark:bg-red-900/10 text-red-600 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 transition-all"><LogOut size={20}/> Quitter la session</button>
                 </div>
             </div>
