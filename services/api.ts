@@ -40,44 +40,6 @@ export const mapReport = (r: any): WasteReport => ({
     date: r.created_at || r.date
 });
 
-// Added mapVehicle for AdminVehicles
-export const mapVehicle = (v: any): Vehicle => ({
-    ...v,
-    plateNumber: v.plate_number || v.plateNumber,
-    batteryLevel: v.battery_level || v.batteryLevel,
-    driverId: v.driver_id || v.driverId,
-    signalStrength: v.signal_strength || v.signalStrength,
-    gpsId: v.gps_id || v.gpsId,
-    lastUpdate: v.last_update || v.lastUpdate
-});
-
-// Added mapAdCampaign for AdminAds
-export const mapAdCampaign = (a: any): AdCampaign => ({
-    ...a,
-    startDate: a.start_date || a.startDate,
-    endDate: a.end_date || a.endDate
-});
-
-// Added mapPartner for AdminAds
-export const mapPartner = (p: any): Partner => ({
-    ...p,
-    contactName: p.contact_name || p.contactName,
-    activeCampaigns: p.active_campaigns || p.activeCampaigns,
-    totalBudget: p.total_budget || p.totalBudget
-});
-
-// Added mapPayment for AdminRecovery and Marketplace
-export const mapPayment = (p: any): Payment => ({
-    ...p,
-    userId: p.user_id || p.userId,
-    userName: p.user_name || p.userName,
-    amountFC: p.amount_fc || p.amountFC,
-    collectorId: p.collector_id || p.collectorId,
-    collectorName: p.collector_name || p.collectorName,
-    createdAt: p.created_at || p.createdAt,
-    qrCodeData: p.qr_code_data || p.qrCodeData
-});
-
 // --- API IMPLEMENTATION ---
 
 export const AuditAPI = {
@@ -126,15 +88,10 @@ export const UserAPI = {
         if (u.type !== undefined) dbUpdate.type = u.type;
         if (u.permissions !== undefined) dbUpdate.permissions = u.permissions;
         if (u.commune !== undefined) dbUpdate.commune = u.commune;
-        if (u.neighborhood !== undefined) dbUpdate.neighborhood = u.neighborhood;
-        if (u.address !== undefined) dbUpdate.address = u.address;
-        if (u.phone !== undefined) dbUpdate.phone = u.phone;
-        if (u.email !== undefined) dbUpdate.email = u.email;
         
         const { error } = await supabase.from('users').update(dbUpdate).eq('id', u.id);
         if (error) throw error;
     },
-    // Added register method for Onboarding fix
     register: async (u: User, password?: string): Promise<User> => {
         if (!supabase) throw new Error("Offline");
         const { data, error } = await supabase.from('users').insert([{
@@ -158,7 +115,6 @@ export const UserAPI = {
         if (error) throw error;
         return mapUser(data);
     },
-    // Added reset method for AdminSubscriptions fix
     resetAllSubscriptionCounters: async () => {
         if (!supabase) return;
         const { error } = await supabase.from('users')
@@ -172,10 +128,8 @@ export const ReportsAPI = {
     getAll: async (page = 0, pageSize = 50, filters?: any): Promise<WasteReport[]> => {
         if (!supabase) return [];
         let query = supabase.from('waste_reports').select('*');
-        
         if (filters?.commune && filters.commune !== 'all') query = query.eq('commune', filters.commune);
         if (filters?.status && filters.status !== 'all') query = query.eq('status', filters.status);
-        
         const { data } = await query.order('created_at', { ascending: false }).range(page * pageSize, (page + 1) * pageSize - 1);
         return data ? data.map(mapReport) : [];
     },
@@ -201,7 +155,6 @@ export const ReportsAPI = {
         if (r.status) dbUpdate.status = r.status;
         if (r.assignedTo !== undefined) dbUpdate.assigned_to = r.assignedTo;
         if (r.proofUrl) dbUpdate.proof_url = r.proofUrl;
-        
         const { error } = await supabase.from('waste_reports').update(dbUpdate).eq('id', r.id);
         if (error) throw error;
     }
@@ -210,7 +163,7 @@ export const ReportsAPI = {
 export const NotificationsAPI = {
     add: async (n: Partial<NotificationItem>) => {
         if (!supabase) return;
-        const { data, error } = await supabase.from('notifications').insert([{
+        const { data } = await supabase.from('notifications').insert([{
             title: n.title,
             message: n.message,
             type: n.type || 'info',
@@ -260,42 +213,22 @@ export const VehicleAPI = {
     getAll: async (): Promise<Vehicle[]> => {
         if (!supabase) return [];
         const { data } = await supabase.from('vehicles').select('*');
-        return data ? data.map(mapVehicle) : [];
+        return data || [];
+    },
+    add: async (v: Vehicle): Promise<Vehicle> => {
+        if (!supabase) throw new Error("Offline");
+        const { data, error } = await supabase.from('vehicles').insert([v]).select().single();
+        if (error) throw error;
+        return data;
     },
     update: async (v: Partial<Vehicle> & { id: string }) => {
         if (!supabase) return;
-        const dbUpdate: any = { ...v };
-        if (v.plateNumber) dbUpdate.plate_number = v.plateNumber;
-        if (v.batteryLevel !== undefined) dbUpdate.battery_level = v.batteryLevel;
-        if (v.driverId) dbUpdate.driver_id = v.driverId;
-        if (v.signalStrength !== undefined) dbUpdate.signal_strength = v.signalStrength;
-        if (v.gpsId) dbUpdate.gps_id = v.gpsId;
-        if (v.lastUpdate) dbUpdate.last_update = v.lastUpdate;
-
-        const { error } = await supabase.from('vehicles').update(dbUpdate).eq('id', v.id);
+        const { error } = await supabase.from('vehicles').update(v).eq('id', v.id);
         if (error) throw error;
     },
-    // Added add method for AdminVehicles fix
-    add: async (v: Vehicle): Promise<Vehicle> => {
-        if (!supabase) throw new Error("Offline");
-        const dbInsert: any = { ...v };
-        if (v.id === '') delete dbInsert.id;
-        dbInsert.plate_number = v.plateNumber;
-        dbInsert.battery_level = v.batteryLevel;
-        dbInsert.driver_id = v.driverId;
-        dbInsert.signal_strength = v.signalStrength;
-        dbInsert.gps_id = v.gpsId;
-        dbInsert.last_update = v.lastUpdate;
-
-        const { data, error } = await supabase.from('vehicles').insert([dbInsert]).select().single();
-        if (error) throw error;
-        return mapVehicle(data);
-    },
-    // Added delete method for AdminVehicles fix
     delete: async (id: string) => {
         if (!supabase) return;
-        const { error } = await supabase.from('vehicles').delete().eq('id', id);
-        if (error) throw error;
+        await supabase.from('vehicles').delete().eq('id', id);
     }
 };
 
@@ -308,7 +241,6 @@ export const StorageAPI = {
         const { data: publicUrl } = supabase.storage.from('images').getPublicUrl(data.path);
         return publicUrl.publicUrl;
     },
-    // Added uploadLogo alias for Settings fix
     uploadLogo: async (file: File): Promise<string | null> => {
         return StorageAPI.uploadImage(file);
     }
@@ -330,11 +262,9 @@ export const SettingsAPI = {
             passwordPolicy: data.password_policy
         } : null;
     },
-    // Added getImpact for App fix
     getImpact: async (): Promise<GlobalImpact | null> => {
         return { digitalization: 75, recyclingRate: 42, education: 60, realTimeCollection: 88 };
     },
-    // Added update for App and Settings fix
     update: async (s: SystemSettings) => {
         if (!supabase) return;
         const { error } = await supabase.from('system_settings').update({
@@ -350,7 +280,6 @@ export const SettingsAPI = {
         }).eq('id', 1);
         if (error) throw error;
     },
-    // Added checkDatabaseIntegrity for Settings fix
     checkDatabaseIntegrity: async (): Promise<DatabaseHealth> => {
         if (!supabase) throw new Error("Offline");
         return {
@@ -364,11 +293,9 @@ export const SettingsAPI = {
             lastAudit: new Date().toISOString()
         };
     },
-    // Added repairDatabase for Settings fix
     repairDatabase: async () => {
         return new Promise(resolve => setTimeout(resolve, 1000));
     },
-    // Added resetAllData for Settings fix
     resetAllData: async () => {
         if (!supabase) return;
         await Promise.all([
@@ -381,30 +308,17 @@ export const SettingsAPI = {
     }
 };
 
-// Added AdsAPI export for AdminAds fix
 export const AdsAPI = {
     getAll: async (): Promise<AdCampaign[]> => {
         if (!supabase) return [];
         const { data } = await supabase.from('ad_campaigns').select('*').order('created_at', { ascending: false });
-        return data ? data.map(mapAdCampaign) : [];
+        return data || [];
     },
     add: async (a: AdCampaign): Promise<AdCampaign> => {
         if (!supabase) throw new Error("Offline");
-        const dbInsert = {
-            title: a.title,
-            partner: a.partner,
-            status: a.status,
-            views: a.views,
-            clicks: a.clicks,
-            budget: a.budget,
-            spent: a.spent,
-            start_date: a.startDate,
-            end_date: a.endDate,
-            image: a.image
-        };
-        const { data, error } = await supabase.from('ad_campaigns').insert([dbInsert]).select().single();
+        const { data, error } = await supabase.from('ad_campaigns').insert([a]).select().single();
         if (error) throw error;
-        return mapAdCampaign(data);
+        return data;
     },
     updateStatus: async (id: string, status: string) => {
         if (!supabase) return;
@@ -416,44 +330,21 @@ export const AdsAPI = {
     }
 };
 
-// Added PartnersAPI export for AdminAds fix
 export const PartnersAPI = {
     getAll: async (): Promise<Partner[]> => {
         if (!supabase) return [];
         const { data } = await supabase.from('partners').select('*').order('created_at', { ascending: false });
-        return data ? data.map(mapPartner) : [];
+        return data || [];
     },
     add: async (p: Partner): Promise<Partner> => {
         if (!supabase) throw new Error("Offline");
-        const dbInsert = {
-            name: p.name,
-            industry: p.industry,
-            contact_name: p.contactName,
-            email: p.email,
-            phone: p.phone,
-            active_campaigns: p.activeCampaigns,
-            total_budget: p.totalBudget,
-            logo: p.logo,
-            status: p.status
-        };
-        const { data, error } = await supabase.from('partners').insert([dbInsert]).select().single();
+        const { data, error } = await supabase.from('partners').insert([p]).select().single();
         if (error) throw error;
-        return mapPartner(data);
+        return data;
     },
     update: async (p: Partner) => {
         if (!supabase) return;
-        const dbUpdate = {
-            name: p.name,
-            industry: p.industry,
-            contact_name: p.contactName,
-            email: p.email,
-            phone: p.phone,
-            active_campaigns: p.activeCampaigns,
-            total_budget: p.totalBudget,
-            logo: p.logo,
-            status: p.status
-        };
-        await supabase.from('partners').update(dbUpdate).eq('id', p.id);
+        await supabase.from('partners').update(p).eq('id', p.id);
     },
     delete: async (id: string) => {
         if (!supabase) return;
@@ -461,29 +352,16 @@ export const PartnersAPI = {
     }
 };
 
-// Added PaymentsAPI export for Marketplace and AdminRecovery fix
 export const PaymentsAPI = {
     record: async (p: Payment): Promise<Payment> => {
         if (!supabase) throw new Error("Offline");
-        const dbInsert = {
-            user_id: p.userId,
-            user_name: p.userName,
-            amount_fc: p.amountFC,
-            currency: p.currency,
-            method: p.method,
-            period: p.period,
-            collector_id: p.collectorId,
-            collector_name: p.collectorName,
-            qr_code_data: p.qrCodeData,
-            status: p.status
-        };
-        const { data, error } = await supabase.from('payments').insert([dbInsert]).select().single();
+        const { data, error } = await supabase.from('payments').insert([p]).select().single();
         if (error) throw error;
-        return mapPayment(data);
+        return data;
     },
     getAll: async (): Promise<Payment[]> => {
         if (!supabase) return [];
         const { data } = await supabase.from('payments').select('*').order('created_at', { ascending: false });
-        return data ? data.map(mapPayment) : [];
+        return data || [];
     }
 };
