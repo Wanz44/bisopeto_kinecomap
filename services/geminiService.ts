@@ -21,11 +21,6 @@ VOTRE PERSONNALITÉ :
 
 let chatSession: Chat | null = null;
 
-/**
- * Initialise ou récupère la session de chat existante.
- * On crée une nouvelle instance de GoogleGenAI à chaque fois pour s'assurer 
- * d'utiliser la clé API la plus récente, mais on garde la session de chat pour l'historique.
- */
 export const getOrInitChat = (): Chat => {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
@@ -47,9 +42,6 @@ export const getOrInitChat = (): Chat => {
     return chatSession;
 };
 
-/**
- * Envoie un message et retourne un itérateur pour le streaming
- */
 export async function* sendMessageStream(message: string) {
     try {
         const chat = getOrInitChat();
@@ -61,17 +53,64 @@ export async function* sendMessageStream(message: string) {
         }
     } catch (error: any) {
         console.error("Gemini Stream Error:", error);
-        if (error.message?.includes("entity was not found")) {
-             yield "Pardon, ce modèle d'IA n'est pas encore activé pour votre clé API. Contactez l'administrateur Biso Peto.";
-        } else {
-             yield "Désolé, j'ai eu un petit souci technique passager. Kinshasa ezo zela biso, réessaie un instant !";
-        }
+        yield "Désolé, j'ai eu un petit souci technique passager. Kinshasa ezo zela biso, réessaie un instant !";
     }
 }
 
 /**
- * Analyse un signalement de déchets pour le SIG
+ * Recherche de lieux via Maps Grounding (Gemini 2.5 Flash)
  */
+export const findLocationsWithMaps = async (query: string, userLat?: number, userLng?: number): Promise<{
+    text: string;
+    places: Array<{
+        name: string;
+        uri: string;
+        lat?: number;
+        lng?: number;
+        address?: string;
+    }>;
+}> => {
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Trouve des lieux à Kinshasa pour cette demande: ${query}. Réponds avec une explication courte et liste les lieux précis.`,
+            config: {
+                tools: [{ googleMaps: {} }],
+                toolConfig: {
+                    retrievalConfig: {
+                        latLng: {
+                            latitude: userLat || -4.325,
+                            longitude: userLng || 15.322
+                        }
+                    }
+                }
+            }
+        });
+
+        const text = response.text || "";
+        const places: any[] = [];
+        
+        // Extraction des données de grounding pour Maps
+        const candidates = (response as any).candidates;
+        if (candidates && candidates[0]?.groundingMetadata?.groundingChunks) {
+            candidates[0].groundingMetadata.groundingChunks.forEach((chunk: any) => {
+                if (chunk.maps) {
+                    places.push({
+                        name: chunk.maps.title || "Lieu trouvé",
+                        uri: chunk.maps.uri
+                    });
+                }
+            });
+        }
+
+        return { text, places };
+    } catch (error) {
+        console.error("Maps Grounding Error:", error);
+        return { text: "Impossible de récupérer les données Maps pour le moment.", places: [] };
+    }
+};
+
 export const analyzeTrashReport = async (base64Image: string): Promise<{
     wasteType: string;
     urgency: 'low' | 'medium' | 'high';
@@ -113,9 +152,6 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
     }
 };
 
-/**
- * Analyse un objet pour la marketplace circulaire
- */
 export const analyzeWasteItem = async (base64Image: string): Promise<{
     title: string;
     category: 'electronics' | 'metal' | 'plastic' | 'other';
@@ -155,9 +191,6 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
     }
 };
 
-/**
- * Compare deux images pour preuve de collecte
- */
 export const compareBeforeAfter = async (beforeB64: string, afterB64: string): Promise<{
     isCleaned: boolean;
     confidence: number;
