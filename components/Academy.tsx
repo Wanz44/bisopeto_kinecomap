@@ -23,10 +23,11 @@ const COURSES: Course[] = [
 ];
 
 const AI_SUGGESTIONS = [
-    "Comment trier le plastique à Kinshasa ?",
-    "Faire son propre compost en appartement",
-    "Pourquoi recycler les métaux ?",
-    "Impact des déchets sur le fleuve Congo",
+    "Pourquoi il ne faut pas jeter le plastique dans le caniveau ?",
+    "Comment gagner plus d'Eco-Points ?",
+    "Faire du compost avec des restes de manioc",
+    "Où partent les déchets de Kinshasa ?",
+    "Impact de la pollution sur le fleuve Congo",
 ];
 
 export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
@@ -35,7 +36,7 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
     
     // Chat State
     const [messages, setMessages] = useState<ChatMessage[]>([
-        { id: '0', sender: 'ai', text: 'Mbote ! Je suis Biso Peto AI, votre expert en environnement. Je connais tout sur le recyclage et la propreté à Kinshasa. Posez-moi vos questions écolo ! 🌍', timestamp: new Date() }
+        { id: '0', sender: 'ai', text: 'Mbote ! Je suis votre expert écolo. Je connais Kinshasa comme ma poche et je suis là pour vous aider à rendre notre ville "Peto" (propre). Que voulez-vous savoir ? 🌍', timestamp: new Date() }
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +49,7 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
 
     useEffect(() => {
         if (activeTab === 'chat') scrollToBottom();
-    }, [messages, activeTab]);
+    }, [messages, activeTab, isLoading]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -105,104 +106,110 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 transition-colors duration-300">
-            {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-4 shadow-sm flex items-center sticky top-0 z-10 border-b dark:border-gray-800 shrink-0">
-                <button onClick={() => selectedCourse ? setSelectedCourse(null) : onBack()} className="mr-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
-                    <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
-                </button>
-                <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tighter uppercase">
-                    {selectedCourse ? selectedCourse.title : 'Biso Peto Academy'}
-                </h2>
+        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 transition-colors duration-300 overflow-hidden">
+            {/* Header Interne (Layout Slim Compatible) */}
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-4 shadow-sm flex items-center justify-between sticky top-0 z-50 border-b dark:border-white/5 shrink-0">
+                <div className="flex items-center gap-3">
+                    <button onClick={() => selectedCourse ? setSelectedCourse(null) : onBack()} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">
+                        <ArrowLeft size={18} className="text-gray-600 dark:text-gray-300" />
+                    </button>
+                    <div className="flex flex-col">
+                        <h2 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none">
+                            {selectedCourse ? selectedCourse.title : 'Biso Peto Academy'}
+                        </h2>
+                        <span className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">Savoir & Impact</span>
+                    </div>
+                </div>
                 {activeTab === 'chat' && (
                     <button 
                         onClick={() => setIsMuted(!isMuted)}
-                        className={`ml-auto p-2 rounded-xl transition-all ${isMuted ? 'bg-gray-100 text-gray-400' : 'bg-green-50 text-green-600'}`}
+                        className={`p-2 rounded-xl transition-all ${isMuted ? 'bg-gray-100 dark:bg-white/5 text-gray-400' : 'bg-green-50 dark:bg-green-900/20 text-green-600'}`}
                     >
-                        {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                        {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                     </button>
                 )}
             </div>
 
-            {/* Global Tabs */}
+            {/* View Switcher */}
             {!selectedCourse && (
-                <div className="flex p-4 gap-4 bg-white dark:bg-gray-900 border-b dark:border-gray-800 shrink-0">
+                <div className="flex p-3 gap-2 bg-white/50 dark:bg-gray-900/50 border-b dark:border-white/5 shrink-0">
                     <button 
                         onClick={() => setActiveTab('learn')}
-                        className={`flex-1 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'learn' ? 'bg-[#00C853] text-white shadow-lg' : 'bg-gray-50 dark:bg-gray-800 text-gray-500'}`}
+                        className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'learn' ? 'bg-primary text-white shadow-lg' : 'bg-gray-100 dark:bg-white/5 text-gray-400'}`}
                     >
-                        Formation
+                        Formations
                     </button>
                     <button 
                         onClick={() => setActiveTab('chat')}
-                        className={`flex-1 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'chat' ? 'bg-[#2962FF] text-white shadow-lg' : 'bg-gray-50 dark:bg-gray-800 text-gray-500'}`}
+                        className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'chat' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 dark:bg-white/5 text-gray-400'}`}
                     >
-                        Expert Écolo IA
+                        Expert IA
                     </button>
                 </div>
             )}
 
-            {/* Content Switcher */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Content Area */}
+            <div className="flex-1 flex flex-col overflow-hidden relative">
                 {activeTab === 'learn' || selectedCourse ? (
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-24">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-32">
                         {selectedCourse ? (
                              <div className="animate-fade-in space-y-6">
-                                <div className="aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl">
+                                <div className="aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white dark:border-gray-800">
                                     <iframe 
                                         width="100%" height="100%" 
                                         src={`https://www.youtube.com/embed/${selectedCourse.videoUrl?.split('v=')[1]}`} 
                                         frameBorder="0" allowFullScreen
                                     ></iframe>
                                 </div>
-                                <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm">
-                                    <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase mb-4 tracking-tighter">{selectedCourse.title}</h3>
-                                    <p className="text-gray-500 dark:text-gray-400 font-medium leading-relaxed">{selectedCourse.description}</p>
-                                    <button className="w-full mt-8 py-5 bg-[#00C853] text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-500/20 active:scale-95 transition-all">Lancer le Quiz final</button>
+                                <div className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm">
+                                    <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase mb-3 tracking-tight">{selectedCourse.title}</h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed">{selectedCourse.description}</p>
+                                    <button className="w-full mt-6 py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl active:scale-95 transition-all">Lancer le Quiz final</button>
                                 </div>
                              </div>
                         ) : (
                             COURSES.map(c => (
-                                <div key={c.id} onClick={() => setSelectedCourse(c)} className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] border dark:border-gray-800 shadow-sm flex items-center gap-6 cursor-pointer hover:scale-[1.02] transition-all group">
-                                    <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shrink-0 ${c.color} bg-opacity-20`}>
-                                        <BookOpen size={28} />
+                                <div key={c.id} onClick={() => setSelectedCourse(c)} className="bg-white dark:bg-gray-900 p-5 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-sm flex items-center gap-5 cursor-pointer hover:shadow-md transition-all group">
+                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${c.color} bg-opacity-20 shadow-inner`}>
+                                        <BookOpen size={24} />
                                     </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tight group-hover:text-[#00C853] transition-colors">{c.title}</h4>
-                                        <div className="mt-3 h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                            <div className="h-full bg-[#00C853] transition-all duration-1000" style={{width: `${c.progress}%`}}></div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-sm truncate group-hover:text-primary transition-colors">{c.title}</h4>
+                                        <div className="mt-2 h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                            <div className="h-full bg-primary transition-all duration-1000" style={{width: `${c.progress}%`}}></div>
                                         </div>
                                     </div>
-                                    <ChevronRight className="text-gray-300" />
+                                    <ChevronRight className="text-gray-300 w-5 h-5" />
                                 </div>
                             ))
                         )}
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 overflow-hidden animate-fade-in">
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar pb-10">
+                        {/* Messages List */}
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 no-scrollbar pb-10">
                             {messages.map(msg => (
                                 <div key={msg.id} className={`flex items-end gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${msg.sender === 'ai' ? 'bg-green-600 text-white shadow-lg shadow-green-500/20' : 'bg-gray-200 text-gray-500'}`}>
-                                        {msg.sender === 'ai' ? <Leaf size={16} /> : <User size={16} />}
+                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-md ${msg.sender === 'ai' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-500'}`}>
+                                        {msg.sender === 'ai' ? <Bot size={16} /> : <User size={16} />}
                                     </div>
-                                    <div className={`max-w-[85%] px-5 py-4 rounded-[1.8rem] shadow-sm font-medium text-sm leading-relaxed ${
+                                    <div className={`max-w-[85%] px-5 py-4 rounded-[1.8rem] shadow-sm font-medium text-xs leading-relaxed ${
                                         msg.sender === 'ai' 
-                                        ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-white rounded-bl-none border-2 border-green-50 dark:border-green-900/20' 
-                                        : 'bg-[#2962FF] text-white rounded-br-none shadow-blue-500/20'
+                                        ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-white rounded-bl-none border dark:border-white/5' 
+                                        : 'bg-blue-600 text-white rounded-br-none shadow-blue-500/20'
                                     }`}>
                                         {msg.text}
                                     </div>
                                 </div>
                             ))}
                             {isLoading && (
-                                <div className="flex gap-3">
-                                    <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center"><Bot size={16} className="text-green-600 animate-pulse" /></div>
-                                    <div className="bg-white dark:bg-gray-900 px-5 py-4 rounded-[1.8rem] rounded-bl-none border dark:border-gray-800">
-                                        <div className="flex gap-1">
-                                            <div className="w-1.5 h-1.5 bg-green-300 rounded-full animate-bounce"></div>
-                                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+                                <div className="flex gap-3 animate-pulse">
+                                    <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center"><Bot size={16} className="text-blue-600" /></div>
+                                    <div className="bg-white dark:bg-gray-900 px-5 py-4 rounded-[1.8rem] rounded-bl-none border dark:border-white/5 shadow-sm">
+                                        <div className="flex gap-1.5 items-center h-4">
+                                            <div className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-bounce"></div>
+                                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
                                         </div>
                                     </div>
                                 </div>
@@ -210,31 +217,32 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
                             <div ref={messagesEndRef} />
                         </div>
 
-                        <div className="p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-800 shrink-0">
-                            {messages.length < 3 && (
+                        {/* Input Area */}
+                        <div className="p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t dark:border-white/5 shrink-0 pb-10">
+                            {messages.length < 5 && (
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
                                     {AI_SUGGESTIONS.map((s, i) => (
-                                        <button key={i} onClick={() => handleSendMessage(s)} className="px-4 py-2 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10px] font-black uppercase whitespace-nowrap border border-green-100 dark:border-green-900/40 hover:bg-green-100 transition-colors">
+                                        <button key={i} onClick={() => handleSendMessage(s)} className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 text-[9px] font-black uppercase whitespace-nowrap border border-blue-100 dark:border-blue-900/30 hover:bg-blue-100 transition-colors">
                                             {s}
                                         </button>
                                     ))}
                                 </div>
                             )}
                             <div className="flex gap-2 items-center">
-                                <button onClick={toggleListening} className={`p-4 rounded-2xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-green-600'}`}>
-                                    {isListening ? <MicOff size={22} /> : <Mic size={22} />}
+                                <button onClick={toggleListening} className={`p-4 rounded-2xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-gray-100 dark:bg-white/5 text-gray-500'}`}>
+                                    {isListening ? <MicOff size={20} /> : <Mic size={20} />}
                                 </button>
                                 <div className="flex-1 relative">
                                     <input 
                                         type="text" 
-                                        className="w-full py-4 pl-5 pr-14 bg-gray-50 dark:bg-gray-800 border-none outline-none rounded-[1.5rem] font-bold text-sm dark:text-white focus:ring-2 ring-green-500/20"
-                                        placeholder="Question sur le recyclage ou Kinshasa..."
+                                        className="w-full py-4 pl-5 pr-14 bg-gray-50 dark:bg-gray-800/80 border-none outline-none rounded-2xl font-bold text-xs dark:text-white focus:ring-2 ring-blue-500/20 shadow-inner"
+                                        placeholder="Posez votre question écolo..."
                                         value={inputValue}
                                         onChange={(e) => setInputValue(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                                     />
-                                    <button onClick={() => handleSendMessage()} className="absolute right-2 top-2 p-3 bg-[#00C853] text-white rounded-xl shadow-lg active:scale-90 transition-all">
-                                        <Send size={18} />
+                                    <button onClick={() => handleSendMessage()} className="absolute right-2 top-2 p-2.5 bg-blue-600 text-white rounded-xl shadow-lg active:scale-90 transition-all">
+                                        <Send size={16} />
                                     </button>
                                 </div>
                             </div>
