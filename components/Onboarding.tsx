@@ -208,7 +208,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                     <div className={`w-24 h-24 md:w-28 md:h-28 ${slide.bg.replace('50', '100')} dark:bg-gray-800 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-xl shadow-black/5`}>
                         <slide.icon className={`w-12 h-12 md:w-16 md:h-16 ${slide.color}`} />
                     </div>
-                    <h2 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter leading-tight">
+                    <h2 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter leading-tight uppercase">
                         {slide.title}
                     </h2>
                     <p className="text-base md:text-xl text-gray-500 dark:text-gray-400 font-medium mb-12 leading-relaxed px-2">
@@ -251,9 +251,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                         <CheckCircle2 className="w-12 h-12 md:w-16 md:h-16 animate-bounce" />
                     </div>
                     
-                    <h2 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter leading-none relative z-10">Demande Reçue !</h2>
+                    <h2 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter leading-none relative z-10 uppercase">Demande Reçue !</h2>
                     
-                    <div className="space-y-6 mb-12 relative z-10">
+                    <div className="space-y-6 mb-12 relative z-10 text-center">
                         <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-[2rem] border border-blue-100 dark:border-blue-900/30 flex items-start gap-4 text-left">
                             <div className="p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm text-blue-600"><Mail className="w-6 h-6" /></div>
                             <div>
@@ -281,12 +281,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-[#050505] flex flex-col items-center justify-center p-4 md:p-8">
-            <div className="w-full max-w-xl bg-white dark:bg-[#111827] rounded-[3rem] shadow-2xl p-8 md:p-12 space-y-8 animate-scale-up border border-gray-100 dark:border-gray-800 flex flex-col max-h-[95vh]">
+            <div className="w-full max-w-xl bg-white dark:bg-[#111827] rounded-[3rem] shadow-2xl p-8 md:p-12 space-y-8 animate-scale-up border border-gray-100 dark:border-gray-800 flex flex-col max-h-[95vh] overflow-y-auto no-scrollbar">
                 <div className="text-center shrink-0">
                     <div className="flex justify-center mb-6">
                         <img src={appLogo} alt="Logo" className="w-20 h-20 md:w-24 md:h-24 object-contain" />
                     </div>
-                    <h2 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter leading-none mb-2">
+                    <h2 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter leading-none mb-2 uppercase">
                         {showLogin ? 'Connexion' : 'Nous Rejoindre'}
                     </h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-black uppercase tracking-[0.2em]">
@@ -300,7 +300,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                     </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto no-scrollbar space-y-8 pr-1">
+                <div className="flex-1 space-y-8 pr-1">
                     {showLogin ? (
                         <div className="space-y-8">
                             <div className="space-y-4">
@@ -319,7 +319,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                                             <div className={`p-4 rounded-2xl mb-3 ${role.color} bg-white dark:bg-gray-700 shadow-sm transition-transform group-hover:scale-110`}>
                                                 <role.icon className="w-6 h-6 md:w-7 md:h-7" />
                                             </div>
-                                            <span className={`font-black text-sm md:text-base ${loginRole === role.type ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>{role.label}</span>
+                                            <span className={`font-black text-sm md:text-base uppercase tracking-tight ${loginRole === role.type ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>{role.label}</span>
                                             {loginRole === role.type && <div className="absolute top-2 right-2"><CheckCircle2 className="w-5 h-5 text-primary" /></div>}
                                         </button>
                                     ))}
@@ -368,8 +368,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                             {regStep === 3 && (
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="flex gap-4">
-                                        <button onClick={() => setFormData({...formData, type: UserType.CITIZEN})} className={`flex-1 p-4 rounded-2xl border-2 font-black text-xs md:text-sm transition-all ${formData.type === UserType.CITIZEN ? 'border-primary-light bg-green-50 text-primary-light' : 'border-transparent bg-gray-100 text-gray-500'}`}>Particulier</button>
-                                        <button onClick={() => setFormData({...formData, type: UserType.BUSINESS})} className={`flex-1 p-4 rounded-2xl border-2 font-black text-xs md:text-sm transition-all ${formData.type === UserType.BUSINESS ? 'border-secondary bg-blue-50 text-secondary' : 'border-transparent bg-gray-100 text-gray-500'}`}>Entreprise</button>
+                                        <button onClick={() => setFormData({...formData, type: UserType.CITIZEN})} className={`flex-1 p-4 rounded-2xl border-2 font-black text-xs md:text-sm transition-all uppercase ${formData.type === UserType.CITIZEN ? 'border-primary-light bg-green-50 text-primary-light' : 'border-transparent bg-gray-100 text-gray-500'}`}>Particulier</button>
+                                        <button onClick={() => setFormData({...formData, type: UserType.BUSINESS})} className={`flex-1 p-4 rounded-2xl border-2 font-black text-xs md:text-sm transition-all uppercase ${formData.type === UserType.BUSINESS ? 'border-secondary bg-blue-50 text-secondary' : 'border-transparent bg-gray-100 text-gray-500'}`}>Entreprise</button>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1.5">

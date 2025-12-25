@@ -201,8 +201,8 @@ function AdminDashboard({ onChangeView, onToast }: DashboardProps) {
                 </div>
 
                 <div className="bg-white dark:bg-[#111827] p-8 rounded-[2.5rem] md:rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center">
-                    <h3 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8 w-full">Efficacité Terrain</h3>
-                    <div className="flex-1 w-full h-[200px] md:h-[250px] relative">
+                    <h3 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8 w-full text-center">Efficacité Terrain</h3>
+                    <div className="flex-1 w-full h-[200px] md:h-[250px] relative flex justify-center">
                         <ResponsiveContainer width="100%" height="100%">
                             <RechartsPieChart>
                                 <Pie 
@@ -259,7 +259,7 @@ function AdminDashboard({ onChangeView, onToast }: DashboardProps) {
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#111827] p-8 rounded-[2.5rem] md:rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col group overflow-hidden">
+                <div className="bg-white dark:bg-[#111827] p-8 rounded-[2.5rem] md:rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col group overflow-hidden min-h-[400px]">
                     <div className="flex justify-between items-center mb-10">
                         <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Zones Live</h3>
                         <PieIcon className="w-7 h-7 text-blue-500" />
@@ -281,7 +281,7 @@ function AdminDashboard({ onChangeView, onToast }: DashboardProps) {
             </div>
 
             {/* KYC Section */}
-            <div className="bg-white dark:bg-[#111827] p-8 rounded-[2.5rem] md:rounded-[3rem] border-2 border-orange-100 dark:border-orange-900/40 shadow-2xl flex flex-col relative overflow-hidden group mb-10">
+            <div className="bg-white dark:bg-[#111827] p-8 rounded-[2.5rem] md:rounded-[3rem] border-2 border-orange-100 dark:border-orange-900/40 shadow-2xl flex flex-col relative overflow-hidden group mb-10 min-h-[400px]">
                 <div className="flex justify-between items-center mb-8 relative z-10">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 md:w-14 md:h-14 bg-orange-100 text-orange-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg animate-bounce"><UserCheck className="w-6 h-6 md:w-7 md:h-7" /></div>
@@ -402,8 +402,8 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
         <div className="p-4 md:p-8 space-y-8 animate-fade-in pb-32 md:pb-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                 <div>
-                    <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Mbote, {user.firstName}!</h1>
-                    <div className="text-sm md:text-base font-bold text-gray-500 mt-4 flex items-center gap-2">
+                    <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none text-center sm:text-left">Mbote, {user.firstName}!</h1>
+                    <div className="text-sm md:text-base font-bold text-gray-500 mt-4 flex items-center justify-center sm:justify-start gap-2">
                         <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center"><Leaf className="w-4 h-4" /></div> Kinshasa devient plus propre grâce à vous.
                     </div>
                 </div>
@@ -422,11 +422,11 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                     </div>
                 </button>
                 <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => onChangeView(AppView.ACADEMY)} className="bg-white dark:bg-[#111827] p-6 rounded-3xl md:rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all">
+                    <button onClick={() => onChangeView(AppView.ACADEMY)} className="bg-white dark:bg-[#111827] p-6 rounded-3xl md:rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all min-h-[140px]">
                         <div className="w-14 h-14 md:w-16 md:h-16 bg-green-50 dark:bg-green-900/20 rounded-[1.25rem] md:rounded-[1.5rem] flex items-center justify-center text-[#00C853] transition-transform group-hover:scale-110"><GraduationCap className="w-8 h-8 md:w-9 md:h-9" /></div>
                         <span className="text-xs font-black text-gray-800 dark:text-white uppercase tracking-widest text-center leading-tight">Eco Academy</span>
                     </button>
-                    <button onClick={() => onChangeView(AppView.MARKETPLACE)} className="bg-white dark:bg-[#111827] p-6 rounded-3xl md:rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all">
+                    <button onClick={() => onChangeView(AppView.MARKETPLACE)} className="bg-white dark:bg-[#111827] p-6 rounded-3xl md:rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-4 group hover:shadow-lg transition-all min-h-[140px]">
                         <div className="w-14 h-14 md:w-16 md:h-16 bg-purple-50 dark:bg-purple-900/20 rounded-[1.25rem] md:rounded-[1.5rem] flex items-center justify-center text-purple-600 transition-transform group-hover:scale-110"><ShoppingBag className="w-8 h-8 md:w-9 md:h-9" /></div>
                         <span className="text-xs font-black text-gray-800 dark:text-white uppercase tracking-widest text-center leading-tight">Boutique</span>
                     </button>

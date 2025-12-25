@@ -119,11 +119,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
         <div className="w-full h-[100dvh] flex bg-[#F5F5F5] dark:bg-[#050505] transition-colors duration-500 overflow-hidden relative font-sans">
             {/* Sidebar (Desktop) */}
             <aside className="hidden md:flex flex-col w-[18rem] h-[calc(100vh-3rem)] m-6 rounded-[2.5rem] bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl border border-gray-100 dark:border-white/5 shadow-2xl transition-all duration-300 relative z-50 shrink-0">
-                <div className="p-8 flex flex-col gap-1">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg border border-gray-100 p-1.5 shrink-0"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
-                        <div className="flex flex-col"><span className="font-black text-2xl text-primary tracking-tighter leading-none">KIN ECO MAP</span><span className="text-xs font-bold text-secondary uppercase tracking-widest mt-0.5">BISO PETO GROUP</span></div>
-                    </div>
+                <div className="p-8 flex flex-col gap-1 text-center items-center">
+                    <div className="w-14 h-14 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg border border-gray-100 p-1.5 shrink-0 mb-2"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
+                    <div className="flex flex-col"><span className="font-black text-2xl text-primary tracking-tighter leading-none">KIN ECO MAP</span><span className="text-xs font-bold text-secondary uppercase tracking-widest mt-0.5">BISO PETO GROUP</span></div>
                 </div>
                 <nav className="flex-1 px-4 space-y-6 mt-2 overflow-y-auto no-scrollbar">
                     {navSections.map((section, idx) => (
@@ -155,11 +153,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                     
                     <div className="flex items-center gap-3 ml-auto">
                         <button onClick={onRefresh} className={`p-3 rounded-2xl text-gray-500 dark:text-gray-300 bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-white shadow-sm ${isRefreshing ? 'animate-spin text-primary-light' : ''}`}><RotateCw className="w-5 h-5" /></button>
-                        <button onClick={() => onChangeView(AppView.PROFILE)} className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center text-white"><UserIcon className="w-5 h-5" /></button>
+                        <button onClick={() => onChangeView(AppView.PROFILE)} className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${currentView === AppView.PROFILE ? 'bg-primary' : 'bg-primary-light'}`}><UserIcon className="w-5 h-5" /></button>
                     </div>
                 </header>
 
-                {/* ZONE DE CONTENU : padding-bottom massif pour le menu flottant mobile */}
                 <main className="flex-1 overflow-y-auto relative pb-40 md:pb-8 h-full w-full no-scrollbar">
                     {children}
                 </main>
