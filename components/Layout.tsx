@@ -31,7 +31,6 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeView, onLogout, onRefresh, isRefreshing, user, unreadNotifications = 0, appLogo = 'logobisopeto.png', toast, onCloseToast }) => {
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [syncQueueSize, setSyncQueueSize] = useState(OfflineManager.getQueueSize());
     const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -48,7 +47,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
         };
     }, []);
 
-    // Liste des vues qui gèrent leur propre entête (donc on masque l'entête global)
     const viewsWithInternalHeader = [
         AppView.REPORTING, 
         AppView.MAP, 
@@ -72,7 +70,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
     const getMobileNavItems = (): NavItem[] => {
         if (user?.type === UserType.ADMIN) {
             return [
-                { view: AppView.DASHBOARD, icon: Home, label: 'Bord' },
+                { view: AppView.DASHBOARD, icon: Home, label: 'Dashboard' },
                 { view: AppView.ADMIN_REPORTS, icon: AlertTriangle, label: 'SIG' },
                 { view: AppView.NOTIFICATIONS, icon: Bell, label: 'Alertes' },
                 { view: AppView.PROFILE, icon: UserIcon, label: 'Admin' },
@@ -99,7 +97,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
 
     return (
         <div className="w-full h-[100dvh] flex bg-[#F5F5F5] dark:bg-[#050505] transition-colors duration-500 overflow-hidden relative font-sans">
-            {/* Sidebar (Desktop) - Toujours visible sur grand écran */}
+            {/* Sidebar (Desktop) */}
             <aside className="hidden md:flex flex-col w-[18rem] h-[calc(100vh-3rem)] m-6 rounded-[2.5rem] bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl border border-gray-100 dark:border-white/5 shadow-2xl transition-all duration-300 relative z-50 shrink-0">
                 <div className="p-8 flex flex-col gap-1 text-center items-center">
                     <div className="w-14 h-14 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg border border-gray-100 p-1.5 shrink-0 mb-2"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
@@ -120,47 +118,45 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
 
             {/* Main Content View */}
             <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative z-10">
-                {/* Entête Global Conditionnel */}
+                {/* Entête Global Slim (Mobile: h-12, Desktop: h-18) */}
                 {showGlobalHeader && (
-                    <header className="min-h-[4.5rem] px-6 md:px-8 flex items-center justify-between sticky top-0 z-40 shrink-0 bg-white/50 backdrop-blur-sm dark:bg-black/50 animate-fade-in">
-                        <div className="flex items-center gap-3 md:hidden">
-                            <div className="w-9 h-9 bg-white dark:bg-black rounded-xl flex items-center justify-center shadow-lg border border-gray-100 p-1"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
-                            <span className="font-black text-lg tracking-tighter text-primary uppercase">BISO PETO</span>
+                    <header className="min-h-[3rem] md:min-h-[4.5rem] px-6 md:px-8 flex items-center justify-between sticky top-0 z-40 shrink-0 bg-white/70 backdrop-blur-xl dark:bg-black/70 border-b dark:border-white/5 animate-fade-in">
+                        <div className="flex items-center gap-2.5 md:hidden">
+                            <div className="w-7 h-7 bg-white dark:bg-black rounded-lg flex items-center justify-center shadow-md border border-gray-100 p-1"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
+                            <span className="font-black text-sm tracking-tighter text-primary uppercase">BISO PETO</span>
                         </div>
-                        <div className="hidden md:block"><h1 className="font-black text-xl text-gray-800 dark:text-white tracking-tight uppercase">Tableau de bord</h1></div>
+                        <div className="hidden md:block"><h1 className="font-black text-lg text-gray-800 dark:text-white tracking-tight uppercase">Dashboard</h1></div>
                         
-                        <div className="flex items-center gap-3">
-                            <button onClick={onRefresh} className={`p-2.5 rounded-xl text-gray-500 bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 ${isRefreshing ? 'animate-spin' : ''}`}><RotateCw className="w-5 h-5" /></button>
-                            <button onClick={() => onChangeView(AppView.NOTIFICATIONS)} className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 relative">
-                                <Bell className="w-5 h-5" />
-                                {unreadNotifications > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-black">{unreadNotifications}</span>}
+                        <div className="flex items-center gap-2">
+                            <button onClick={onRefresh} className={`p-2 rounded-lg text-gray-500 bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 ${isRefreshing ? 'animate-spin' : ''}`}><RotateCw className="w-4 h-4" /></button>
+                            <button onClick={() => onChangeView(AppView.NOTIFICATIONS)} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 relative">
+                                <Bell className="w-4 h-4" />
+                                {unreadNotifications > 0 && <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[7px] font-black rounded-full flex items-center justify-center border border-white dark:border-black">{unreadNotifications}</span>}
                             </button>
                         </div>
                     </header>
                 )}
 
-                {/* Zone de contenu dynamique */}
-                <main className={`flex-1 overflow-y-auto relative h-full w-full no-scrollbar transition-all duration-500 ${showGlobalHeader ? 'pb-40' : 'pb-24'}`}>
+                <main className={`flex-1 overflow-y-auto relative h-full w-full no-scrollbar transition-all duration-500 ${showGlobalHeader ? 'pb-32' : 'pb-24'}`}>
                     {children}
                 </main>
                 
-                {/* Tab Bar (Mobile) - Adapté au pouce */}
-                <nav className="md:hidden fixed bottom-6 inset-x-6 h-16 bg-white/90 dark:bg-[#111827]/90 backdrop-blur-xl border border-gray-100 dark:border-white/10 rounded-full shadow-2xl z-[100] flex items-center justify-evenly px-2">
+                {/* Tab Bar (Mobile) - Icons Only */}
+                <nav className="md:hidden fixed bottom-6 inset-x-6 h-16 bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl border border-gray-100 dark:border-white/10 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.2)] z-[100] flex items-center justify-evenly px-2">
                     {mobileItems.map((item) => {
                         const isActive = currentView === item.view;
                         return (
-                            <button key={item.view} onClick={() => onChangeView(item.view)} className="flex flex-col items-center justify-center h-full relative flex-1">
-                                <div className={`relative z-10 p-3 rounded-full transition-all duration-300 ${isActive ? 'bg-primary text-white -translate-y-4 shadow-xl scale-110' : 'text-gray-400'}`}>
-                                    <item.icon className="w-5 h-5" />
+                            <button key={item.view} onClick={() => onChangeView(item.view)} className="flex items-center justify-center h-full relative flex-1">
+                                <div className={`relative z-10 p-3.5 rounded-full transition-all duration-500 ${isActive ? 'bg-primary text-white -translate-y-5 shadow-2xl scale-110' : 'text-gray-400 hover:text-primary/50'}`}>
+                                    <item.icon className="w-6 h-6" />
                                 </div>
-                                <span className={`text-[8px] font-black uppercase tracking-widest mt-1 transition-opacity duration-300 ${isActive ? 'opacity-0' : 'opacity-100'}`}>{item.label}</span>
                             </button>
                         );
                     })}
                 </nav>
             </div>
 
-            {/* Toasts / Notifications éphémères */}
+            {/* Toasts */}
             {toast && toast.visible && (
                 <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[92%] max-w-sm">
                     <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border backdrop-blur-xl ${toast.type === 'success' ? 'bg-primary/90 text-white' : 'bg-red-500/90 text-white'} `}>
