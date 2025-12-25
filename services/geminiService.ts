@@ -21,22 +21,29 @@ VOTRE PERSONNALITÉ :
 
 let chatSession: Chat | null = null;
 
-const getAiClient = () => {
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
-};
-
+/**
+ * Initialise ou récupère la session de chat existante.
+ * On crée une nouvelle instance de GoogleGenAI à chaque fois pour s'assurer 
+ * d'utiliser la clé API la plus récente, mais on garde la session de chat pour l'historique.
+ */
 export const getOrInitChat = (): Chat => {
-    if (chatSession) return chatSession;
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        throw new Error("Clé API manquante. Veuillez configurer votre environnement.");
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     
-    const ai = getAiClient();
-    chatSession = ai.chats.create({
-        model: 'gemini-3-flash-preview', 
-        config: { 
-            systemInstruction: SYSTEM_INSTRUCTION,
-            temperature: 0.7,
-            topP: 0.95,
-        },
-    });
+    if (!chatSession) {
+        chatSession = ai.chats.create({
+            model: 'gemini-3-flash-preview', 
+            config: { 
+                systemInstruction: SYSTEM_INSTRUCTION,
+                temperature: 0.7,
+                topP: 0.95,
+            },
+        });
+    }
     return chatSession;
 };
 
@@ -52,9 +59,13 @@ export async function* sendMessageStream(message: string) {
             const part = chunk as GenerateContentResponse;
             yield part.text || "";
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Gemini Stream Error:", error);
-        yield "Désolé, j'ai eu un petit souci technique. Kinshasa ezo zela biso, réessaie un instant !";
+        if (error.message?.includes("entity was not found")) {
+             yield "Pardon, ce modèle d'IA n'est pas encore activé pour votre clé API. Contactez l'administrateur Biso Peto.";
+        } else {
+             yield "Désolé, j'ai eu un petit souci technique passager. Kinshasa ezo zela biso, réessaie un instant !";
+        }
     }
 }
 
@@ -70,7 +81,7 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
     immediateAdvice: string;
 }> => {
     try {
-        const ai = getAiClient();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
@@ -113,7 +124,7 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
     description: string;
 }> => {
     try {
-        const ai = getAiClient();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
@@ -153,7 +164,7 @@ export const compareBeforeAfter = async (beforeB64: string, afterB64: string): P
     comment: string;
 }> => {
     try {
-        const ai = getAiClient();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const cleanBefore = beforeB64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
         const cleanAfter = afterB64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 

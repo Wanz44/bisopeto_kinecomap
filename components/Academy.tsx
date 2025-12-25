@@ -39,11 +39,6 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Voice State
-    const [isListening, setIsListening] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
-    const recognitionRef = useRef<any>(null);
-
     useEffect(() => {
         if (messages.length === 0) {
             setMessages([
@@ -74,15 +69,22 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
         setMessages(prev => [...prev, { id: aiMsgId, sender: 'ai', text: "", timestamp: new Date() }]);
 
         let fullAiText = "";
+        let hasStartedStreaming = false;
+
         try {
             const stream = sendMessageStream(textToSend);
             for await (const chunk of stream) {
+                if (!hasStartedStreaming) hasStartedStreaming = true;
                 fullAiText += chunk;
                 setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: fullAiText } : m));
             }
+
+            if (!hasStartedStreaming && !fullAiText) {
+                setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: "Désolé, je n'ai pas pu générer de réponse. Vérifie ta connexion Internet." } : m));
+            }
         } catch (e) {
-            console.error(e);
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: "Désolé, ma connexion avec la tour de contrôle a été coupée. Peux-tu répéter ?" } : m));
+            console.error("Academy Chat Interface Error:", e);
+            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: "Oups ! Une erreur réseau m'empêche de répondre. Réessaie dans quelques secondes." } : m));
         } finally {
             setIsLoading(false);
         }
@@ -176,7 +178,7 @@ export const Academy: React.FC<AcademyProps> = ({ onBack }) => {
                                         ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-white rounded-bl-none border dark:border-white/5' 
                                         : 'bg-blue-600 text-white rounded-br-none'
                                     }`}>
-                                        {msg.text || (isLoading && msg.sender === 'ai' ? "..." : "")}
+                                        {msg.text || (isLoading && msg.sender === 'ai' ? "Génération en cours..." : "")}
                                     </div>
                                 </div>
                             ))}
