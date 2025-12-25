@@ -1,24 +1,22 @@
 
-import { GoogleGenAI, Chat, Type } from "@google/genai";
+import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
-Vous êtes "Biso Peto AI", l'Expert Senior en Environnement et Économie Circulaire pour la ville de Kinshasa. Vous travaillez pour la plateforme Biso Peto.
+Vous êtes "Biso Peto AI", l'Expert Senior en Environnement et Économie Circulaire pour la ville de Kinshasa. 
+
+VOTRE MISSION : Éduquer les Kinois sur le tri, le recyclage et l'assainissement urbain.
 
 VOTRE EXPERTISE :
-1. ASSAINISSEMENT URBAIN : Connaissance approfondie du Plan Directeur d'Assainissement de Kinshasa. Vous savez que la ville produit 10 000 tonnes de déchets/jour.
-2. TRI SÉLECTIF LOCAL : Vous guidez sur le recyclage du PET (bouteilles d'eau/jus), PEHD (bidons), Métaux (canettes, fers à béton) et Papier.
-3. VALORISATION : Vous expliquez comment transformer les déchets en "Eco-Points" (crédit mobile, électricité SNEL, bons d'achat).
-4. IMPACT LOCAL : Vous expliquez le lien entre les bouteilles jetées et les inondations à Kalamu ou Limete (caniveaux bouchés).
-5. GÉOGRAPHIE : Vous connaissez les 24 communes (Gombe, Masina, Kimbanseke, Ngaliema, etc.) et leurs défis spécifiques (marchés, zones industrielles).
+1. ASSAINISSEMENT URBAIN : Vous savez que Kinshasa produit 10 000 tonnes de déchets/jour.
+2. TRI SÉLECTIF LOCAL : Vous guidez sur le PET (bouteilles), PEHD (bidons), Métaux et Papier.
+3. VALORISATION : Expliquez comment gagner des Eco-Points (crédit mobile, SNEL).
+4. IMPACT LOCAL : Expliquez le lien entre bouteilles jetées et inondations (ex: à Kalamu ou Limete).
+5. GÉOGRAPHIE : Vous connaissez les 24 communes et leurs défis.
 
-VOTRE PERSONNALITÉ & STYLE :
-- TONE : Professionnel, expert, mais "Frère/Sœur de Kinshasa". Très encourageant.
-- LANGUE : Français impeccable mélangé subtilement avec du Lingala urbain. Utilisez des expressions comme "Mbote na yo", "Tozala peto", "Kinshasa ezo bonga", "Tika buzoba na ebale".
-- CONVERSATIONNEL : Ne faites pas de longs monologues inutiles. Posez des questions pour engager l'utilisateur. Soyez pragmatique.
-- SÉCURITÉ : Ne donnez jamais de conseils dangereux. Si un déchet est toxique (batteries, produits chimiques), conseillez toujours de contacter un agent Biso Peto pro.
-
-EXEMPLE DE RÉPONSE :
-"Mbote! Le plastique que tu as trouvé à Bandal est précieux. C'est du PET. Si tu le ramènes au point de collecte, tu gagnes 50 Eco-Points. C'est mieux que de le voir boucher nos caniveaux et causer des inondations, n'est-ce pas ?"
+VOTRE PERSONNALITÉ :
+- TONE : Professionnel, expert, mais chaleureux ("Frère/Sœur de Kinshasa"). 
+- LANGUE : Français impeccable mélangé avec du Lingala urbain (ex: "Mbote", "Tozala peto", "Kinshasa ezo bonga").
+- STYLE : Réponses structurées, courtes et encourageantes. Toujours poser une question à la fin pour engager.
 `;
 
 let chatSession: Chat | null = null;
@@ -27,37 +25,38 @@ const getAiClient = () => {
     return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
-export const initializeChat = (): Chat | null => {
+export const getOrInitChat = (): Chat => {
     if (chatSession) return chatSession;
-    try {
-        const ai = getAiClient();
-        chatSession = ai.chats.create({
-            model: 'gemini-3-pro-preview', 
-            config: { 
-                systemInstruction: SYSTEM_INSTRUCTION,
-                temperature: 0.8,
-                topP: 0.9,
-                topK: 40,
-            },
-        });
-    } catch (error) {
-        console.error("Failed to init Gemini Chat:", error);
-        return null;
-    }
+    
+    const ai = getAiClient();
+    chatSession = ai.chats.create({
+        model: 'gemini-3-flash-preview', 
+        config: { 
+            systemInstruction: SYSTEM_INSTRUCTION,
+            temperature: 0.7,
+            topP: 0.95,
+        },
+    });
     return chatSession;
 };
 
-export const sendMessageToGemini = async (message: string): Promise<string> => {
+/**
+ * Envoie un message et retourne un itérateur pour le streaming
+ */
+export async function* sendMessageStream(message: string) {
     try {
-        const chat = initializeChat();
-        if (!chat) return "Pardon, j'ai un petit souci de connexion. Réessaie dans un instant !";
-        const response = await chat.sendMessage({ message });
-        return response.text || "Désolé, je n'ai pas pu formuler de réponse. On réessaie ?";
+        const chat = getOrInitChat();
+        const streamResponse = await chat.sendMessageStream({ message });
+        
+        for await (const chunk of streamResponse) {
+            const part = chunk as GenerateContentResponse;
+            yield part.text || "";
+        }
     } catch (error) {
-        console.error("Gemini Chat Error:", error);
-        return "Erreur technique. Vérifie ta connexion Internet, Kinshasa ezo zela biso !";
+        console.error("Gemini Stream Error:", error);
+        yield "Désolé, j'ai eu un petit souci technique. Kinshasa ezo zela biso, réessaie un instant !";
     }
-};
+}
 
 /**
  * Analyse un signalement de déchets pour le SIG
@@ -74,11 +73,11 @@ export const analyzeTrashReport = async (base64Image: string): Promise<{
         const ai = getAiClient();
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-3-flash-preview',
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-                    { text: "Analysez cette photo de déchets à Kinshasa pour le SIG. Déterminez type, urgence (low/medium/high) et impact environnemental. Répondez en français de Kinshasa." }
+                    { text: "Analysez cette photo de déchets à Kinshasa pour le SIG. Déterminez type, urgence (low/medium/high) et impact environnemental. Répondez en JSON." }
                 ]
             },
             config: {
@@ -117,11 +116,11 @@ export const analyzeWasteItem = async (base64Image: string): Promise<{
         const ai = getAiClient();
         const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-3-flash-preview',
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-                    { text: "Identifiez cet objet pour le marché circulaire de Kinshasa. Estimez le poids en kg et un prix juste en Francs Congolais (FC)." }
+                    { text: "Identifiez cet objet pour le marché circulaire de Kinshasa. Estimez le poids en kg et un prix juste en FC. Répondez en JSON." }
                 ]
             },
             config: {
@@ -159,12 +158,12 @@ export const compareBeforeAfter = async (beforeB64: string, afterB64: string): P
         const cleanAfter = afterB64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-3-flash-preview',
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBefore } },
                     { inlineData: { mimeType: 'image/jpeg', data: cleanAfter } },
-                    { text: "IMAGE 1 : Tas initial. IMAGE 2 : Après passage du collecteur. Est-ce que l'endroit est propre maintenant ? Répondez en JSON avec isCleaned, confidence (0-1) et un court commentaire." }
+                    { text: "IMAGE 1 : Tas initial. IMAGE 2 : Après passage du collecteur. Est-ce que l'endroit est propre maintenant ? Répondez en JSON." }
                 ]
             },
             config: {
