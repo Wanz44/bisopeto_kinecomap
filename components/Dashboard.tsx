@@ -5,8 +5,7 @@ import {
     Activity, Truck, MapPin, Clock, ShieldCheck, 
     RefreshCw, Zap, History, Loader2, Sparkles, ArrowUpRight, 
     DollarSign, Database, Wifi, CreditCard, ShoppingBag, Bell, Lock, CheckCircle2,
-    // Add missing Camera icon import
-    Camera
+    Camera, UserPlus
 } from 'lucide-react';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -29,7 +28,6 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
     const [allReports, setAllReports] = useState<WasteReport[]>([]);
     const [allPayments, setAllPayments] = useState<Payment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
     const hasPermission = (p: UserPermission) => user.permissions?.includes(p) || user.type === UserType.ADMIN;
 
@@ -37,10 +35,10 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         initDashboard();
 
-        // Realtime sync pour les compteurs
         const channel = supabase?.channel('dashboard_counters')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, () => refreshData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => refreshData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => refreshData())
             .subscribe();
 
         return () => {
@@ -72,17 +70,18 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
         }
     };
 
-    // Calculs agrégés depuis la BDD Cloud
     const stats = useMemo(() => {
         const revenue = allPayments.reduce((acc, p) => acc + (p.amountFC || 0), 0);
         const tonnage = allUsers.reduce((acc, u) => acc + (u.totalTonnage || 0), 0);
         const activeAlerts = allReports.filter(r => r.status === 'pending' || r.status === 'assigned').length;
+        const pendingUsers = allUsers.filter(u => u.status === 'pending').length;
         
         return {
             revenue: revenue,
             tonnage: tonnage,
             reports: activeAlerts,
             members: allUsers.length,
+            pendingUsers: pendingUsers,
             successRate: allReports.length > 0 ? Math.round((allReports.filter(r => r.status === 'resolved').length / allReports.length) * 100) : 0
         };
     }, [allUsers, allReports, allPayments]);
@@ -133,17 +132,22 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
 
             {/* LIVE KPI GRID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Fix: Added raw property to keep numeric value for comparison, avoiding the '>' operator error on string | number union */}
                 {[
-                    { label: 'Signalements Actifs', val: stats.reports, icon: AlertTriangle, color: 'text-orange-600', perm: 'manage_reports' },
-                    { label: 'Réseau Membres', val: stats.members, icon: Users, color: 'text-blue-600', perm: 'manage_users' },
-                    { label: 'Recette Totale (FC)', val: stats.revenue.toLocaleString(), icon: DollarSign, color: 'text-green-600', perm: 'view_finance' },
-                    { label: 'Tonnage Récupéré', val: `${stats.tonnage}kg`, icon: Trash2, color: 'text-purple-600', perm: 'manage_recovery' }
+                    { label: 'Inscriptions à Valider', raw: stats.pendingUsers, val: stats.pendingUsers, icon: UserPlus, color: 'text-red-600', perm: 'manage_users', view: AppView.ADMIN_USERS },
+                    { label: 'Signalements Actifs', raw: stats.reports, val: stats.reports, icon: AlertTriangle, color: 'text-orange-600', perm: 'manage_reports', view: AppView.ADMIN_REPORTS },
+                    { label: 'Recette Totale (FC)', raw: stats.revenue, val: stats.revenue.toLocaleString(), icon: DollarSign, color: 'text-green-600', perm: 'view_finance', view: AppView.ADMIN_SUBSCRIPTIONS },
+                    { label: 'Tonnage Récupéré', raw: stats.tonnage, val: `${stats.tonnage}kg`, icon: Trash2, color: 'text-purple-600', perm: 'manage_recovery', view: AppView.ADMIN_RECOVERY }
                 ].map((kpi, i) => hasPermission(kpi.perm as UserPermission) && (
-                    <div key={i} className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] border dark:border-gray-800 shadow-sm relative overflow-hidden group">
+                    <div key={i} onClick={() => kpi.view && onChangeView(kpi.view)} className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] border dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-all">
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform"><kpi.icon size={80}/></div>
                         <div className={`w-12 h-12 bg-gray-50 dark:bg-gray-800 ${kpi.color} rounded-2xl flex items-center justify-center mb-4 shadow-inner`}><kpi.icon size={24}/></div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{kpi.label}</p>
                         <h3 className="text-3xl font-black text-gray-900 dark:text-white leading-none mt-1">{kpi.val}</h3>
+                        {/* Fix: Compare raw numeric value instead of kpi.val which can be a string */}
+                        {kpi.raw > 0 && kpi.icon === UserPlus && (
+                            <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+                        )}
                     </div>
                 ))}
             </div>

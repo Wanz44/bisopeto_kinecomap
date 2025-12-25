@@ -78,7 +78,6 @@ function App() {
         try {
             const freshUser = await UserAPI.getById(user.id);
             if (freshUser) {
-                // Si l'utilisateur vient d'être activé ou a changé de statut
                 if (freshUser.status !== user.status) {
                     if (freshUser.status === 'active') {
                         showToast("Activation confirmée ! Bienvenue dans le réseau.", "success");
@@ -87,7 +86,6 @@ function App() {
                     setUser(freshUser);
                     localStorage.setItem('kinecomap_user', JSON.stringify(freshUser));
                 } else {
-                    // Mise à jour classique des points/tonnage sans changer l'historique
                     setUser(freshUser);
                     localStorage.setItem('kinecomap_user', JSON.stringify(freshUser));
                 }
@@ -97,11 +95,11 @@ function App() {
         }
     }, [user?.id, user?.status, showToast]);
 
-    // REAL-TIME LISTENER POUR L'ACTIVATION DU COMPTE
+    // REAL-TIME LISTENER POUR L'ACTIVATION DU COMPTE ET LES NOTIFICATIONS
     useEffect(() => {
         if (user?.id && isSupabaseConfigured() && supabase) {
-            const channelId = `user_activation_${user.id}`;
-            const channel = supabase.channel(channelId)
+            // 1. Écouteur activation utilisateur
+            const activationChannel = supabase.channel(`user_activation_${user.id}`)
                 .on('postgres_changes', { 
                     event: 'UPDATE', 
                     schema: 'public', 
@@ -109,7 +107,6 @@ function App() {
                     filter: `id=eq.${user.id}`
                 }, (payload) => {
                     const mapped = mapUser(payload.new);
-                    // On force le rafraîchissement si le statut change vers 'active'
                     if (mapped.status === 'active' && user.status === 'pending') {
                         showToast("Compte débloqué ! Mbote !", "success");
                         setUser(mapped);
@@ -122,9 +119,35 @@ function App() {
                 })
                 .subscribe();
 
-            return () => { supabase.removeChannel(channel); };
+            // 2. Écouteur Notifications temps réel (Inscriptions, Alertes SIG)
+            const notifChannel = supabase.channel('realtime_notifications')
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'notifications'
+                }, (payload) => {
+                    const newNotif = payload.new as NotificationItem;
+                    const isAdmin = user.type === UserType.ADMIN;
+                    
+                    // Vérifier si la notification est destinée à cet utilisateur ou au rôle ADMIN
+                    const isTargeted = newNotif.targetUserId === user.id || 
+                                     newNotif.targetUserId === 'ALL' || 
+                                     (isAdmin && newNotif.targetUserId === 'ADMIN');
+
+                    if (isTargeted) {
+                        setNotifications(prev => [newNotif, ...prev]);
+                        showToast(`🔔 ${newNotif.title}`, newNotif.type);
+                        NotificationService.sendPush(newNotif.title, newNotif.message, appLogo);
+                    }
+                })
+                .subscribe();
+
+            return () => { 
+                supabase.removeChannel(activationChannel);
+                supabase.removeChannel(notifChannel);
+            };
         }
-    }, [user?.id, user?.status, showToast]);
+    }, [user?.id, user?.status, user?.type, showToast, appLogo]);
 
     const handleSync = useCallback(async () => {
         if (navigator.onLine && OfflineManager.getQueueSize() > 0) {
@@ -187,9 +210,8 @@ function App() {
     };
 
     const handleNotify = async (targetId: string, title: string, message: string, type: any) => {
-        const n = await NotificationsAPI.add({ targetUserId: targetId, title, message, type });
-        setNotifications(prev => [n, ...prev]);
-        NotificationService.sendPush(title, message, appLogo);
+        await NotificationsAPI.add({ targetUserId: targetId, title, message, type });
+        // Le listener temps réel s'occupera d'ajouter à la liste locale si besoin
     };
 
     const handleRefresh = async () => {
@@ -205,7 +227,6 @@ function App() {
 
     const isPending = user?.type !== UserType.ADMIN && user?.status === 'pending';
     
-    // ÉCRAN D'ATTENTE (S'affiche si le statut est 'pending')
     if (user && isPending) {
         return (
             <div className="h-full w-full bg-[#F5F7FA] dark:bg-[#050505] flex flex-col overflow-hidden animate-fade-in">
@@ -217,7 +238,6 @@ function App() {
         );
     }
 
-    // INTERFACE PRINCIPALE (S'affiche si 'active' ou ADMIN)
     const renderContent = () => {
         if (!user) {
             if (view === AppView.LANDING) return <LandingPage onStart={() => navigateTo(AppView.ONBOARDING)} onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} appLogo={appLogo} impactData={impactData} />;
