@@ -9,10 +9,10 @@ import {
     History, UserCog, Trash2, ArrowRight, CheckCircle2, AlertCircle, Ban,
     Maximize2, ChevronRight, MessageCircle, Check, Calendar, User, UserPlus,
     RotateCcw, Target, FileSpreadsheet, Eraser, CalendarDays, SlidersHorizontal,
-    UserCircle
+    UserCircle, Activity, BarChart3, Image as ImageIcon
 } from 'lucide-react';
 import { WasteReport, User as AppUser, UserType } from '../types';
-import { ReportsAPI, UserAPI } from '../services/api';
+import { ReportsAPI, UserAPI, AuditAPI } from '../services/api';
 
 const KINSHASA_COMMUNES = [
     "Barumbu", "Bumbu", "Bandalungwa", "Gombe", "Kalamu", "Kasa-Vubu", 
@@ -24,10 +24,10 @@ const KINSHASA_COMMUNES = [
 const WASTE_TYPES = ["Plastique", "Métal", "Électronique", "Organique", "Papier/Carton", "Verre", "Médical", "Gravats", "Divers"];
 
 const STATUSES = [
-    { key: 'pending', label: 'En attente', color: 'bg-yellow-500' },
-    { key: 'assigned', label: 'Assigné', color: 'bg-blue-500' },
-    { key: 'resolved', label: 'Résolu', color: 'bg-green-500' },
-    { key: 'rejected', label: 'Rejeté', color: 'bg-gray-500' }
+    { key: 'pending', label: 'En attente', color: 'bg-yellow-500', icon: Clock },
+    { key: 'assigned', label: 'Assigné', color: 'bg-blue-500', icon: Truck },
+    { key: 'resolved', label: 'Résolu', color: 'bg-green-500', icon: CheckCircle2 },
+    { key: 'rejected', label: 'Rejeté', color: 'bg-gray-500', icon: Ban }
 ];
 
 const reportIcon = (status: string, urgency: string, isSelected: boolean) => {
@@ -51,6 +51,7 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
     const [showFilters, setShowFilters] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [isAssigning, setIsAssigning] = useState(false);
+    const [viewProof, setViewProof] = useState(false);
 
     const [filters, setFilters] = useState({
         commune: 'all',
@@ -124,6 +125,21 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
         }
     };
 
+    const handleUnassign = async () => {
+        if (!selectedReport) return;
+        if (!confirm("Retirer cette mission du collecteur actuel ?")) return;
+        
+        setIsAssigning(true);
+        try {
+            await ReportsAPI.update({ id: selectedReport.id, status: 'pending', assignedTo: undefined });
+            setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, status: 'pending', assignedTo: undefined } : r));
+            setSelectedReport(null);
+            onToast?.("Mission remise en attente", "info");
+        } finally {
+            setIsAssigning(false);
+        }
+    };
+
     const handleApplyFilters = () => {
         setPage(0); setHasMore(true);
         loadData(0, true);
@@ -136,11 +152,17 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
         setTimeout(() => loadData(0, true), 10);
     };
 
+    const stats = {
+        pending: reports.filter(r => r.status === 'pending').length,
+        urgent: reports.filter(r => r.urgency === 'high' && r.status !== 'resolved').length,
+        assigned: reports.filter(r => r.status === 'assigned').length
+    };
+
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 transition-colors duration-300 relative overflow-hidden">
-            {/* Header / Search & Toggle Filter */}
+            {/* Header SIG */}
             <div className="bg-white dark:bg-gray-900 p-4 shadow-sm border-b dark:border-gray-800 sticky top-0 z-40 shrink-0">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 mb-4">
                     <div className="flex items-center gap-4">
                         <button onClick={onBack} className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all"><ArrowLeft size={18} /></button>
                         <div>
@@ -156,6 +178,22 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
                     </button>
                 </div>
 
+                {/* Bandeau Stats Dynamique */}
+                <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-orange-50 dark:bg-orange-900/10 p-3 rounded-2xl border border-orange-100 dark:border-orange-900/30 flex items-center justify-between">
+                        <div><p className="text-[8px] font-black text-orange-400 uppercase tracking-widest">En attente</p><p className="text-xl font-black text-orange-600 leading-none mt-1">{stats.pending}</p></div>
+                        <Clock size={20} className="text-orange-500 opacity-30" />
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-2xl border border-red-100 dark:border-red-900/30 flex items-center justify-between">
+                        <div><p className="text-[8px] font-black text-red-400 uppercase tracking-widest">Urgent High</p><p className="text-xl font-black text-red-600 leading-none mt-1">{stats.urgent}</p></div>
+                        <AlertTriangle size={20} className="text-red-500 opacity-30" />
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-center justify-between">
+                        <div><p className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Missions Live</p><p className="text-xl font-black text-blue-600 leading-none mt-1">{stats.assigned}</p></div>
+                        <Truck size={20} className="text-blue-500 opacity-30" />
+                    </div>
+                </div>
+
                 {showFilters && (
                     <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-[2rem] border dark:border-gray-800 grid grid-cols-1 md:grid-cols-5 gap-3 mt-4 animate-fade-in">
                         <select value={filters.commune} onChange={e => setFilters({...filters, commune: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">{KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}</select>
@@ -168,16 +206,20 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
             </div>
 
             <div className="flex-1 flex overflow-hidden">
+                {/* Liste latérale ultra-compacte */}
                 <div className="hidden lg:flex w-[350px] bg-white dark:bg-gray-950 border-r dark:border-gray-800 flex-col overflow-hidden">
-                    <div className="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
                         {reports.map((report, index) => (
-                            <div key={report.id} ref={index === reports.length - 1 ? lastElementRef : null} onClick={() => setSelectedReport(report)} className={`p-4 rounded-[1.8rem] border transition-all cursor-pointer group flex flex-col gap-3 ${selectedReport?.id === report.id ? 'border-[#2962FF] bg-blue-50/30 shadow-lg' : 'border-gray-50 dark:border-gray-900 hover:border-gray-100'}`}>
-                                <div className="flex gap-4">
-                                    <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-gray-100"><img src={report.imageUrl} className="w-full h-full object-cover" /></div>
+                            <div key={report.id} ref={index === reports.length - 1 ? lastElementRef : null} onClick={() => { setSelectedReport(report); setViewProof(false); }} className={`p-4 rounded-[1.8rem] border transition-all cursor-pointer group flex flex-col gap-2 ${selectedReport?.id === report.id ? 'border-[#2962FF] bg-blue-50/30 shadow-lg' : 'border-gray-50 dark:border-gray-900 hover:border-gray-100'}`}>
+                                <div className="flex gap-3">
+                                    <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-100"><img src={report.imageUrl} className="w-full h-full object-cover" /></div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start"><h4 className="font-black dark:text-white uppercase truncate text-[11px]">{report.wasteType}</h4><span className={`px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase text-white ${report.urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>{report.urgency}</span></div>
-                                        <p className="text-[9px] text-gray-400 font-bold mt-1 uppercase truncate"><MapPin size={9}/> {report.commune}</p>
-                                        <span className={`mt-2 inline-block px-2 py-0.5 rounded-md text-[7px] font-black uppercase text-white ${STATUSES.find(s=>s.key===report.status)?.color}`}>{STATUSES.find(s=>s.key===report.status)?.label}</span>
+                                        <div className="flex justify-between items-start"><h4 className="font-black dark:text-white uppercase truncate text-[10px]">{report.wasteType}</h4><span className={`px-1.5 py-0.5 rounded-md text-[6px] font-black uppercase text-white ${report.urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>{report.urgency}</span></div>
+                                        <p className="text-[8px] text-gray-400 font-bold mt-0.5 uppercase truncate"><MapPin size={8}/> {report.commune}</p>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <span className={`px-1.5 py-0.5 rounded-md text-[6px] font-black uppercase text-white ${STATUSES.find(s=>s.key===report.status)?.color}`}>{STATUSES.find(s=>s.key===report.status)?.label}</span>
+                                            <span className="text-[7px] text-gray-300 font-mono">{new Date(report.date).toLocaleDateString()}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -189,26 +231,43 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
                 <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 z-0">
                     <MapContainer center={[-4.325, 15.322]} zoom={12} style={{height: '100%', width: '100%'}} zoomControl={false}>
                         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" attribution="&copy; Biso Peto SIG" />
-                        {reports.map(r => <Marker key={r.id} position={[r.lat, r.lng]} icon={reportIcon(r.status, r.urgency, selectedReport?.id === r.id)} eventHandlers={{ click: () => setSelectedReport(r) }} />)}
+                        {reports.map(r => <Marker key={r.id} position={[r.lat, r.lng]} icon={reportIcon(r.status, r.urgency, selectedReport?.id === r.id)} eventHandlers={{ click: () => { setSelectedReport(r); setViewProof(false); } }} />)}
                     </MapContainer>
 
                     {selectedReport && (
                         <div className="absolute bottom-6 left-6 right-6 lg:left-auto lg:right-6 lg:bottom-6 z-[1000] animate-fade-in-up">
                             <div className="w-full lg:w-[400px] bg-white dark:bg-gray-950 p-5 rounded-[2.2rem] shadow-2xl border-2 border-blue-500/20 flex flex-col gap-4 relative overflow-hidden group">
                                 <div className="absolute top-3 right-3"><button onClick={() => setSelectedReport(null)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-400"><X size={16}/></button></div>
-                                <div className="flex gap-4">
-                                    <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden shrink-0 border dark:border-gray-800"><img src={selectedReport.imageUrl} className="w-full h-full object-cover" /></div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-base font-black dark:text-white uppercase tracking-tight truncate leading-tight">{selectedReport.wasteType}</h3>
-                                        <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 flex items-center gap-1"><MapPin size={9}/> {selectedReport.commune}</p>
-                                        <p className="text-[8px] text-gray-400 mt-2 font-medium line-clamp-2">"{selectedReport.comment || 'Aucune observation...'}"</p>
+                                
+                                {viewProof && selectedReport.proofUrl ? (
+                                    <div className="space-y-4 animate-fade-in">
+                                        <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest text-center">Vérification terrain</h3>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1"><p className="text-[7px] font-black uppercase text-center text-gray-400">Avant</p><img src={selectedReport.imageUrl} className="aspect-square rounded-2xl object-cover border" /></div>
+                                            <div className="space-y-1"><p className="text-[7px] font-black uppercase text-center text-green-500">Après</p><img src={selectedReport.proofUrl} className="aspect-square rounded-2xl object-cover border-2 border-green-500" /></div>
+                                        </div>
+                                        <button onClick={() => setViewProof(false)} className="w-full py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 rounded-xl font-black uppercase text-[8px] tracking-widest">Retour détails</button>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="flex gap-4">
+                                        <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden shrink-0 border dark:border-gray-800"><img src={selectedReport.imageUrl} className="w-full h-full object-cover" /></div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-base font-black dark:text-white uppercase tracking-tight truncate leading-tight">{selectedReport.wasteType}</h3>
+                                            <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 flex items-center gap-1"><MapPin size={9}/> {selectedReport.commune}</p>
+                                            <p className="text-[8px] text-gray-400 mt-2 font-medium line-clamp-2 italic">"{selectedReport.comment || 'Aucune observation...'}"</p>
+                                        </div>
+                                    </div>
+                                )}
+                                
                                 <div className="flex items-center gap-2 pt-2 border-t dark:border-gray-800">
                                     {selectedReport.status === 'pending' ? (
                                         <button onClick={() => setShowAssignModal(true)} className="flex-1 py-2.5 bg-[#2962FF] text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg active:scale-95 transition-all">Assigner Équipe</button>
+                                    ) : selectedReport.status === 'assigned' ? (
+                                        <button onClick={handleUnassign} className="flex-1 py-2.5 bg-orange-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg active:scale-95 transition-all">Réaffecter</button>
+                                    ) : selectedReport.status === 'resolved' ? (
+                                        <button onClick={() => setViewProof(!viewProof)} className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg flex items-center justify-center gap-2"><ImageIcon size={14}/> {viewProof ? 'Détails' : 'Voir Preuve'}</button>
                                     ) : (
-                                        <div className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl text-center text-gray-400 font-black text-[9px] uppercase tracking-widest">Déjà Assigné</div>
+                                        <div className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl text-center text-gray-400 font-black text-[9px] uppercase tracking-widest">Clôturé</div>
                                     )}
                                     <button className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-xl hover:text-[#2962FF] transition-colors"><ExternalLink size={16}/></button>
                                 </div>
