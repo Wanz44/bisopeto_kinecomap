@@ -63,6 +63,7 @@ export interface User {
     co2Saved?: number;
     recyclingRate?: number;
     avatarUrl?: string;
+    emailConsent?: boolean; // Consentement communication
 }
 
 export interface WasteReport {

@@ -55,22 +55,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
         };
     }, []);
 
-    // Fonction de vérification de permission STRICTE
     const hasPermission = (perm?: UserPermission): boolean => {
-        // La vue Profil (AppView.PROFILE) est toujours accessible
         if (currentView === AppView.PROFILE) return true;
         if (!perm) return true;
         if (!user) return false;
-        
-        // Un admin n'a accès qu'à ce qui est dans son tableau de permissions
         return user.permissions?.includes(perm) || false;
     };
 
-    // Sécurité supplémentaire : Si la vue actuelle demande une permission que l'utilisateur n'a pas
     useEffect(() => {
         const checkCurrentAccess = () => {
             if (!user) return;
-            // Toujours autoriser le profil et le dashboard
             if (currentView === AppView.PROFILE || currentView === AppView.DASHBOARD) return;
 
             const sections = getNavSections();
@@ -78,7 +72,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             const currentItem = allPossibleItems.find(i => i.view === currentView);
             
             if (currentItem && currentItem.permission && !hasPermission(currentItem.permission)) {
-                console.warn(`Accès refusé à ${currentView}. Permission ${currentItem.permission} manquante.`);
                 onChangeView(AppView.DASHBOARD);
             }
         };
@@ -96,7 +89,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
             const gestionItems: NavItem[] = [];
             if (hasPermission('manage_reports')) gestionItems.push({ view: AppView.ADMIN_REPORTS, icon: AlertTriangle, label: 'Signalements SIG', permission: 'manage_reports' });
             if (hasPermission('manage_users')) gestionItems.push({ view: AppView.ADMIN_USERS, icon: Users, label: 'Utilisateurs', permission: 'manage_users' });
-            if (hasPermission('manage_recovery')) gestionItems.push({ view: AppView.ADMIN_RECOVERY, icon: DollarSign, label: 'Recouvrement', permission: 'manage_recovery' });
+            if (hasPermission('manage_recovery')) gestionItems.push({ view: AppView.ADMIN_RECOVERY, icon: DollarSign, label: 'Recouvrement Cash', permission: 'manage_recovery' });
             if (hasPermission('manage_subscriptions')) gestionItems.push({ view: AppView.ADMIN_SUBSCRIPTIONS, icon: CreditCard, label: 'Abonnements', permission: 'manage_subscriptions' });
             if (gestionItems.length > 0) sections.push({ title: 'Opérations', items: gestionItems });
 
@@ -187,7 +180,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                     <div className="hidden md:block"><h1 className="font-black text-2xl text-gray-800 dark:text-white tracking-tight flex items-center gap-3">{user?.type === UserType.ADMIN && <Shield size={24} className="text-secondary" />}{flattenedItems.find(n => n.view === currentView)?.label || (currentView === AppView.PROFILE ? 'Mon Profil' : 'Biso Peto')}</h1></div>
                     
                     <div className="flex items-center gap-3 ml-auto">
-                        {/* Synchronisation Status Badge */}
                         <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all ${syncQueueSize > 0 ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 border-orange-100' : 'bg-green-50 dark:bg-green-900/20 text-green-600 border-green-100'}`}>
                             {syncQueueSize > 0 ? (
                                 <>
@@ -225,7 +217,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                         </div>
                     </div>
                 </header>
-                <main className="flex-1 overflow-y-auto relative pb-28 md:pb-0 h-full w-full">{children}</main>
+                {/* 
+                   AJUSTEMENT ICI : pb-32 au lieu de pb-28 pour garantir que le bas du contenu 
+                   dépasse largement la barre de navigation mobile (h-16 + marges).
+                */}
+                <main className="flex-1 overflow-y-auto relative pb-32 md:pb-8 h-full w-full">{children}</main>
                 
                 {/* Tab Bar (Mobile) */}
                 <nav className="md:hidden fixed bottom-6 inset-x-6 h-16 bg-white/90 dark:bg-[#111827]/90 backdrop-blur-xl border border-gray-100 dark:border-white/10 rounded-full shadow-2xl z-[100] flex items-center justify-evenly px-2">
@@ -245,7 +241,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                 </nav>
             </div>
             {toast && toast.visible && <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[90%] max-w-sm"><div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border backdrop-blur-xl ${toast.type === 'success' ? 'bg-primary-light text-white border-green-400/30' : toast.type === 'error' ? 'bg-red-500 text-white border-red-400/30' : 'bg-secondary text-white border-blue-400/30'}`}><span className="font-bold text-sm">{toast.message}</span><button onClick={onCloseToast} className="ml-auto"><X size={16} /></button></div></div>}
-            {showLogoutConfirm && <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4"><div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowLogoutConfirm(false)}></div><div className="bg-white dark:bg-[#161b22] rounded-[2rem] p-8 w-full max-w-sm shadow-2xl relative z-10 animate-scale-up border dark:border-gray-700 text-center"><div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600"><LogOut size={32} /></div><h3 className="text-2xl font-black text-gray-800 dark:text-white mb-3">Quitter ?</h3><p className="text-gray-500 dark:text-gray-400 mb-8 text-sm font-medium">Voulez-vous vraiment vous déconnecter ?</p><div className="flex gap-4"><button onClick={() => setShowLogoutConfirm(false)} className="flex-1 py-4 rounded-2xl font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 transition-colors">Annuler</button><button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} className="flex-1 py-4 rounded-2xl font-bold bg-red-50 text-white shadow-lg shadow-red-500/20">Quitter</button></div></div></div>}
+            {showLogoutConfirm && <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4"><div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowLogoutConfirm(false)}></div><div className="bg-white dark:bg-[#161b22] rounded-[2rem] p-8 w-full max-sm shadow-2xl relative z-10 animate-scale-up border dark:border-gray-700 text-center"><div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600"><LogOut size={32} /></div><h3 className="text-2xl font-black text-gray-800 dark:text-white mb-3">Quitter ?</h3><p className="text-gray-500 dark:text-gray-400 mb-8 text-sm font-medium">Voulez-vous vraiment vous déconnecter ?</p><div className="flex gap-4"><button onClick={() => setShowLogoutConfirm(false)} className="flex-1 py-4 rounded-2xl font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 transition-colors">Annuler</button><button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} className="flex-1 py-4 rounded-2xl font-bold bg-red-50 text-white shadow-lg shadow-red-500/20">Quitter</button></div></div></div>}
         </div>
     );
 };
