@@ -79,10 +79,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
                 <span className="font-black text-xl tracking-tighter text-primary dark:text-white leading-none">BISO PETO</span>
                 <div className="hidden sm:flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">Live</span>
+                  <span className="text-[0.625rem] font-black text-green-600 uppercase tracking-widest">Live</span>
                 </div>
               </div>
-              <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Kin Eco-Map</span>
+              <span className="text-[0.6rem] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Kin Eco-Map</span>
             </div>
           </div>
 
@@ -94,7 +94,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
               { id: 'objectives', label: 'Impact' },
               { id: 'contact', label: 'Contact' }
             ].map((item) => (
-              <button key={item.id} onClick={() => handleSmoothScroll(item.id)} className="relative text-[11px] font-black uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white transition-colors group">
+              <button key={item.id} onClick={() => handleSmoothScroll(item.id)} className="relative text-xs font-black uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white transition-colors group">
                 {item.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
               </button>
@@ -102,12 +102,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
           </div>
 
           <div className="flex items-center gap-3">
-            <button onClick={onLogin} className="hidden sm:flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.15em] text-gray-600 dark:text-gray-400 hover:text-primary transition-all px-4 py-2">Connexion</button>
-            <button onClick={onStart} className="group relative bg-primary hover:bg-primary-light text-white px-7 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-green-500/20 active:scale-95 transition-all overflow-hidden">
-              <span className="relative z-10 flex items-center gap-2">Commencer <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" /></span>
+            <button onClick={onLogin} className="hidden sm:flex items-center gap-2 text-xs font-black uppercase tracking-[0.15em] text-gray-600 dark:text-gray-400 hover:text-primary transition-all px-4 py-2">Connexion</button>
+            <button onClick={onStart} className="group relative bg-primary hover:bg-primary-light text-white px-7 py-3 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-green-500/20 active:scale-95 transition-all overflow-hidden">
+              <span className="relative z-10 flex items-center gap-2">Commencer <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>
             </button>
             <button className="lg:hidden p-3 bg-gray-100 dark:bg-gray-800 text-primary rounded-2xl transition-all" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </nav>
@@ -123,51 +123,51 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="animate-fade-in-up">
             <div className="inline-flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-primary-light px-4 py-2 rounded-full mb-8 border border-green-100 dark:border-green-800">
-              <Sparkles size={16} className="animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">L'Intelligence Artificielle au service de Kinshasa</span>
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              <span className="text-xs font-black uppercase tracking-widest">L'Intelligence Artificielle au service de Kinshasa</span>
             </div>
-            <h1 className="text-6xl md:text-8xl font-black text-gray-900 dark:text-white tracking-tighter leading-[0.9] mb-8 uppercase">
+            <h1 className="text-5xl md:text-8xl font-black text-gray-900 dark:text-white tracking-tighter leading-[0.95] mb-8 uppercase">
               REPENSONS <br/> <span className="text-primary italic">L'URBAIN</span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-500 dark:text-gray-400 font-medium leading-relaxed max-w-xl mb-12">
+            <p className="text-lg md:text-2xl text-gray-500 dark:text-gray-400 font-medium leading-relaxed max-w-xl mb-12">
               Transformez chaque déchet en ressource. Biso Peto connecte les citoyens, les entreprises et les collecteurs pour un Kinshasa propre, connecté et durable.
             </p>
             <div className="flex flex-col sm:flex-row gap-5">
               <button onClick={onStart} className="bg-primary text-white px-10 py-5 rounded-3xl font-black text-lg uppercase tracking-widest shadow-[0_20px_50px_rgba(46,125,50,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3">
-                Rejoindre le Réseau <MousePointer2 size={24} />
+                Rejoindre le Réseau <MousePointer2 className="w-6 h-6" />
               </button>
               <button onClick={() => handleSmoothScroll('modules')} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-2 border-gray-100 dark:border-gray-700 px-10 py-5 rounded-3xl font-black text-lg uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-3 active:scale-95">
-                Découvrir l'Espace <Play size={24} />
+                Découvrir l'Espace <Play className="w-6 h-6" />
               </button>
             </div>
           </div>
 
           <div className="relative animate-fade-in hidden lg:block">
-            <div className="relative z-10 w-full aspect-square rounded-[4rem] overflow-hidden shadow-2xl border-[12px] border-white dark:border-gray-800 rotate-3 group cursor-pointer" onClick={onStart}>
+            <div className="relative z-10 w-full aspect-square rounded-[4rem] overflow-hidden shadow-2xl border-[0.75rem] border-white dark:border-gray-800 rotate-3 group cursor-pointer" onClick={onStart}>
               <img src="https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/hero-kinshasa.jpg?t=1" alt="Kinshasa Verte" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                    onError={(e) => e.currentTarget.src = "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1000&q=80"} />
               <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                  <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-primary shadow-2xl scale-0 group-hover:scale-100 transition-transform duration-500">
-                    <Rocket size={32} />
+                    <Rocket className="w-8 h-8" />
                  </div>
               </div>
             </div>
             {/* Stats Badge */}
             <div className="absolute -bottom-10 -left-10 z-20 bg-white dark:bg-gray-900 p-8 rounded-[2.5rem] shadow-2xl border border-gray-50 dark:border-gray-800">
                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-green-50 dark:bg-green-900/30 text-primary rounded-2xl"><Award size={24}/></div>
+                  <div className="p-4 bg-green-50 dark:bg-green-900/30 text-primary rounded-2xl"><Award className="w-7 h-7"/></div>
                   <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Inscriptions</p>
+                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Inscriptions</p>
                     <p className="text-2xl font-black dark:text-white leading-none mt-1">+24 Zones</p>
                   </div>
                </div>
-               <div className="h-1.5 bg-green-100 dark:bg-gray-800 rounded-full overflow-hidden"><div className="h-full bg-primary w-[75%] animate-grow-width"></div></div>
+               <div className="h-2 bg-green-100 dark:bg-gray-800 rounded-full overflow-hidden"><div className="h-full bg-primary w-[75%] animate-grow-width"></div></div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. About Section (Deeper Info) */}
+      {/* 3. About Section */}
       <section id="about" className="py-32 bg-white dark:bg-gray-950/50 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
@@ -182,21 +182,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="p-6 rounded-[2rem] bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
-                  <ShieldCheck className="text-primary mb-4" size={32} />
+                <div className="p-8 rounded-[2rem] bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+                  <ShieldCheck className="w-10 h-10 text-primary mb-4" />
                   <h4 className="font-black uppercase text-sm mb-2 dark:text-white">Traçabilité Totale</h4>
                   <p className="text-xs text-gray-500 font-bold leading-relaxed">De la poubelle au centre de recyclage, suivez chaque kilo via GPS et QR Code.</p>
                 </div>
-                <div className="p-6 rounded-[2rem] bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
-                  <Users className="text-secondary mb-4" size={32} />
+                <div className="p-8 rounded-[2rem] bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+                  <Users className="w-10 h-10 text-secondary mb-4" />
                   <h4 className="font-black uppercase text-sm mb-2 dark:text-white">Économie Inclusive</h4>
                   <p className="text-xs text-gray-500 font-bold leading-relaxed">Nous créons des emplois directs pour les collecteurs et récompensons les citoyens.</p>
                 </div>
               </div>
 
               <div className="pt-8">
-                <div className="flex items-center gap-4 p-6 bg-blue-50 dark:bg-blue-900/10 rounded-[2.5rem] border border-blue-100 dark:border-blue-900/30">
-                  <Info className="text-blue-600 shrink-0" size={32} />
+                <div className="flex items-center gap-4 p-8 bg-blue-50 dark:bg-blue-900/10 rounded-[2.5rem] border border-blue-100 dark:border-blue-900/30">
+                  <Info className="w-10 h-10 text-blue-600 shrink-0" />
                   <p className="text-sm font-bold text-blue-800 dark:text-blue-300 leading-relaxed">
                     "Notre vision est d'intégrer le tri sélectif dans l'ADN de chaque Kinois d'ici 2030." — <strong>Directeur Stratégie, Biso Peto.</strong>
                   </p>
@@ -206,13 +206,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
 
             <div className="relative order-1 lg:order-2">
               <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-75"></div>
-              <img src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80" className="relative z-10 w-full rounded-[4rem] shadow-2xl border-8 border-white dark:border-gray-800" alt="Action Terrain" />
+              <img src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80" className="relative z-10 w-full rounded-[4rem] shadow-2xl border-[1rem] border-white dark:border-gray-800" alt="Action Terrain" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4. Process Section (How it works) */}
+      {/* 4. Process Section */}
       <section id="process" className="py-32 bg-gray-50 dark:bg-gray-950">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-20 space-y-4">
@@ -227,19 +227,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
               { step: '03', title: 'Valoriser', icon: Recycle, desc: 'Les déchets sont triés et acheminés vers des centres de recyclage partenaires. Vous gagnez des points échangeables.' },
             ].map((proc, i) => (
               <div key={i} className="relative group text-center md:text-left">
-                <div className="text-8xl font-black text-gray-100 dark:text-gray-900 absolute -top-10 left-0 -z-10 group-hover:text-primary/10 transition-colors">{proc.step}</div>
+                <div className="text-8xl md:text-9xl font-black text-gray-100 dark:text-gray-900 absolute -top-12 left-0 -z-10 group-hover:text-primary/10 transition-colors">{proc.step}</div>
                 <div className="w-20 h-20 bg-white dark:bg-gray-800 rounded-3xl flex items-center justify-center mb-8 shadow-xl border border-gray-100 dark:border-gray-700 group-hover:scale-110 group-hover:rotate-6 transition-all">
-                  <proc.icon className="text-primary" size={36} />
+                  <proc.icon className="w-10 h-10 text-primary" />
                 </div>
                 <h3 className="text-2xl font-black uppercase mb-4 dark:text-white">{proc.title}</h3>
-                <p className="text-gray-500 dark:text-gray-400 font-medium leading-relaxed">{proc.desc}</p>
+                <p className="text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">{proc.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 5. Modules Section (Enhanced descriptions) */}
+      {/* 5. Modules Section */}
       <section id="modules" className="py-32 bg-white dark:bg-gray-900/30">
         <div className="max-w-7xl mx-auto px-6 text-center mb-20">
           <h2 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-6">Un Espace pour chacun</h2>
@@ -254,13 +254,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
              { title: 'Academy', icon: GraduationCap, color: 'bg-purple-50 text-purple-600', desc: 'Apprenez les gestes qui sauvent l\'environnement. Formations, Quiz et certifications pour écoles et agents municipaux.', features: ['Quiz Écolo', 'Certificats'] },
            ].map((mod, i) => (
              <div key={i} className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 hover:shadow-2xl transition-all group flex flex-col hover:-translate-y-2">
-                <div className={`w-16 h-16 ${mod.color} rounded-2xl flex items-center justify-center mb-8 group-hover:rotate-12 transition-transform`}><mod.icon size={32}/></div>
+                <div className={`w-16 h-16 ${mod.color} rounded-2xl flex items-center justify-center mb-8 group-hover:rotate-12 transition-transform`}><mod.icon className="w-8 h-8"/></div>
                 <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase mb-4 tracking-tight">{mod.title}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-8 leading-relaxed flex-1">{mod.desc}</p>
                 <div className="flex flex-wrap gap-2 mb-8">
-                   {mod.features.map(f => <span key={f} className="text-[9px] font-black uppercase text-gray-400 border border-gray-200 dark:border-gray-800 px-2 py-1 rounded-lg">{f}</span>)}
+                   {mod.features.map(f => <span key={f} className="text-[0.6rem] font-black uppercase text-gray-400 border border-gray-200 dark:border-gray-800 px-2 py-1 rounded-lg">{f}</span>)}
                 </div>
-                <button onClick={onStart} className="w-full py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl font-black text-[10px] uppercase tracking-widest text-gray-900 dark:text-white hover:bg-primary hover:text-white transition-all">Accéder à l'espace</button>
+                <button onClick={onStart} className="w-full py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl font-black text-xs uppercase tracking-widest text-gray-900 dark:text-white hover:bg-primary hover:text-white transition-all">Accéder à l'espace</button>
              </div>
            ))}
         </div>
@@ -268,7 +268,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
 
       {/* 6. Impact Data Section */}
       <section id="objectives" className="py-32 bg-primary text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-20 opacity-10 rotate-12"><Globe size={400}/></div>
+        <div className="absolute top-0 right-0 p-20 opacity-10 rotate-12"><Globe className="w-[25rem] h-[25rem]"/></div>
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             <div className="space-y-8">
@@ -277,11 +277,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
               <div className="flex gap-4">
                  <div className="bg-white/10 p-6 rounded-3xl border border-white/20">
                     <p className="text-4xl font-black">24</p>
-                    <p className="text-[10px] font-black uppercase tracking-widest mt-2">Communes Actives</p>
+                    <p className="text-[0.6rem] font-black uppercase tracking-widest mt-2">Communes Actives</p>
                  </div>
                  <div className="bg-white/10 p-6 rounded-3xl border border-white/20">
                     <p className="text-4xl font-black">+85%</p>
-                    <p className="text-[10px] font-black uppercase tracking-widest mt-2">Satisfaction</p>
+                    <p className="text-[0.6rem] font-black uppercase tracking-widest mt-2">Satisfaction</p>
                  </div>
               </div>
             </div>
@@ -294,7 +294,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
                ].map((obj, i) => (
                  <div key={i} className="space-y-3">
                    <div className="flex justify-between items-end">
-                      <span className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><obj.icon size={16}/> {obj.label}</span>
+                      <span className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><obj.icon className="w-4 h-4"/> {obj.label}</span>
                       <span className="text-2xl font-black">{obj.val}%</span>
                    </div>
                    <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
@@ -320,23 +320,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
 
                 <div className="space-y-8">
                    <div className="flex items-center gap-6">
-                      <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"><Mail size={24}/></div>
+                      <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"><Mail className="w-7 h-7"/></div>
                       <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Email Support & Partenaires</p>
+                        <p className="text-[0.6rem] font-black text-gray-400 uppercase tracking-widest">Email Support & Partenaires</p>
                         <p className="text-lg font-black dark:text-white">contact@bisopeto.com</p>
                       </div>
                    </div>
                    <div className="flex items-center gap-6">
-                      <div className="w-14 h-14 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"><Phone size={24}/></div>
+                      <div className="w-14 h-14 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"><Phone className="w-7 h-7"/></div>
                       <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ligne d'Urgence / WhatsApp</p>
+                        <p className="text-[0.6rem] font-black text-gray-400 uppercase tracking-widest">Ligne d'Urgence / WhatsApp</p>
                         <p className="text-lg font-black dark:text-white">+243 85 229 1755</p>
                       </div>
                    </div>
                    <div className="flex items-center gap-6">
-                      <div className="w-14 h-14 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"><MapPin size={24}/></div>
+                      <div className="w-14 h-14 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"><MapPin className="w-7 h-7"/></div>
                       <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Quartier Général</p>
+                        <p className="text-[0.6rem] font-black text-gray-400 uppercase tracking-widest">Quartier Général</p>
                         <p className="text-base font-black dark:text-white leading-tight">63, Av. Colonel Mondjiba <br/><span className="text-gray-400 text-xs">Kinshasa / Gombe - RDC</span></p>
                       </div>
                    </div>
@@ -344,10 +344,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
              </div>
 
              <div className="bg-gray-900 p-12 lg:p-20 relative overflow-hidden flex flex-col justify-center">
-                <div className="absolute top-0 right-0 p-8 opacity-5 text-white"><Shield size={200}/></div>
+                <div className="absolute top-0 right-0 p-8 opacity-5 text-white"><Shield className="w-[12rem] h-[12rem]"/></div>
                 {isSent ? (
                   <div className="h-full flex flex-col items-center justify-center text-center space-y-6 animate-scale-up">
-                      <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white shadow-2xl"><Check size={40} strokeWidth={4}/></div>
+                      <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white shadow-2xl"><Check className="w-10 h-10" strokeWidth={4}/></div>
                       <h3 className="text-3xl font-black text-white uppercase tracking-tight leading-none">Message Reçu</h3>
                       <p className="text-gray-400 font-medium max-w-xs mx-auto">Mbote! Nous avons bien reçu votre demande. Un consultant environnemental reviendra vers vous sous 24h.</p>
                       <button onClick={() => setIsSent(false)} className="text-primary text-xs font-black uppercase tracking-widest underline underline-offset-4">Envoyer un autre message</button>
@@ -355,19 +355,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Identité / Entreprise</label>
+                        <label className="text-[0.6rem] font-black text-gray-500 uppercase tracking-widest ml-1">Identité / Entreprise</label>
                         <input required className="w-full bg-white/5 border-2 border-white/10 text-white p-5 rounded-3xl focus:border-primary focus:ring-0 outline-none font-bold transition-all" placeholder="Nom complet" value={formState.name} onChange={e => setFormState({...formState, name: e.target.value})} />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">E-mail professionnel</label>
+                        <label className="text-[0.6rem] font-black text-gray-500 uppercase tracking-widest ml-1">E-mail professionnel</label>
                         <input required type="email" className="w-full bg-white/5 border-2 border-white/10 text-white p-5 rounded-3xl focus:border-primary focus:ring-0 outline-none font-bold transition-all" placeholder="votre@email.com" value={formState.email} onChange={e => setFormState({...formState, email: e.target.value})} />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Votre Message</label>
+                        <label className="text-[0.6rem] font-black text-gray-500 uppercase tracking-widest ml-1">Votre Message</label>
                         <textarea required rows={4} className="w-full bg-white/5 border-2 border-white/10 text-white p-5 rounded-3xl focus:border-primary focus:ring-0 outline-none font-bold resize-none transition-all" placeholder="Décrivez votre besoin..." value={formState.message} onChange={e => setFormState({...formState, message: e.target.value})} />
                     </div>
-                    <button disabled={isSending} className="w-full py-5 bg-primary hover:bg-primary-light text-white rounded-3xl font-black uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 transition-all disabled:opacity-50">
-                      {isSending ? <Loader2 className="animate-spin" size={24}/> : <><Send size={20}/> Envoyer la demande</>}
+                    <button disabled={isSending} className="w-full py-5 bg-primary hover:bg-primary-light text-white rounded-3xl font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 transition-all disabled:opacity-50">
+                      {isSending ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Send className="w-5 h-5"/> Envoyer la demande</>}
                     </button>
                   </form>
                 )}
@@ -387,21 +387,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
                   </div>
                   <div>
                     <h3 className="text-4xl font-black tracking-tighter leading-none">BISO PETO</h3>
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mt-1">Group SARL</p>
+                    <p className="text-[0.6rem] font-black text-gray-500 uppercase tracking-[0.4em] mt-1">Group SARL</p>
                   </div>
                </div>
                <p className="text-gray-400 font-medium leading-relaxed max-w-sm">
                  Première plateforme congolaise de digitalisation environnementale, certifiée pour l'assainissement durable de la ville-province de Kinshasa.
                </p>
                <div className="flex gap-4">
-                  <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-gray-500">RCCM CD/KNM/25-B-01937</div>
-                  <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-gray-500">ID.NAT. 01-S9502-N76752K</div>
+                  <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[0.6rem] font-black uppercase tracking-widest text-gray-500">RCCM CD/KNM/25-B-01937</div>
+                  <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[0.6rem] font-black uppercase tracking-widest text-gray-500">ID.NAT. 01-S9502-N76752K</div>
                </div>
             </div>
 
             <div>
               <h4 className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-10">Navigation</h4>
-              <ul className="space-y-5 font-black uppercase text-[10px] tracking-[0.2em] text-gray-400">
+              <ul className="space-y-5 font-black uppercase text-[0.6rem] tracking-[0.2em] text-gray-400">
                 <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => handleSmoothScroll('about')}>Manifeste</li>
                 <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => handleSmoothScroll('modules')}>Écosystème</li>
                 <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => handleSmoothScroll('process')}>Le Modèle</li>
@@ -411,7 +411,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
 
             <div>
               <h4 className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-10">Plateforme</h4>
-              <ul className="space-y-5 font-black uppercase text-[10px] tracking-[0.2em] text-gray-400">
+              <ul className="space-y-5 font-black uppercase text-[0.6rem] tracking-[0.2em] text-gray-400">
                 <li className="hover:text-primary cursor-pointer transition-colors" onClick={onLogin}>Mon Compte</li>
                 <li className="hover:text-primary cursor-pointer transition-colors" onClick={onStart}>Eco Citoyen</li>
                 <li className="hover:text-primary cursor-pointer transition-colors" onClick={onStart}>Expert Collecteur</li>
@@ -421,11 +421,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
           </div>
 
           <div className="pt-16 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">© 2025 BISO PETO Group SARL. KIN ECO-MAP est un produit protégé.</p>
+            <p className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-gray-600">© 2025 BISO PETO Group SARL. KIN ECO-MAP est un produit protégé.</p>
             <div className="flex items-center gap-8">
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500 hover:text-white cursor-pointer transition-colors">Confidentialité</span>
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500 hover:text-white cursor-pointer transition-colors">Mentions Légales</span>
-                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all cursor-pointer"><Rocket size={16}/></div>
+                <span className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-gray-500 hover:text-white cursor-pointer transition-colors">Confidentialité</span>
+                <span className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-gray-500 hover:text-white cursor-pointer transition-colors">Mentions Légales</span>
+                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all cursor-pointer"><Rocket className="w-4 h-4"/></div>
             </div>
           </div>
         </div>
