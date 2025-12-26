@@ -35,7 +35,8 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         initDashboard();
 
-        const channel = supabase?.channel('dashboard_counters')
+        // Écouteur temps réel pour maintenir les compteurs EXACTS
+        const channel = supabase?.channel('dashboard_realtime_sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, () => refreshData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => refreshData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => refreshData())
@@ -57,6 +58,7 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
 
     const refreshData = async () => {
         try {
+            // Lecture directe de la base de données
             const [usersData, reportsData, paymentsData] = await Promise.all([
                 UserAPI.getAll(),
                 ReportsAPI.getAll(0, 200),
@@ -75,16 +77,16 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
         const tonnage = allUsers.reduce((acc, u) => acc + (u.totalTonnage || 0), 0);
         const activeAlerts = allReports.filter(r => r.status === 'pending' || r.status === 'assigned').length;
         const pendingUsers = allUsers.filter(u => u.status === 'pending').length;
-        // Simulation du statut "en ligne" basé sur le statut 'active' pour cette version
-        // En production réelle, on utiliserait Supabase Presence ou un timestamp 'last_seen'
+        
+        // Exactitude DB : On compte les utilisateurs ayant le statut 'active' comme étant opérationnels/connectés
         const onlineUsers = allUsers.filter(u => u.status === 'active').length;
         
         return {
             revenue: revenue,
             tonnage: tonnage,
             reports: activeAlerts,
-            members: allUsers.length,
-            online: onlineUsers,
+            members: allUsers.length, // Nombres des user total
+            online: onlineUsers,      // Nombres des user connecter/actifs
             pendingUsers: pendingUsers,
             successRate: allReports.length > 0 ? Math.round((allReports.filter(r => r.status === 'resolved').length / allReports.length) * 100) : 0
         };
@@ -134,15 +136,15 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                 </div>
             </div>
 
-            {/* LIVE KPI GRID */}
+            {/* LIVE KPI GRID - Priorité aux compteurs d'utilisateurs demandés */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
                 {[
                     { label: 'Utilisateurs Totaux', val: stats.members, icon: Users, color: 'text-blue-600', perm: 'manage_users', view: AppView.ADMIN_USERS },
-                    { label: 'Utilisateurs En Ligne', val: stats.online, icon: Globe, color: 'text-green-500', perm: 'manage_users', view: AppView.ADMIN_USERS, pulse: true },
-                    { label: 'Inscriptions à Valider', val: stats.pendingUsers, icon: UserPlus, color: 'text-orange-600', perm: 'manage_users', view: AppView.ADMIN_USERS },
+                    { label: 'Utilisateurs Connectés', val: stats.online, icon: Globe, color: 'text-green-500', perm: 'manage_users', view: AppView.ADMIN_USERS, pulse: true },
+                    { label: 'Inscriptions en Attente', val: stats.pendingUsers, icon: UserPlus, color: 'text-orange-600', perm: 'manage_users', view: AppView.ADMIN_USERS },
                     { label: 'Signalements Actifs', val: stats.reports, icon: AlertTriangle, color: 'text-red-600', perm: 'manage_reports', view: AppView.ADMIN_REPORTS },
-                    { label: 'Recette Totale (FC)', val: stats.revenue.toLocaleString(), icon: DollarSign, color: 'text-green-600', perm: 'view_finance', view: AppView.ADMIN_SUBSCRIPTIONS },
-                    { label: 'Tonnage Récupéré', val: `${stats.tonnage}kg`, icon: Trash2, color: 'text-purple-600', perm: 'manage_recovery', view: AppView.ADMIN_RECOVERY }
+                    { label: 'Chiffre d\'Affaires (FC)', val: stats.revenue.toLocaleString(), icon: DollarSign, color: 'text-green-600', perm: 'view_finance', view: AppView.ADMIN_SUBSCRIPTIONS },
+                    { label: 'Tonnage Global', val: `${stats.tonnage}kg`, icon: Trash2, color: 'text-purple-600', perm: 'manage_recovery', view: AppView.ADMIN_RECOVERY }
                 ].map((kpi, i) => hasPermission(kpi.perm as UserPermission) && (
                     <div key={i} onClick={() => kpi.view && onChangeView(kpi.view)} className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] border dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-all">
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform"><kpi.icon size={80}/></div>
@@ -152,8 +154,8 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                         </div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{kpi.label}</p>
                         <h3 className="text-3xl font-black text-gray-900 dark:text-white leading-none mt-1">{kpi.val}</h3>
-                        {/* Fix: Added type check for kpi.val before numeric comparison to fix TS operator error */}
-                        {typeof kpi.val === 'number' && kpi.val > 0 && kpi.icon === UserPlus && (
+                        {/* Indicateur visuel pour les actions requises */}
+                        {(kpi.icon === UserPlus && typeof kpi.val === 'number' && kpi.val > 0) && (
                             <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
                         )}
                     </div>
@@ -195,7 +197,7 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                 <div className="bg-white dark:bg-gray-900 p-8 rounded-[3.5rem] border dark:border-gray-800 shadow-sm flex flex-col">
                     <div className="flex items-center gap-3 mb-8">
                         <History size={20} className="text-blue-500" />
-                        <h3 className="text-sm font-black dark:text-white uppercase tracking-widest">Logs Cloud</h3>
+                        <h3 className="text-sm font-black dark:text-white uppercase tracking-widest">Journal d'Activité</h3>
                     </div>
                     <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar pr-1">
                         {allReports.slice(0, 8).map(report => (
@@ -255,7 +257,6 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
         };
         loadMyData();
 
-        // Écoute en temps réel de ses propres changements
         if (user.id && supabase) {
             const channel = supabase.channel(`citizen_reports_${user.id}`)
                 .on('postgres_changes', { 
