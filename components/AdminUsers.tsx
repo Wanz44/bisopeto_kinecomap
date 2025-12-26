@@ -7,10 +7,10 @@ import {
     MoreVertical, Ban, History, Calendar, Eye, Download, ShieldCheck, ClipboardList, 
     CheckCircle2, Clock, AlertTriangle, UserPlus, Key, EyeOff, Lock, Save, RefreshCw,
     FileText, CheckCircle, Fingerprint, ShieldQuestion, ChevronRight, CheckCircle as CheckIcon,
-    Package, Activity, FileWarning, HelpCircle
+    Package, Activity, FileWarning, HelpCircle, Zap
 } from 'lucide-react';
 import { UserPermission, User as AppUser, UserType, WasteReport } from '../types';
-import { UserAPI, ReportsAPI } from '../services/api';
+import { UserAPI, ReportsAPI, SettingsAPI } from '../services/api';
 
 interface AdminUsersProps {
     onBack: () => void;
@@ -37,13 +37,14 @@ const ALL_PERMISSIONS: { key: UserPermission; label: string; desc: string }[] = 
 
 export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onNotify, onToast }) => {
     const [users, setUsers] = useState<AppUser[]>([]);
+    const [rolesConfig, setRolesConfig] = useState<Record<string, UserPermission[]>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('all');
     
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'identity' | 'documents' | 'permissions' | 'history'>('identity');
+    const [activeTab, setActiveTab] = useState<'identity' | 'permissions'>('identity');
     const [editForm, setEditForm] = useState<Partial<AppUser>>({});
 
     useEffect(() => { loadData(); }, []);
@@ -51,15 +52,27 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const usersData = await UserAPI.getAll();
+            const [usersData, config] = await Promise.all([
+                UserAPI.getAll(),
+                SettingsAPI.getRolesConfig()
+            ]);
             setUsers(usersData);
+            setRolesConfig(config);
         } catch (e) { console.error(e); }
         finally { setIsLoading(false); }
     };
 
+    const handleApplyDefaultPerms = () => {
+        const type = editForm.type;
+        if (type && rolesConfig[type]) {
+            setEditForm({ ...editForm, permissions: rolesConfig[type] });
+            onToast?.(`Permissions par défaut pour ${type} appliquées.`, "info");
+        }
+    };
+
     const handleOpenEdit = (user: AppUser) => {
         setSelectedUser(user);
-        setEditForm({ ...user });
+        setEditForm({ ...user, permissions: user.permissions || [] });
         setActiveTab('identity');
     };
 
@@ -209,6 +222,14 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                             </select>
                                         </div>
                                     </div>
+                                    {/* Action rapide pour réaligner les droits si le rôle change */}
+                                    <button 
+                                        type="button"
+                                        onClick={handleApplyDefaultPerms}
+                                        className="w-full py-4 bg-blue-50 dark:bg-blue-900/10 text-blue-600 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border border-blue-100 hover:bg-blue-100 transition-all"
+                                    >
+                                        <Zap size={14} /> Appliquer les droits par défaut du rôle
+                                    </button>
                                 </div>
                             )}
 
@@ -216,7 +237,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-[2rem] border border-blue-100 dark:border-blue-900/30 mb-8">
                                         <p className="text-xs text-blue-700 dark:text-blue-300 font-bold leading-relaxed">
-                                            L'accès aux fonctionnalités administratives est strictement lié aux cases cochées ci-dessous. Un admin sans droits cochés ne verra rien.
+                                            Modifiez les accès individuels. Si vous changez le rôle, utilisez l'onglet coordonnées pour réinitialiser les droits par défaut.
                                         </p>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

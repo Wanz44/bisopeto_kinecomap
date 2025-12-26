@@ -1,5 +1,5 @@
 
-import { User, MarketplaceItem, Vehicle, AdCampaign, Partner, UserType, SystemSettings, WasteReport, GlobalImpact, DatabaseHealth, NotificationItem, Payment, AuditLog } from '../types';
+import { User, MarketplaceItem, Vehicle, AdCampaign, Partner, UserType, SystemSettings, WasteReport, GlobalImpact, DatabaseHealth, NotificationItem, Payment, AuditLog, UserPermission } from '../types';
 import { supabase } from './supabaseClient';
 
 // --- MAPPERS (Source of Truth Alignment) ---
@@ -17,7 +17,7 @@ export const mapUser = (u: any): User => ({
     collections: u.collections || 0,
     badges: u.badges || 0,
     subscription: u.subscription || 'standard',
-    permissions: u.permissions || [],
+    permissions: u.permissions || [], // Sécurité : toujours un tableau
     status: u.status || 'active',
     type: u.type || UserType.CITIZEN,
     address: u.address || '',
@@ -262,6 +262,12 @@ export const SettingsAPI = {
             passwordPolicy: data.password_policy
         } : null;
     },
+    // Nouvelle méthode pour récupérer les rôles et leurs permissions
+    getRolesConfig: async (): Promise<Record<string, UserPermission[]>> => {
+        if (!supabase) return {};
+        const { data } = await supabase.from('system_settings').select('roles_config').eq('id', 1).maybeSingle();
+        return data?.roles_config || {};
+    },
     getImpact: async (): Promise<GlobalImpact | null> => {
         return { digitalization: 75, recyclingRate: 42, education: 60, realTimeCollection: 88 };
     },
@@ -278,6 +284,12 @@ export const SettingsAPI = {
             session_timeout: s.sessionTimeout,
             password_policy: s.passwordPolicy
         }).eq('id', 1);
+        if (error) throw error;
+    },
+    // Mise à jour de la matrice RBAC
+    updateRolesConfig: async (config: Record<string, UserPermission[]>) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('system_settings').update({ roles_config: config }).eq('id', 1);
         if (error) throw error;
     },
     checkDatabaseIntegrity: async (): Promise<DatabaseHealth> => {
