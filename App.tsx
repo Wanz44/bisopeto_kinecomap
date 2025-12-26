@@ -95,10 +95,8 @@ function App() {
         }
     }, [user?.id, user?.status, showToast]);
 
-    // REAL-TIME LISTENER POUR L'ACTIVATION DU COMPTE ET LES NOTIFICATIONS
     useEffect(() => {
         if (user?.id && isSupabaseConfigured() && supabase) {
-            // 1. Écouteur activation utilisateur
             const activationChannel = supabase.channel(`user_activation_${user.id}`)
                 .on('postgres_changes', { 
                     event: 'UPDATE', 
@@ -119,7 +117,6 @@ function App() {
                 })
                 .subscribe();
 
-            // 2. Écouteur Notifications temps réel (Inscriptions, Alertes SIG)
             const notifChannel = supabase.channel('realtime_notifications')
                 .on('postgres_changes', { 
                     event: 'INSERT', 
@@ -129,7 +126,6 @@ function App() {
                     const newNotif = payload.new as NotificationItem;
                     const isAdmin = user.type === UserType.ADMIN;
                     
-                    // Vérifier si la notification est destinée à cet utilisateur ou au rôle ADMIN
                     const isTargeted = newNotif.targetUserId === user.id || 
                                      newNotif.targetUserId === 'ALL' || 
                                      (isAdmin && newNotif.targetUserId === 'ADMIN');
@@ -211,7 +207,6 @@ function App() {
 
     const handleNotify = async (targetId: string, title: string, message: string, type: any) => {
         await NotificationsAPI.add({ targetUserId: targetId, title, message, type });
-        // Le listener temps réel s'occupera d'ajouter à la liste locale si besoin
     };
 
     const handleRefresh = async () => {
@@ -247,7 +242,7 @@ function App() {
 
         switch (view) {
             case AppView.DASHBOARD: return <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} onRefresh={refreshUserData} />;
-            case AppView.REPORTING: return <Reporting user={user} onBack={goBack} onToast={showToast} />;
+            case AppView.REPORTING: return <Reporting user={user} onBack={goBack} onToast={showToast} onNotifyAdmin={(t, m) => handleNotify('ADMIN', t, m, 'alert')} />;
             case AppView.MAP: return <MapView user={user} onBack={goBack} />;
             case AppView.ACADEMY: return <Academy onBack={goBack} />;
             case AppView.MARKETPLACE: return <Marketplace user={user} onBack={goBack} systemSettings={systemSettings} onToast={showToast} />;
