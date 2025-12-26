@@ -24,16 +24,21 @@ export const supabase = isSupabaseConfigured()
  * Test de santé de la connexion vers Supabase.
  */
 export const testSupabaseConnection = async (): Promise<boolean> => {
-    if (!supabase) return false;
+    if (!supabase) {
+        console.error("[BISO PETO CLOUD] Erreur : Client non initialisé. Vérifiez les secrets SUPABASE_URL/KEY.");
+        return false;
+    }
     try {
         // On tente de lire une ligne de la table users pour valider la clé
         const { error } = await supabase.from('users').select('id').limit(1);
         if (error) {
-            console.warn("Supabase connection check failed:", error.message);
+            console.warn("[BISO PETO CLOUD] Échec de la vérification :", error.message);
             return false;
         }
+        console.log("[BISO PETO CLOUD] Connexion établie avec succès. Temps réel actif.");
         return true;
     } catch (e) {
+        console.error("[BISO PETO CLOUD] Erreur critique de connexion.");
         return false;
     }
 };

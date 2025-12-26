@@ -5,7 +5,7 @@ import {
     Activity, Truck, MapPin, Clock, ShieldCheck, 
     RefreshCw, Zap, History, Loader2, Sparkles, ArrowUpRight, 
     DollarSign, Database, Wifi, CreditCard, ShoppingBag, Bell, Lock, CheckCircle2,
-    Camera, UserPlus
+    Camera, UserPlus, ChevronRight
 } from 'lucide-react';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -132,7 +132,6 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
 
             {/* LIVE KPI GRID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Fix: Added raw property to keep numeric value for comparison, avoiding the '>' operator error on string | number union */}
                 {[
                     { label: 'Inscriptions à Valider', raw: stats.pendingUsers, val: stats.pendingUsers, icon: UserPlus, color: 'text-red-600', perm: 'manage_users', view: AppView.ADMIN_USERS },
                     { label: 'Signalements Actifs', raw: stats.reports, val: stats.reports, icon: AlertTriangle, color: 'text-orange-600', perm: 'manage_reports', view: AppView.ADMIN_REPORTS },
@@ -144,7 +143,6 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                         <div className={`w-12 h-12 bg-gray-50 dark:bg-gray-800 ${kpi.color} rounded-2xl flex items-center justify-center mb-4 shadow-inner`}><kpi.icon size={24}/></div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{kpi.label}</p>
                         <h3 className="text-3xl font-black text-gray-900 dark:text-white leading-none mt-1">{kpi.val}</h3>
-                        {/* Fix: Compare raw numeric value instead of kpi.val which can be a string */}
                         {kpi.raw > 0 && kpi.icon === UserPlus && (
                             <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
                         )}
@@ -229,13 +227,51 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
 }
 
 function CitizenDashboard({ user, onChangeView }: DashboardProps) {
+    const [myReports, setMyReports] = useState<WasteReport[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isCloudSynced, setIsCloudSynced] = useState(false);
+
+    useEffect(() => {
+        const loadMyData = async () => {
+            setIsLoading(true);
+            const live = await testSupabaseConnection();
+            setIsCloudSynced(live);
+            try {
+                if (user.id) {
+                    const data = await ReportsAPI.getByUserId(user.id);
+                    setMyReports(data);
+                }
+            } finally { setIsLoading(false); }
+        };
+        loadMyData();
+
+        // Écoute en temps réel de ses propres changements
+        if (user.id && supabase) {
+            const channel = supabase.channel(`citizen_reports_${user.id}`)
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'waste_reports',
+                    filter: `reporter_id=eq.${user.id}`
+                }, () => loadMyData())
+                .subscribe();
+            return () => { supabase.removeChannel(channel); };
+        }
+    }, [user.id]);
+
     return (
         <div className="p-4 md:p-8 space-y-8 animate-fade-in pb-32">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8">
                 <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className={`px-2 py-0.5 rounded-full flex items-center gap-1.5 border ${isCloudSynced ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${isCloudSynced ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                            <span className="text-[7px] font-black uppercase tracking-widest">{isCloudSynced ? 'Connecté au Cloud SIG' : 'Mode local'}</span>
+                        </div>
+                    </div>
                     <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none truncate">Mbote, {user.firstName}!</h1>
                     <div className="flex items-center gap-3 mt-4">
-                        <div className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 border border-green-100 dark:border-green-800 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
+                        <div className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-primary-light border border-green-100 dark:border-green-800 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
                            <Sparkles size={10}/> Citoyen de {user.commune}
                         </div>
                     </div>
@@ -252,9 +288,34 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                     <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-[2rem] flex items-center justify-center text-white shadow-xl"><Camera size={40} /></div>
                     <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Signaler <br/> un tas</h3>
                 </button>
-                <div className="bg-white dark:bg-gray-900 p-10 rounded-[3.5rem] border dark:border-gray-800 shadow-sm flex flex-col">
-                    <h3 className="text-xl font-black dark:text-white uppercase tracking-tighter flex items-center gap-3 mb-8"><History size={24} className="text-blue-500"/> Activité Récente</h3>
-                    <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-20 font-black uppercase text-xs">Aucun signalement ce mois-ci</div>
+                
+                <div className="bg-white dark:bg-gray-900 p-10 rounded-[3.5rem] border dark:border-gray-800 shadow-sm flex flex-col overflow-hidden">
+                    <h3 className="text-xl font-black dark:text-white uppercase tracking-tighter flex items-center gap-3 mb-8"><History size={24} className="text-blue-500"/> Mes Signalements Live</h3>
+                    
+                    <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar">
+                        {isLoading ? (
+                            <div className="py-10 text-center"><Loader2 className="animate-spin text-primary mx-auto" /></div>
+                        ) : myReports.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-10 opacity-20 font-black uppercase text-xs">Aucun signalement trouvé</div>
+                        ) : myReports.map(report => (
+                            <div key={report.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-3xl border border-transparent hover:border-blue-100 transition-all">
+                                <img src={report.imageUrl} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-black dark:text-white uppercase truncate">{report.wasteType}</p>
+                                    <p className="text-[8px] text-gray-400 font-bold uppercase">{new Date(report.date).toLocaleDateString()}</p>
+                                </div>
+                                <span className={`px-2 py-1 rounded-lg text-[7px] font-black uppercase text-white ${
+                                    report.status === 'resolved' ? 'bg-green-500' : 
+                                    report.status === 'assigned' ? 'bg-blue-500' : 'bg-yellow-500'
+                                }`}>
+                                    {report.status}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                    {myReports.length > 0 && (
+                        <button className="w-full mt-6 py-4 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">Voir tout l'historique <ChevronRight size={14}/></button>
+                    )}
                 </div>
             </div>
         </div>

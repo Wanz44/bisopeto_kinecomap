@@ -17,7 +17,7 @@ export const mapUser = (u: any): User => ({
     collections: u.collections || 0,
     badges: u.badges || 0,
     subscription: u.subscription || 'standard',
-    permissions: Array.isArray(u.permissions) ? u.permissions : [], // Sécurité renforcée
+    permissions: Array.isArray(u.permissions) ? u.permissions : [], 
     status: u.status || 'active',
     type: u.type || UserType.CITIZEN,
     address: u.address || '',
@@ -131,6 +131,14 @@ export const ReportsAPI = {
         if (filters?.commune && filters.commune !== 'all') query = query.eq('commune', filters.commune);
         if (filters?.status && filters.status !== 'all') query = query.eq('status', filters.status);
         const { data } = await query.order('created_at', { ascending: false }).range(page * pageSize, (page + 1) * pageSize - 1);
+        return data ? data.map(mapReport) : [];
+    },
+    getByUserId: async (userId: string): Promise<WasteReport[]> => {
+        if (!supabase) return [];
+        const { data } = await supabase.from('waste_reports')
+            .select('*')
+            .eq('reporter_id', userId)
+            .order('created_at', { ascending: false });
         return data ? data.map(mapReport) : [];
     },
     add: async (r: WasteReport): Promise<WasteReport> => {
@@ -262,7 +270,6 @@ export const SettingsAPI = {
             passwordPolicy: data.password_policy
         } : null;
     },
-    // Nouvelle méthode pour récupérer les rôles et leurs permissions
     getRolesConfig: async (): Promise<Record<string, UserPermission[]>> => {
         if (!supabase) return {};
         const { data } = await supabase.from('system_settings').select('roles_config').eq('id', 1).maybeSingle();
@@ -286,7 +293,6 @@ export const SettingsAPI = {
         }).eq('id', 1);
         if (error) throw error;
     },
-    // Mise à jour de la matrice RBAC
     updateRolesConfig: async (config: Record<string, UserPermission[]>) => {
         if (!supabase) return;
         const { error } = await supabase.from('system_settings').update({ roles_config: config }).eq('id', 1);
