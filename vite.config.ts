@@ -1,11 +1,13 @@
 
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-import process from 'node:process';
+// Fix: Import specifically used methods to avoid type resolution issues with Node's process object
+import { cwd } from 'node:process';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  // Fix: Use the imported cwd() instead of process.cwd() to resolve TS2339
+  const env = loadEnv(mode, cwd(), '');
 
   return {
     plugins: [react()],

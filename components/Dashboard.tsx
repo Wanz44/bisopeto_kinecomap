@@ -5,7 +5,7 @@ import {
     Activity, Truck, MapPin, Clock, ShieldCheck, 
     RefreshCw, Zap, History, Loader2, Sparkles, ArrowUpRight, 
     DollarSign, Database, Wifi, CreditCard, ShoppingBag, Bell, Lock, CheckCircle2,
-    Camera, UserPlus, ChevronRight
+    Camera, UserPlus, ChevronRight, UserCheck, Globe
 } from 'lucide-react';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -75,12 +75,16 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
         const tonnage = allUsers.reduce((acc, u) => acc + (u.totalTonnage || 0), 0);
         const activeAlerts = allReports.filter(r => r.status === 'pending' || r.status === 'assigned').length;
         const pendingUsers = allUsers.filter(u => u.status === 'pending').length;
+        // Simulation du statut "en ligne" basé sur le statut 'active' pour cette version
+        // En production réelle, on utiliserait Supabase Presence ou un timestamp 'last_seen'
+        const onlineUsers = allUsers.filter(u => u.status === 'active').length;
         
         return {
             revenue: revenue,
             tonnage: tonnage,
             reports: activeAlerts,
             members: allUsers.length,
+            online: onlineUsers,
             pendingUsers: pendingUsers,
             successRate: allReports.length > 0 ? Math.round((allReports.filter(r => r.status === 'resolved').length / allReports.length) * 100) : 0
         };
@@ -124,26 +128,32 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                     </div>
                     <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Console Cloud</h1>
                 </div>
-                <div className="bg-gray-900 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-4">
+                <div className="bg-gray-900 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-4 border border-white/5">
                     <Clock className="w-5 h-5 text-blue-400" />
                     <span className="text-sm font-black font-mono">{currentTime.toLocaleTimeString('fr-FR')}</span>
                 </div>
             </div>
 
             {/* LIVE KPI GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
                 {[
-                    { label: 'Inscriptions à Valider', raw: stats.pendingUsers, val: stats.pendingUsers, icon: UserPlus, color: 'text-red-600', perm: 'manage_users', view: AppView.ADMIN_USERS },
-                    { label: 'Signalements Actifs', raw: stats.reports, val: stats.reports, icon: AlertTriangle, color: 'text-orange-600', perm: 'manage_reports', view: AppView.ADMIN_REPORTS },
-                    { label: 'Recette Totale (FC)', raw: stats.revenue, val: stats.revenue.toLocaleString(), icon: DollarSign, color: 'text-green-600', perm: 'view_finance', view: AppView.ADMIN_SUBSCRIPTIONS },
-                    { label: 'Tonnage Récupéré', raw: stats.tonnage, val: `${stats.tonnage}kg`, icon: Trash2, color: 'text-purple-600', perm: 'manage_recovery', view: AppView.ADMIN_RECOVERY }
+                    { label: 'Utilisateurs Totaux', val: stats.members, icon: Users, color: 'text-blue-600', perm: 'manage_users', view: AppView.ADMIN_USERS },
+                    { label: 'Utilisateurs En Ligne', val: stats.online, icon: Globe, color: 'text-green-500', perm: 'manage_users', view: AppView.ADMIN_USERS, pulse: true },
+                    { label: 'Inscriptions à Valider', val: stats.pendingUsers, icon: UserPlus, color: 'text-orange-600', perm: 'manage_users', view: AppView.ADMIN_USERS },
+                    { label: 'Signalements Actifs', val: stats.reports, icon: AlertTriangle, color: 'text-red-600', perm: 'manage_reports', view: AppView.ADMIN_REPORTS },
+                    { label: 'Recette Totale (FC)', val: stats.revenue.toLocaleString(), icon: DollarSign, color: 'text-green-600', perm: 'view_finance', view: AppView.ADMIN_SUBSCRIPTIONS },
+                    { label: 'Tonnage Récupéré', val: `${stats.tonnage}kg`, icon: Trash2, color: 'text-purple-600', perm: 'manage_recovery', view: AppView.ADMIN_RECOVERY }
                 ].map((kpi, i) => hasPermission(kpi.perm as UserPermission) && (
                     <div key={i} onClick={() => kpi.view && onChangeView(kpi.view)} className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] border dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-all">
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform"><kpi.icon size={80}/></div>
-                        <div className={`w-12 h-12 bg-gray-50 dark:bg-gray-800 ${kpi.color} rounded-2xl flex items-center justify-center mb-4 shadow-inner`}><kpi.icon size={24}/></div>
+                        <div className={`w-12 h-12 bg-gray-50 dark:bg-gray-800 ${kpi.color} rounded-2xl flex items-center justify-center mb-4 shadow-inner relative`}>
+                            <kpi.icon size={24}/>
+                            {kpi.pulse && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping border-2 border-white dark:border-gray-900"></div>}
+                        </div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{kpi.label}</p>
                         <h3 className="text-3xl font-black text-gray-900 dark:text-white leading-none mt-1">{kpi.val}</h3>
-                        {kpi.raw > 0 && kpi.icon === UserPlus && (
+                        {/* Fix: Added type check for kpi.val before numeric comparison to fix TS operator error */}
+                        {typeof kpi.val === 'number' && kpi.val > 0 && kpi.icon === UserPlus && (
                             <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
                         )}
                     </div>
