@@ -9,10 +9,11 @@ import {
     History, UserCog, Trash2, ArrowRight, CheckCircle2, AlertCircle, Ban,
     Maximize2, ChevronRight, MessageCircle, Check, Calendar, User, UserPlus,
     RotateCcw, Target, FileSpreadsheet, Eraser, CalendarDays, SlidersHorizontal,
-    UserCircle, Activity, BarChart3, Image as ImageIcon
+    UserCircle, Activity, BarChart3, Image as ImageIcon, RefreshCw
 } from 'lucide-react';
 import { WasteReport, User as AppUser, UserType } from '../types';
-import { ReportsAPI, UserAPI, AuditAPI } from '../services/api';
+import { ReportsAPI, UserAPI, mapReport } from '../services/api';
+import { supabase } from '../services/supabaseClient';
 
 const KINSHASA_COMMUNES = [
     "Barumbu", "Bumbu", "Bandalungwa", "Gombe", "Kalamu", "Kasa-Vubu", 
@@ -35,7 +36,9 @@ const reportIcon = (status: string, urgency: string, isSelected: boolean) => {
     const size = isSelected ? 22 : 14;
     return L.divIcon({
         className: 'custom-report-marker',
-        html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px ${isSelected ? color : 'rgba(0,0,0,0.2)'}; position: relative;"></div>`,
+        html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px ${isSelected ? color : 'rgba(0,0,0,0.2)'}; position: relative;">
+            ${status === 'pending' ? '<div style="position:absolute; inset:-4px; border:2px solid #FFB300; border-radius:50%; animation:ping 2s infinite;"></div>' : ''}
+        </div>`,
         iconSize: [size, size],
         iconAnchor: [size/2, size/2]
     });
@@ -94,6 +97,37 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
         }
     };
 
+    // REAL-TIME LISTENER POUR LES NOUVEAUX RAPPORTS
+    useEffect(() => {
+        if (supabase) {
+            const channel = supabase.channel('realtime_sig_reports')
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'waste_reports' 
+                }, (payload) => {
+                    const newReport = mapReport(payload.new);
+                    // Ajouter au début de la liste si on est sur la première page et qu'aucun filtre bloquant n'est actif
+                    setReports(prev => [newReport, ...prev]);
+                    onToast?.(`Nouveau Signalement : ${newReport.wasteType} à ${newReport.commune}`, "info");
+                })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'waste_reports'
+                }, (payload) => {
+                    const updated = mapReport(payload.new);
+                    setReports(prev => prev.map(r => r.id === updated.id ? updated : r));
+                    if (selectedReport?.id === updated.id) {
+                        setSelectedReport(updated);
+                    }
+                })
+                .subscribe();
+
+            return () => { supabase.removeChannel(channel); };
+        }
+    }, [onToast, selectedReport?.id]);
+
     useEffect(() => {
         loadData(page);
     }, [page]);
@@ -108,8 +142,6 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
                 status: 'assigned', 
                 assignedTo: collectorId 
             });
-            
-            setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, status: 'assigned', assignedTo: collectorId } : r));
             
             if (onNotify) {
                 onNotify(collectorId, "Nouvelle Mission ! 🚛", `Urgence ${selectedReport.urgency} detectée à ${selectedReport.commune}.`, "alert");
@@ -132,7 +164,6 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
         setIsAssigning(true);
         try {
             await ReportsAPI.update({ id: selectedReport.id, status: 'pending', assignedTo: undefined });
-            setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, status: 'pending', assignedTo: undefined } : r));
             setSelectedReport(null);
             onToast?.("Mission remise en attente", "info");
         } finally {
@@ -170,12 +201,15 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Analyse & Gestion Terrain</p>
                         </div>
                     </div>
-                    <button 
-                        onClick={() => setShowFilters(!showFilters)} 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${showFilters ? 'bg-[#2962FF] text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}
-                    >
-                        <SlidersHorizontal size={14} /> Filtres
-                    </button>
+                    <div className="flex gap-2">
+                        <button onClick={() => loadData(0, true)} className="p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-500 rounded-xl hover:text-primary transition-all"><RefreshCw size={18} className={isLoading ? 'animate-spin' : ''}/></button>
+                        <button 
+                            onClick={() => setShowFilters(!showFilters)} 
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${showFilters ? 'bg-[#2962FF] text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}
+                        >
+                            <SlidersHorizontal size={14} /> Filtres
+                        </button>
+                    </div>
                 </div>
 
                 {/* Bandeau Stats Dynamique */}
@@ -196,9 +230,18 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
 
                 {showFilters && (
                     <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-[2rem] border dark:border-gray-800 grid grid-cols-1 md:grid-cols-5 gap-3 mt-4 animate-fade-in">
-                        <select value={filters.commune} onChange={e => setFilters({...filters, commune: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">{KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-                        <select value={filters.wasteType} onChange={e => setFilters({...filters, wasteType: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">{WASTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select>
-                        <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">{STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
+                        <select value={filters.commune} onChange={e => setFilters({...filters, commune: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">
+                            <option value="all">Toutes les communes</option>
+                            {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <select value={filters.wasteType} onChange={e => setFilters({...filters, wasteType: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">
+                            <option value="all">Tous types</option>
+                            {WASTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">
+                            <option value="all">Tous statuts</option>
+                            {STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                        </select>
                         <div className="flex gap-2"><input type="date" value={filters.dateFrom} onChange={e=>setFilters({...filters, dateFrom:e.target.value})} className="flex-1 p-2 bg-white dark:bg-gray-900 rounded-lg text-[9px] font-black" /><input type="date" value={filters.dateTo} onChange={e=>setFilters({...filters, dateTo:e.target.value})} className="flex-1 p-2 bg-white dark:bg-gray-900 rounded-lg text-[9px] font-black" /></div>
                         <div className="flex gap-2"><button onClick={handleApplyFilters} className="flex-1 bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest">Filtrer</button><button onClick={handleResetFilters} className="p-2.5 bg-gray-100 dark:bg-gray-900 rounded-xl"><RotateCcw size={14}/></button></div>
                     </div>
@@ -207,12 +250,21 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
 
             <div className="flex-1 flex overflow-hidden">
                 {/* Liste latérale ultra-compacte */}
-                <div className="hidden lg:flex w-[350px] bg-white dark:bg-gray-950 border-r dark:border-gray-800 flex-col overflow-hidden">
+                <div className="hidden lg:flex w-[350px] bg-white dark:bg-gray-950 border-r dark:border-gray-800 flex flex-col overflow-hidden">
                     <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
+                        {reports.length === 0 && !isLoading && (
+                            <div className="py-20 text-center opacity-30">
+                                <Activity size={48} className="mx-auto mb-4"/>
+                                <p className="text-[10px] font-black uppercase tracking-widest">Aucun signalement</p>
+                            </div>
+                        )}
                         {reports.map((report, index) => (
                             <div key={report.id} ref={index === reports.length - 1 ? lastElementRef : null} onClick={() => { setSelectedReport(report); setViewProof(false); }} className={`p-4 rounded-[1.8rem] border transition-all cursor-pointer group flex flex-col gap-2 ${selectedReport?.id === report.id ? 'border-[#2962FF] bg-blue-50/30 shadow-lg' : 'border-gray-50 dark:border-gray-900 hover:border-gray-100'}`}>
                                 <div className="flex gap-3">
-                                    <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-100"><img src={report.imageUrl} className="w-full h-full object-cover" /></div>
+                                    <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-100 relative">
+                                        <img src={report.imageUrl} className="w-full h-full object-cover" />
+                                        {report.status === 'pending' && <div className="absolute inset-0 bg-yellow-500/20 animate-pulse"></div>}
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start"><h4 className="font-black dark:text-white uppercase truncate text-[10px]">{report.wasteType}</h4><span className={`px-1.5 py-0.5 rounded-md text-[6px] font-black uppercase text-white ${report.urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>{report.urgency}</span></div>
                                         <p className="text-[8px] text-gray-400 font-bold mt-0.5 uppercase truncate"><MapPin size={8}/> {report.commune}</p>

@@ -17,7 +17,7 @@ export const mapUser = (u: any): User => ({
     collections: u.collections || 0,
     badges: u.badges || 0,
     subscription: u.subscription || 'standard',
-    permissions: u.permissions || [], // Sécurité : toujours un tableau
+    permissions: Array.isArray(u.permissions) ? u.permissions : [], // Sécurité renforcée
     status: u.status || 'active',
     type: u.type || UserType.CITIZEN,
     address: u.address || '',
