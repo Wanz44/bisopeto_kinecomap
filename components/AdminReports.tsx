@@ -22,7 +22,7 @@ const KINSHASA_COMMUNES = [
     "Ngaliema", "N’djili", "Nsele", "Selembao", "Kimbanseke", "Kisenso"
 ];
 
-const WASTE_TYPES = ["Plastique", "Métal", "Électronique", "Organique", "Papier/Carton", "Verre", "Médical", "Gravats", "Divers"];
+const WASTE_TYPES = ["Plastique", "Métal", "Électronique", "Organique", "Papier/Cardon", "Verre", "Médical", "Gravats", "Divers"];
 
 const STATUSES = [
     { key: 'pending', label: 'En attente', color: 'bg-yellow-500', icon: Clock },
@@ -107,7 +107,6 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
                     table: 'waste_reports' 
                 }, (payload) => {
                     const newReport = mapReport(payload.new);
-                    // Ajouter au début de la liste si on est sur la première page et qu'aucun filtre bloquant n'est actif
                     setReports(prev => [newReport, ...prev]);
                     onToast?.(`Nouveau Signalement : ${newReport.wasteType} à ${newReport.commune}`, "info");
                 })
@@ -229,21 +228,46 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
                 </div>
 
                 {showFilters && (
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-[2rem] border dark:border-gray-800 grid grid-cols-1 md:grid-cols-5 gap-3 mt-4 animate-fade-in">
-                        <select value={filters.commune} onChange={e => setFilters({...filters, commune: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">
-                            <option value="all">Toutes les communes</option>
-                            {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <select value={filters.wasteType} onChange={e => setFilters({...filters, wasteType: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">
-                            <option value="all">Tous types</option>
-                            {WASTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                        <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-2.5 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none">
-                            <option value="all">Tous statuts</option>
-                            {STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                        </select>
-                        <div className="flex gap-2"><input type="date" value={filters.dateFrom} onChange={e=>setFilters({...filters, dateFrom:e.target.value})} className="flex-1 p-2 bg-white dark:bg-gray-900 rounded-lg text-[9px] font-black" /><input type="date" value={filters.dateTo} onChange={e=>setFilters({...filters, dateTo:e.target.value})} className="flex-1 p-2 bg-white dark:bg-gray-900 rounded-lg text-[9px] font-black" /></div>
-                        <div className="flex gap-2"><button onClick={handleApplyFilters} className="flex-1 bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest">Filtrer</button><button onClick={handleResetFilters} className="p-2.5 bg-gray-100 dark:bg-gray-900 rounded-xl"><RotateCcw size={14}/></button></div>
+                    <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2rem] border dark:border-gray-800 mt-4 animate-fade-in shadow-inner space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Zone</label>
+                                <select value={filters.commune} onChange={e => setFilters({...filters, commune: e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none border dark:border-gray-700 shadow-sm">
+                                    <option value="all">Toutes les communes</option>
+                                    {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Type de Déchet</label>
+                                <select value={filters.wasteType} onChange={e => setFilters({...filters, wasteType: e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none border dark:border-gray-700 shadow-sm">
+                                    <option value="all">Tous types</option>
+                                    {WASTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Statut</label>
+                                <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none border dark:border-gray-700 shadow-sm">
+                                    <option value="all">Tous statuts</option>
+                                    {STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t dark:border-gray-700">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Période : Du (Début)</label>
+                                <input type="date" value={filters.dateFrom} onChange={e=>setFilters({...filters, dateFrom:e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[10px] font-black outline-none border dark:border-gray-700 shadow-sm" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Au (Fin)</label>
+                                <input type="date" value={filters.dateTo} onChange={e=>setFilters({...filters, dateTo:e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[10px] font-black outline-none border dark:border-gray-700 shadow-sm" />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button onClick={handleApplyFilters} className="flex-1 py-3 bg-[#2962FF] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all">Appliquer les filtres</button>
+                            <button onClick={handleResetFilters} className="px-6 bg-gray-100 dark:bg-gray-900 text-gray-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all flex items-center gap-2"><Eraser size={14}/> Réinitialiser</button>
+                        </div>
                     </div>
                 )}
             </div>
@@ -315,7 +339,7 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
                                     {selectedReport.status === 'pending' ? (
                                         <button onClick={() => setShowAssignModal(true)} className="flex-1 py-2.5 bg-[#2962FF] text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg active:scale-95 transition-all">Assigner Équipe</button>
                                     ) : selectedReport.status === 'assigned' ? (
-                                        <button onClick={handleUnassign} className="flex-1 py-2.5 bg-orange-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg active:scale-95 transition-all">Réaffecter</button>
+                                        <button onClick={handleUnassign} className="flex-1 py-2.5 bg-orange-50 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg active:scale-95 transition-all">Réaffecter</button>
                                     ) : selectedReport.status === 'resolved' ? (
                                         <button onClick={() => setViewProof(!viewProof)} className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg flex items-center justify-center gap-2"><ImageIcon size={14}/> {viewProof ? 'Détails' : 'Voir Preuve'}</button>
                                     ) : (
@@ -332,7 +356,7 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
             {/* MODAL ASSIGNATION COLLECTEURS */}
             {showAssignModal && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowAssignModal(false)}></div>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAssignModal(false)}></div>
                     <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-md p-8 relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800">
                         <div className="flex justify-between items-center mb-8">
                             <div><h3 className="text-2xl font-black dark:text-white uppercase tracking-tighter leading-none">Déploiement</h3><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-2">Choisir un collecteur pour cette mission</p></div>

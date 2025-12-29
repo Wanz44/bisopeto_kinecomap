@@ -128,8 +128,20 @@ export const ReportsAPI = {
     getAll: async (page = 0, pageSize = 50, filters?: any): Promise<WasteReport[]> => {
         if (!supabase) return [];
         let query = supabase.from('waste_reports').select('*');
+        
         if (filters?.commune && filters.commune !== 'all') query = query.eq('commune', filters.commune);
         if (filters?.status && filters.status !== 'all') query = query.eq('status', filters.status);
+        if (filters?.wasteType && filters.wasteType !== 'all') query = query.eq('waste_type', filters.wasteType);
+        
+        // Date Filtering Implementation
+        if (filters?.dateFrom) {
+            query = query.gte('created_at', filters.dateFrom);
+        }
+        if (filters?.dateTo) {
+            // End of day filter to include reports from the selected end date
+            query = query.lte('created_at', `${filters.dateTo}T23:59:59`);
+        }
+
         const { data } = await query.order('created_at', { ascending: false }).range(page * pageSize, (page + 1) * pageSize - 1);
         return data ? data.map(mapReport) : [];
     },
