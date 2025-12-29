@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -44,7 +43,14 @@ const reportIcon = (status: string, urgency: string, isSelected: boolean) => {
     });
 };
 
-export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, currentUser }) => {
+interface AdminReportsProps {
+    onBack: () => void;
+    onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+    onNotify: (targetId: string, title: string, message: string, type: string) => void;
+    currentUser: AppUser;
+}
+
+export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onNotify, currentUser }) => {
     const [reports, setReports] = useState<WasteReport[]>([]);
     const [collectors, setCollectors] = useState<AppUser[]>([]);
     const [page, setPage] = useState(0);
@@ -97,95 +103,51 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
         }
     };
 
-    // REAL-TIME LISTENER POUR LES NOUVEAUX RAPPORTS
     useEffect(() => {
         if (supabase) {
-            const channel = supabase.channel('realtime_sig_reports')
-                .on('postgres_changes', { 
-                    event: 'INSERT', 
-                    schema: 'public', 
-                    table: 'waste_reports' 
-                }, (payload) => {
+            const channel = supabase.channel('realtime_sig_reports_admin')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waste_reports' }, (payload) => {
                     const newReport = mapReport(payload.new);
                     setReports(prev => [newReport, ...prev]);
-                    onToast?.(`Nouveau Signalement : ${newReport.wasteType} à ${newReport.commune}`, "info");
-                })
-                .on('postgres_changes', {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'waste_reports'
-                }, (payload) => {
-                    const updated = mapReport(payload.new);
-                    setReports(prev => prev.map(r => r.id === updated.id ? updated : r));
-                    if (selectedReport?.id === updated.id) {
-                        setSelectedReport(updated);
-                    }
+                    onToast?.(`Nouveau Signalement : ${newReport.wasteType}`, "info");
                 })
                 .subscribe();
-
             return () => { supabase.removeChannel(channel); };
         }
-    }, [onToast, selectedReport?.id]);
+    }, [onToast]);
 
     useEffect(() => {
         loadData(page);
     }, [page]);
 
-    const handleAssign = async (collectorId: string) => {
-        if (!selectedReport) return;
-        setIsAssigning(true);
-        try {
-            const collector = collectors.find(c => c.id === collectorId);
-            await ReportsAPI.update({ 
-                id: selectedReport.id, 
-                status: 'assigned', 
-                assignedTo: collectorId 
-            });
-            
-            if (onNotify) {
-                onNotify(collectorId, "Nouvelle Mission ! 🚛", `Urgence ${selectedReport.urgency} detectée à ${selectedReport.commune}.`, "alert");
-            }
-            
-            if (onToast) onToast(`Mission assignée à ${collector?.firstName}`, "success");
-            setShowAssignModal(false);
-            setSelectedReport(null);
-        } catch (e) {
-            if (onToast) onToast("Échec de l'assignation", "error");
-        } finally {
-            setIsAssigning(false);
-        }
-    };
-
-    const handleUnassign = async () => {
-        if (!selectedReport) return;
-        if (!confirm("Retirer cette mission du collecteur actuel ?")) return;
-        
-        setIsAssigning(true);
-        try {
-            await ReportsAPI.update({ id: selectedReport.id, status: 'pending', assignedTo: undefined });
-            setSelectedReport(null);
-            onToast?.("Mission remise en attente", "info");
-        } finally {
-            setIsAssigning(false);
-        }
-    };
-
     const handleApplyFilters = () => {
-        setPage(0); setHasMore(true);
+        setPage(0);
+        setHasMore(true);
         loadData(0, true);
         setShowFilters(false);
     };
 
     const handleResetFilters = () => {
         setFilters({ commune: 'all', status: 'all', wasteType: 'all', dateFrom: '', dateTo: '' });
-        setPage(0); setHasMore(true);
+        setPage(0);
+        setHasMore(true);
         setTimeout(() => loadData(0, true), 10);
     };
 
-    const stats = {
-        pending: reports.filter(r => r.status === 'pending').length,
-        urgent: reports.filter(r => r.urgency === 'high' && r.status !== 'resolved').length,
-        assigned: reports.filter(r => r.status === 'assigned').length
+    const handleAssign = async (collectorId: string) => {
+        if (!selectedReport) return;
+        setIsAssigning(true);
+        try {
+            await ReportsAPI.update({ id: selectedReport.id, status: 'assigned', assignedTo: collectorId });
+            onNotify(collectorId, "Nouvelle Mission ! 🚛", `Mission assignée à ${selectedReport.commune}.`, "alert");
+            onToast?.("Mission assignée", "success");
+            setShowAssignModal(false);
+            loadData(0, true);
+        } catch (e) {
+            if (onToast) onToast("Erreur lors de l'affectation", "error");
+        } finally {
+            setIsAssigning(false);
+        }
     };
 
     return (
@@ -197,187 +159,261 @@ export const AdminReports: React.FC<any> = ({ onBack, onToast, onNotify, current
                         <button onClick={onBack} className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all"><ArrowLeft size={18} /></button>
                         <div>
                             <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">SIG Opérations</h2>
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Analyse & Gestion Terrain</p>
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Filtrez vos données par période</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={() => loadData(0, true)} className="p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-500 rounded-xl hover:text-primary transition-all"><RefreshCw size={18} className={isLoading ? 'animate-spin' : ''}/></button>
                         <button 
                             onClick={() => setShowFilters(!showFilters)} 
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${showFilters ? 'bg-[#2962FF] text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}
                         >
-                            <SlidersHorizontal size={14} /> Filtres
+                            <CalendarDays size={14} /> Filtrer par Date
                         </button>
-                    </div>
-                </div>
-
-                {/* Bandeau Stats Dynamique */}
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-orange-50 dark:bg-orange-900/10 p-3 rounded-2xl border border-orange-100 dark:border-orange-900/30 flex items-center justify-between">
-                        <div><p className="text-[8px] font-black text-orange-400 uppercase tracking-widest">En attente</p><p className="text-xl font-black text-orange-600 leading-none mt-1">{stats.pending}</p></div>
-                        <Clock size={20} className="text-orange-500 opacity-30" />
-                    </div>
-                    <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-2xl border border-red-100 dark:border-red-900/30 flex items-center justify-between">
-                        <div><p className="text-[8px] font-black text-red-400 uppercase tracking-widest">Urgent High</p><p className="text-xl font-black text-red-600 leading-none mt-1">{stats.urgent}</p></div>
-                        <AlertTriangle size={20} className="text-red-500 opacity-30" />
-                    </div>
-                    <div className="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-center justify-between">
-                        <div><p className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Missions Live</p><p className="text-xl font-black text-blue-600 leading-none mt-1">{stats.assigned}</p></div>
-                        <Truck size={20} className="text-blue-500 opacity-30" />
+                        <button onClick={() => loadData(0, true)} className="p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-500 rounded-xl hover:text-primary transition-all"><RefreshCw size={18} className={isLoading ? 'animate-spin' : ''}/></button>
                     </div>
                 </div>
 
                 {showFilters && (
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2rem] border dark:border-gray-800 mt-4 animate-fade-in shadow-inner space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2rem] border dark:border-gray-800 mt-4 animate-fade-in shadow-inner space-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Zone</label>
-                                <select value={filters.commune} onChange={e => setFilters({...filters, commune: e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none border dark:border-gray-700 shadow-sm">
-                                    <option value="all">Toutes les communes</option>
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Date Début</label>
+                                <div className="relative">
+                                    <Calendar size={14} className="absolute left-3 top-3 text-gray-400" />
+                                    {/* Fix: Line 178 fixed below by completing the setFilters call */}
+                                    <input 
+                                        type="date" 
+                                        value={filters.dateFrom} 
+                                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value })} 
+                                        className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-bold text-xs dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Date Fin</label>
+                                <div className="relative">
+                                    <Calendar size={14} className="absolute left-3 top-3 text-gray-400" />
+                                    <input 
+                                        type="date" 
+                                        value={filters.dateTo} 
+                                        onChange={e => setFilters({ ...filters, dateTo: e.target.value })} 
+                                        className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-bold text-xs dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Commune</label>
+                                <select 
+                                    value={filters.commune} 
+                                    onChange={e => setFilters({ ...filters, commune: e.target.value })}
+                                    className="w-full p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-black text-[10px] uppercase dark:text-white"
+                                >
+                                    <option value="all">Toutes les zones</option>
                                     {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Type de Déchet</label>
-                                <select value={filters.wasteType} onChange={e => setFilters({...filters, wasteType: e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none border dark:border-gray-700 shadow-sm">
+                                <select 
+                                    value={filters.wasteType} 
+                                    onChange={e => setFilters({ ...filters, wasteType: e.target.value })}
+                                    className="w-full p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-black text-[10px] uppercase dark:text-white"
+                                >
                                     <option value="all">Tous types</option>
                                     {WASTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Statut</label>
-                                <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-black outline-none appearance-none border dark:border-gray-700 shadow-sm">
-                                    <option value="all">Tous statuts</option>
-                                    {STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                                </select>
-                            </div>
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t dark:border-gray-700">
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Période : Du (Début)</label>
-                                <input type="date" value={filters.dateFrom} onChange={e=>setFilters({...filters, dateFrom:e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[10px] font-black outline-none border dark:border-gray-700 shadow-sm" />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Au (Fin)</label>
-                                <input type="date" value={filters.dateTo} onChange={e=>setFilters({...filters, dateTo:e.target.value})} className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl text-[10px] font-black outline-none border dark:border-gray-700 shadow-sm" />
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3 pt-2">
-                            <button onClick={handleApplyFilters} className="flex-1 py-3 bg-[#2962FF] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all">Appliquer les filtres</button>
-                            <button onClick={handleResetFilters} className="px-6 bg-gray-100 dark:bg-gray-900 text-gray-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all flex items-center gap-2"><Eraser size={14}/> Réinitialiser</button>
+                        <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
+                            <button onClick={handleResetFilters} className="px-4 py-2 text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors flex items-center gap-2"><Eraser size={14}/> Réinitialiser</button>
+                            <button onClick={handleApplyFilters} className="px-6 py-2 bg-gray-900 dark:bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Filtrer le Flux</button>
                         </div>
                     </div>
                 )}
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
-                {/* Liste latérale ultra-compacte */}
-                <div className="hidden lg:flex w-[350px] bg-white dark:bg-gray-950 border-r dark:border-gray-800 flex flex-col overflow-hidden">
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
-                        {reports.length === 0 && !isLoading && (
-                            <div className="py-20 text-center opacity-30">
-                                <Activity size={48} className="mx-auto mb-4"/>
-                                <p className="text-[10px] font-black uppercase tracking-widest">Aucun signalement</p>
+            {/* List and Map Content Area */}
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 no-scrollbar pb-32">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    {/* List Section */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><List size={16}/> Liste des Interventions</h3>
+                            <span className="text-[10px] font-black text-blue-500 uppercase">{reports.length} résultats</span>
+                        </div>
+                        
+                        {reports.length === 0 && !isLoading ? (
+                            <div className="py-20 text-center bg-white dark:bg-gray-900 rounded-[2.5rem] border border-dashed border-gray-200 dark:border-gray-800">
+                                <FileText size={48} className="mx-auto text-gray-200 mb-4" />
+                                <p className="text-xs font-black text-gray-400 uppercase">Aucun signalement trouvé</p>
                             </div>
-                        )}
-                        {reports.map((report, index) => (
-                            <div key={report.id} ref={index === reports.length - 1 ? lastElementRef : null} onClick={() => { setSelectedReport(report); setViewProof(false); }} className={`p-4 rounded-[1.8rem] border transition-all cursor-pointer group flex flex-col gap-2 ${selectedReport?.id === report.id ? 'border-[#2962FF] bg-blue-50/30 shadow-lg' : 'border-gray-50 dark:border-gray-900 hover:border-gray-100'}`}>
-                                <div className="flex gap-3">
-                                    <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-100 relative">
-                                        <img src={report.imageUrl} className="w-full h-full object-cover" />
-                                        {report.status === 'pending' && <div className="absolute inset-0 bg-yellow-500/20 animate-pulse"></div>}
+                        ) : (
+                            reports.map((report, idx) => (
+                                <div 
+                                    key={report.id}
+                                    ref={idx === reports.length - 1 ? lastElementRef : null}
+                                    onClick={() => setSelectedReport(report)}
+                                    className={`p-5 bg-white dark:bg-gray-900 rounded-[2.5rem] border-2 transition-all cursor-pointer group flex items-center gap-5 ${selectedReport?.id === report.id ? 'border-blue-500 shadow-xl' : 'border-gray-50 dark:border-gray-800 shadow-sm'}`}
+                                >
+                                    <div className="relative">
+                                        <img src={report.imageUrl} className="w-16 h-16 rounded-2xl object-cover border dark:border-gray-700" alt="Déchet" />
+                                        <div className={`absolute -top-2 -right-2 w-4 h-4 rounded-full border-2 border-white ${report.urgency === 'high' ? 'bg-red-500 animate-pulse' : 'bg-orange-500'}`}></div>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start"><h4 className="font-black dark:text-white uppercase truncate text-[10px]">{report.wasteType}</h4><span className={`px-1.5 py-0.5 rounded-md text-[6px] font-black uppercase text-white ${report.urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>{report.urgency}</span></div>
-                                        <p className="text-[8px] text-gray-400 font-bold mt-0.5 uppercase truncate"><MapPin size={8}/> {report.commune}</p>
-                                        <div className="flex items-center justify-between mt-1">
-                                            <span className={`px-1.5 py-0.5 rounded-md text-[6px] font-black uppercase text-white ${STATUSES.find(s=>s.key===report.status)?.color}`}>{STATUSES.find(s=>s.key===report.status)?.label}</span>
-                                            <span className="text-[7px] text-gray-300 font-mono">{new Date(report.date).toLocaleDateString()}</span>
+                                        <div className="flex justify-between items-start mb-1">
+                                            <h4 className="font-black text-gray-900 dark:text-white uppercase text-sm truncate">{report.wasteType}</h4>
+                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-lg ${
+                                                report.status === 'resolved' ? 'bg-green-500 text-white' : 
+                                                report.status === 'assigned' ? 'bg-blue-500 text-white' : 'bg-yellow-500 text-white'
+                                            }`}>{report.status}</span>
                                         </div>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase truncate flex items-center gap-1"><MapPin size={10}/> {report.commune}</p>
+                                        <p className="text-[9px] text-gray-400 font-black mt-2 uppercase tracking-widest flex items-center gap-1"><Clock size={10}/> {new Date(report.date).toLocaleDateString()} • {new Date(report.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                                     </div>
+                                    <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                                 </div>
-                            </div>
-                        ))}
-                        {isLoading && <div className="py-10 text-center"><Loader2 className="animate-spin text-blue-500 mx-auto" /></div>}
+                            ))
+                        )}
+                        {isLoading && (
+                            <div className="flex justify-center py-4"><Loader2 className="animate-spin text-blue-500" /></div>
+                        )}
                     </div>
-                </div>
-                
-                <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 z-0">
-                    <MapContainer center={[-4.325, 15.322]} zoom={12} style={{height: '100%', width: '100%'}} zoomControl={false}>
-                        <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" attribution="&copy; Biso Peto SIG" />
-                        {reports.map(r => <Marker key={r.id} position={[r.lat, r.lng]} icon={reportIcon(r.status, r.urgency, selectedReport?.id === r.id)} eventHandlers={{ click: () => { setSelectedReport(r); setViewProof(false); } }} />)}
-                    </MapContainer>
 
-                    {selectedReport && (
-                        <div className="absolute bottom-6 left-6 right-6 lg:left-auto lg:right-6 lg:bottom-6 z-[1000] animate-fade-in-up">
-                            <div className="w-full lg:w-[400px] bg-white dark:bg-gray-950 p-5 rounded-[2.2rem] shadow-2xl border-2 border-blue-500/20 flex flex-col gap-4 relative overflow-hidden group">
-                                <div className="absolute top-3 right-3"><button onClick={() => setSelectedReport(null)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-400"><X size={16}/></button></div>
-                                
-                                {viewProof && selectedReport.proofUrl ? (
-                                    <div className="space-y-4 animate-fade-in">
-                                        <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest text-center">Vérification terrain</h3>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1"><p className="text-[7px] font-black uppercase text-center text-gray-400">Avant</p><img src={selectedReport.imageUrl} className="aspect-square rounded-2xl object-cover border" /></div>
-                                            <div className="space-y-1"><p className="text-[7px] font-black uppercase text-center text-green-500">Après</p><img src={selectedReport.proofUrl} className="aspect-square rounded-2xl object-cover border-2 border-green-500" /></div>
-                                        </div>
-                                        <button onClick={() => setViewProof(false)} className="w-full py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 rounded-xl font-black uppercase text-[8px] tracking-widest">Retour détails</button>
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-4">
-                                        <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden shrink-0 border dark:border-gray-800"><img src={selectedReport.imageUrl} className="w-full h-full object-cover" /></div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-base font-black dark:text-white uppercase tracking-tight truncate leading-tight">{selectedReport.wasteType}</h3>
-                                            <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 flex items-center gap-1"><MapPin size={9}/> {selectedReport.commune}</p>
-                                            <p className="text-[8px] text-gray-400 mt-2 font-medium line-clamp-2 italic">"{selectedReport.comment || 'Aucune observation...'}"</p>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                <div className="flex items-center gap-2 pt-2 border-t dark:border-gray-800">
-                                    {selectedReport.status === 'pending' ? (
-                                        <button onClick={() => setShowAssignModal(true)} className="flex-1 py-2.5 bg-[#2962FF] text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg active:scale-95 transition-all">Assigner Équipe</button>
-                                    ) : selectedReport.status === 'assigned' ? (
-                                        <button onClick={handleUnassign} className="flex-1 py-2.5 bg-orange-50 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg active:scale-95 transition-all">Réaffecter</button>
-                                    ) : selectedReport.status === 'resolved' ? (
-                                        <button onClick={() => setViewProof(!viewProof)} className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg flex items-center justify-center gap-2"><ImageIcon size={14}/> {viewProof ? 'Détails' : 'Voir Preuve'}</button>
-                                    ) : (
-                                        <div className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl text-center text-gray-400 font-black text-[9px] uppercase tracking-widest">Clôturé</div>
-                                    )}
-                                    <button className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-xl hover:text-[#2962FF] transition-colors"><ExternalLink size={16}/></button>
-                                </div>
-                            </div>
+                    {/* Map Preview */}
+                    <div className="hidden xl:block">
+                        <div className="sticky top-0 h-[600px] rounded-[3rem] overflow-hidden border-4 border-white dark:border-gray-800 shadow-2xl">
+                             <MapContainer center={[-4.325, 15.322]} zoom={12} style={{height: '100%', width: '100%'}} zoomControl={false}>
+                                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                                {reports.map(r => (
+                                    <Marker 
+                                        key={r.id} 
+                                        position={[r.lat, r.lng]} 
+                                        icon={reportIcon(r.status, r.urgency, selectedReport?.id === r.id)}
+                                        eventHandlers={{ click: () => setSelectedReport(r) }}
+                                    />
+                                ))}
+                             </MapContainer>
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
 
-            {/* MODAL ASSIGNATION COLLECTEURS */}
-            {showAssignModal && (
-                <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAssignModal(false)}></div>
-                    <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-md p-8 relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800">
-                        <div className="flex justify-between items-center mb-8">
-                            <div><h3 className="text-2xl font-black dark:text-white uppercase tracking-tighter leading-none">Déploiement</h3><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-2">Choisir un collecteur pour cette mission</p></div>
-                            <button onClick={() => setShowAssignModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={24}/></button>
+            {/* Detail Sheet Overlay */}
+            {selectedReport && (
+                <div className="fixed inset-0 z-[100] flex justify-end">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedReport(null)}></div>
+                    <div className="w-full max-w-xl bg-white dark:bg-gray-950 h-full relative z-10 shadow-2xl animate-fade-in-left flex flex-col border-l dark:border-gray-800 overflow-hidden">
+                        
+                        <div className="p-8 border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white ${selectedReport.urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}><AlertTriangle size={24}/></div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Intervention SIG</h3>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">ID: {selectedReport.id.slice(0,8).toUpperCase()}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedReport(null)} className="p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl transition-all"><X size={24}/></button>
                         </div>
-                        <div className="space-y-3 max-h-[350px] overflow-y-auto no-scrollbar mb-8">
+
+                        <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar pb-32">
+                            <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl h-64 border-4 border-white dark:border-gray-800">
+                                <img src={viewProof && selectedReport.proofUrl ? selectedReport.proofUrl : selectedReport.imageUrl} className="w-full h-full object-cover" alt="Déchet" />
+                                <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl text-white font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                                    <ImageIcon size={14}/> {viewProof ? 'Après Collecte' : 'Signalement Initial'}
+                                </div>
+                                {selectedReport.proofUrl && (
+                                    <button 
+                                        onClick={() => setViewProof(!viewProof)}
+                                        className="absolute bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2"
+                                    >
+                                        <RefreshCw size={14}/> Voir {viewProof ? 'Initial' : 'Après'}
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-5 bg-gray-50 dark:bg-gray-900 rounded-3xl border dark:border-gray-800">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase block mb-1">Catégorie</span>
+                                    <span className="font-black dark:text-white uppercase text-sm">{selectedReport.wasteType}</span>
+                                </div>
+                                <div className="p-5 bg-gray-50 dark:bg-gray-900 rounded-3xl border dark:border-gray-800">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase block mb-1">Zone</span>
+                                    <span className="font-black dark:text-white uppercase text-sm">{selectedReport.commune}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes Terrain</h4>
+                                <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30">
+                                    <p className="text-xs text-blue-900 dark:text-blue-200 font-bold italic leading-relaxed">"{selectedReport.comment || 'Aucune observation enregistrée.'}"</p>
+                                </div>
+                            </div>
+
+                            {selectedReport.status === 'resolved' && (
+                                <div className="bg-green-50 dark:bg-green-900/10 p-6 rounded-[2.5rem] border border-green-100 dark:border-green-900/30 flex items-center gap-5">
+                                    <div className="w-14 h-14 bg-green-500 text-white rounded-2xl flex items-center justify-center shadow-lg"><CheckCircle2 size={28}/></div>
+                                    <div>
+                                        <h4 className="font-black text-green-700 dark:text-green-400 uppercase text-sm leading-none">Intervention Terminée</h4>
+                                        <p className="text-[10px] text-green-600 dark:text-green-500 font-bold uppercase mt-1">Zone nettoyée et validée par IA</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-8 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-950 flex gap-4 shrink-0 shadow-2xl">
+                            {selectedReport.status === 'pending' && (
+                                <button 
+                                    onClick={() => setShowAssignModal(true)}
+                                    className="flex-1 py-5 bg-[#2962FF] text-white rounded-[1.8rem] font-black uppercase tracking-widest shadow-xl shadow-blue-500/30 hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+                                >
+                                    <Truck size={20}/> Affecter un collecteur
+                                </button>
+                            )}
+                            {selectedReport.status === 'assigned' && (
+                                <div className="flex-1 p-5 bg-blue-100 dark:bg-blue-900/20 text-blue-600 rounded-3xl border border-blue-200 font-black text-xs text-center uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <Clock size={18} className="animate-spin"/> En cours de traitement
+                                </div>
+                            )}
+                            <button className="p-5 bg-white dark:bg-gray-800 text-gray-500 rounded-[1.8rem] border dark:border-gray-700"><Download size={20}/></button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Assignment Selection Modal */}
+            {showAssignModal && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAssignModal(false)}></div>
+                    <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-md p-8 relative z-10 shadow-2xl border dark:border-gray-800 animate-scale-up">
+                        <div className="flex justify-between items-center mb-8">
+                            <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Affectation Terrain</h3>
+                            <button onClick={() => setShowAssignModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><X/></button>
+                        </div>
+
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar mb-8">
                             {collectors.length === 0 ? (
-                                <p className="text-center py-10 text-gray-400 font-bold uppercase text-[10px]">Aucun collecteur actif trouvé</p>
+                                <p className="text-center py-10 text-gray-400 text-xs font-bold uppercase">Aucun collecteur actif trouvé</p>
                             ) : (
-                                collectors.map(c => (
-                                    <div key={c.id} onClick={() => !isAssigning && handleAssign(c.id!)} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border-2 border-transparent hover:border-primary transition-all cursor-pointer flex items-center justify-between group">
+                                collectors.map(coll => (
+                                    <div 
+                                        key={coll.id} 
+                                        onClick={() => handleAssign(coll.id!)}
+                                        className="p-5 bg-gray-50 dark:bg-gray-900 rounded-3xl border dark:border-gray-800 flex items-center justify-between cursor-pointer hover:border-blue-500 transition-all group"
+                                    >
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center text-primary shadow-sm"><UserCircle size={24}/></div>
-                                            <div><p className="font-black text-xs dark:text-white uppercase">{c.firstName} {c.lastName}</p><p className="text-[9px] text-gray-400 font-bold uppercase">{c.commune}</p></div>
+                                            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center font-black">{coll.firstName[0]}</div>
+                                            <div>
+                                                <p className="font-black text-gray-900 dark:text-white uppercase text-xs">{coll.firstName} {coll.lastName}</p>
+                                                <p className="text-[9px] text-gray-400 font-bold uppercase">{coll.phone}</p>
+                                            </div>
                                         </div>
-                                        {isAssigning ? <Loader2 className="animate-spin text-blue-500" size={16}/> : <ChevronRight className="text-gray-300 group-hover:text-primary" size={16}/>}
+                                        <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                                     </div>
                                 ))
                             )}
                         </div>
-                        <button onClick={() => setShowAssignModal(false)} className="w-full py-4 text-gray-400 font-black uppercase text-[10px] tracking-widest">Annuler</button>
+                        
+                        <p className="text-[9px] text-gray-400 font-bold text-center uppercase">Le collecteur recevra une alerte d'urgence immédiate.</p>
                     </div>
                 </div>
             )}
