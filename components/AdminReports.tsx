@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -105,7 +106,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
 
     useEffect(() => {
         if (supabase) {
-            const channel = supabase.channel('realtime_sig_reports_admin')
+            const channel = supabase.channel('realtime_sig_reports_admin_v3')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waste_reports' }, (payload) => {
                     const newReport = mapReport(payload.new);
                     setReports(prev => [newReport, ...prev]);
@@ -139,12 +140,12 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
         setIsAssigning(true);
         try {
             await ReportsAPI.update({ id: selectedReport.id, status: 'assigned', assignedTo: collectorId });
-            onNotify(collectorId, "Nouvelle Mission ! 🚛", `Mission assignée à ${selectedReport.commune}.`, "alert");
-            onToast?.("Mission assignée", "success");
+            onNotify(collectorId, "Nouvelle Mission ! 🚛", `Urgence ${selectedReport.urgency} détectée à ${selectedReport.commune}.`, "alert");
+            onToast?.("Mission assignée avec succès", "success");
             setShowAssignModal(false);
             loadData(0, true);
         } catch (e) {
-            if (onToast) onToast("Erreur lors de l'affectation", "error");
+            if (onToast) onToast("Échec de l'affectation", "error");
         } finally {
             setIsAssigning(false);
         }
@@ -159,7 +160,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                         <button onClick={onBack} className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all"><ArrowLeft size={18} /></button>
                         <div>
                             <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">SIG Opérations</h2>
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Filtrez vos données par période</p>
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Filtrage temporel et spatial</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -167,7 +168,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                             onClick={() => setShowFilters(!showFilters)} 
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${showFilters ? 'bg-[#2962FF] text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}
                         >
-                            <CalendarDays size={14} /> Filtrer par Date
+                            <CalendarDays size={14} /> Calendrier
                         </button>
                         <button onClick={() => loadData(0, true)} className="p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-500 rounded-xl hover:text-primary transition-all"><RefreshCw size={18} className={isLoading ? 'animate-spin' : ''}/></button>
                     </div>
@@ -177,10 +178,9 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                     <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2rem] border dark:border-gray-800 mt-4 animate-fade-in shadow-inner space-y-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Date Début</label>
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Début Période</label>
                                 <div className="relative">
                                     <Calendar size={14} className="absolute left-3 top-3 text-gray-400" />
-                                    {/* Fix: Line 178 fixed below by completing the setFilters call */}
                                     <input 
                                         type="date" 
                                         value={filters.dateFrom} 
@@ -190,7 +190,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Date Fin</label>
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Fin Période</label>
                                 <div className="relative">
                                     <Calendar size={14} className="absolute left-3 top-3 text-gray-400" />
                                     <input 
@@ -202,57 +202,55 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Commune</label>
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Zone (Commune)</label>
                                 <select 
                                     value={filters.commune} 
                                     onChange={e => setFilters({ ...filters, commune: e.target.value })}
                                     className="w-full p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-black text-[10px] uppercase dark:text-white"
                                 >
-                                    <option value="all">Toutes les zones</option>
+                                    <option value="all">Tout Kinshasa</option>
                                     {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Type de Déchet</label>
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Flux de Déchets</label>
                                 <select 
                                     value={filters.wasteType} 
                                     onChange={e => setFilters({ ...filters, wasteType: e.target.value })}
                                     className="w-full p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-black text-[10px] uppercase dark:text-white"
                                 >
-                                    <option value="all">Tous types</option>
+                                    <option value="all">Toutes catégories</option>
                                     {WASTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
                             </div>
                         </div>
                         <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
-                            <button onClick={handleResetFilters} className="px-4 py-2 text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors flex items-center gap-2"><Eraser size={14}/> Réinitialiser</button>
-                            <button onClick={handleApplyFilters} className="px-6 py-2 bg-gray-900 dark:bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Filtrer le Flux</button>
+                            <button onClick={handleResetFilters} className="px-4 py-2 text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors flex items-center gap-2"><Eraser size={14}/> Reset</button>
+                            <button onClick={handleApplyFilters} className="px-6 py-2 bg-gray-900 dark:bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Appliquer</button>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* List and Map Content Area */}
             <div className="flex-1 overflow-y-auto p-6 md:p-8 no-scrollbar pb-32">
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* List Section */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><List size={16}/> Liste des Interventions</h3>
-                            <span className="text-[10px] font-black text-blue-500 uppercase">{reports.length} résultats</span>
+                            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><List size={16}/> Rapports SIG</h3>
+                            <span className="text-[10px] font-black text-blue-500 uppercase">{reports.length} missions</span>
                         </div>
                         
                         {reports.length === 0 && !isLoading ? (
                             <div className="py-20 text-center bg-white dark:bg-gray-900 rounded-[2.5rem] border border-dashed border-gray-200 dark:border-gray-800">
                                 <FileText size={48} className="mx-auto text-gray-200 mb-4" />
-                                <p className="text-xs font-black text-gray-400 uppercase">Aucun signalement trouvé</p>
+                                <p className="text-xs font-black text-gray-400 uppercase">Aucun flux de données détecté</p>
                             </div>
                         ) : (
                             reports.map((report, idx) => (
                                 <div 
                                     key={report.id}
                                     ref={idx === reports.length - 1 ? lastElementRef : null}
-                                    onClick={() => setSelectedReport(report)}
+                                    onClick={() => { setSelectedReport(report); setViewProof(false); }}
                                     className={`p-5 bg-white dark:bg-gray-900 rounded-[2.5rem] border-2 transition-all cursor-pointer group flex items-center gap-5 ${selectedReport?.id === report.id ? 'border-blue-500 shadow-xl' : 'border-gray-50 dark:border-gray-800 shadow-sm'}`}
                                 >
                                     <div className="relative">
@@ -261,14 +259,14 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start mb-1">
-                                            <h4 className="font-black text-gray-900 dark:text-white uppercase text-sm truncate">{report.wasteType}</h4>
-                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-lg ${
+                                            <h4 className="font-black text-gray-900 dark:text-white uppercase text-xs truncate">{report.wasteType}</h4>
+                                            <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-lg ${
                                                 report.status === 'resolved' ? 'bg-green-500 text-white' : 
                                                 report.status === 'assigned' ? 'bg-blue-500 text-white' : 'bg-yellow-500 text-white'
-                                            }`}>{report.status}</span>
+                                            }`}>{STATUSES.find(s=>s.key===report.status)?.label}</span>
                                         </div>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase truncate flex items-center gap-1"><MapPin size={10}/> {report.commune}</p>
-                                        <p className="text-[9px] text-gray-400 font-black mt-2 uppercase tracking-widest flex items-center gap-1"><Clock size={10}/> {new Date(report.date).toLocaleDateString()} • {new Date(report.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                        <p className="text-[9px] text-gray-400 font-bold uppercase truncate flex items-center gap-1"><MapPin size={10}/> {report.commune}</p>
+                                        <p className="text-[8px] text-gray-400 font-black mt-2 uppercase tracking-widest flex items-center gap-1"><Clock size={10}/> {new Date(report.date).toLocaleDateString()}</p>
                                     </div>
                                     <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                                 </div>
@@ -279,7 +277,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                         )}
                     </div>
 
-                    {/* Map Preview */}
                     <div className="hidden xl:block">
                         <div className="sticky top-0 h-[600px] rounded-[3rem] overflow-hidden border-4 border-white dark:border-gray-800 shadow-2xl">
                              <MapContainer center={[-4.325, 15.322]} zoom={12} style={{height: '100%', width: '100%'}} zoomControl={false}>
@@ -289,7 +286,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                         key={r.id} 
                                         position={[r.lat, r.lng]} 
                                         icon={reportIcon(r.status, r.urgency, selectedReport?.id === r.id)}
-                                        eventHandlers={{ click: () => setSelectedReport(r) }}
+                                        eventHandlers={{ click: () => { setSelectedReport(r); setViewProof(false); } }}
                                     />
                                 ))}
                              </MapContainer>
@@ -298,66 +295,54 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                 </div>
             </div>
 
-            {/* Detail Sheet Overlay */}
             {selectedReport && (
                 <div className="fixed inset-0 z-[100] flex justify-end">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedReport(null)}></div>
                     <div className="w-full max-w-xl bg-white dark:bg-gray-950 h-full relative z-10 shadow-2xl animate-fade-in-left flex flex-col border-l dark:border-gray-800 overflow-hidden">
-                        
                         <div className="p-8 border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center shrink-0">
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white ${selectedReport.urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}><AlertTriangle size={24}/></div>
                                 <div>
-                                    <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Intervention SIG</h3>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">ID: {selectedReport.id.slice(0,8).toUpperCase()}</p>
+                                    <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Intervention Terrain</h3>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">ID SIG: {selectedReport.id.slice(0,8).toUpperCase()}</p>
                                 </div>
                             </div>
                             <button onClick={() => setSelectedReport(null)} className="p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl transition-all"><X size={24}/></button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar pb-32">
-                            <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl h-64 border-4 border-white dark:border-gray-800">
+                            <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl h-64 border-4 border-white dark:border-gray-800 bg-gray-100">
                                 <img src={viewProof && selectedReport.proofUrl ? selectedReport.proofUrl : selectedReport.imageUrl} className="w-full h-full object-cover" alt="Déchet" />
                                 <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl text-white font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-                                    <ImageIcon size={14}/> {viewProof ? 'Après Collecte' : 'Signalement Initial'}
+                                    <ImageIcon size={14}/> {viewProof ? 'Vérification' : 'Signalement'}
                                 </div>
                                 {selectedReport.proofUrl && (
                                     <button 
                                         onClick={() => setViewProof(!viewProof)}
                                         className="absolute bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2"
                                     >
-                                        <RefreshCw size={14}/> Voir {viewProof ? 'Initial' : 'Après'}
+                                        <RefreshCw size={14}/> Basculer Vue
                                     </button>
                                 )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-5 bg-gray-50 dark:bg-gray-900 rounded-3xl border dark:border-gray-800">
-                                    <span className="text-[10px] font-black text-gray-400 uppercase block mb-1">Catégorie</span>
-                                    <span className="font-black dark:text-white uppercase text-sm">{selectedReport.wasteType}</span>
+                                    <span className="text-[9px] font-black text-gray-400 uppercase block mb-1">Catégorie</span>
+                                    <span className="font-black dark:text-white uppercase text-xs">{selectedReport.wasteType}</span>
                                 </div>
                                 <div className="p-5 bg-gray-50 dark:bg-gray-900 rounded-3xl border dark:border-gray-800">
-                                    <span className="text-[10px] font-black text-gray-400 uppercase block mb-1">Zone</span>
-                                    <span className="font-black dark:text-white uppercase text-sm">{selectedReport.commune}</span>
+                                    <span className="text-[9px] font-black text-gray-400 uppercase block mb-1">Zone</span>
+                                    <span className="font-black dark:text-white uppercase text-xs">{selectedReport.commune}</span>
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes Terrain</h4>
+                            <div className="space-y-3">
+                                <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes Citoyen</h4>
                                 <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30">
-                                    <p className="text-xs text-blue-900 dark:text-blue-200 font-bold italic leading-relaxed">"{selectedReport.comment || 'Aucune observation enregistrée.'}"</p>
+                                    <p className="text-xs text-blue-900 dark:text-blue-200 font-bold italic leading-relaxed">"{selectedReport.comment || 'Sans commentaire particulier.'}"</p>
                                 </div>
                             </div>
-
-                            {selectedReport.status === 'resolved' && (
-                                <div className="bg-green-50 dark:bg-green-900/10 p-6 rounded-[2.5rem] border border-green-100 dark:border-green-900/30 flex items-center gap-5">
-                                    <div className="w-14 h-14 bg-green-500 text-white rounded-2xl flex items-center justify-center shadow-lg"><CheckCircle2 size={28}/></div>
-                                    <div>
-                                        <h4 className="font-black text-green-700 dark:text-green-400 uppercase text-sm leading-none">Intervention Terminée</h4>
-                                        <p className="text-[10px] text-green-600 dark:text-green-500 font-bold uppercase mt-1">Zone nettoyée et validée par IA</p>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         <div className="p-8 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-950 flex gap-4 shrink-0 shadow-2xl">
@@ -366,33 +351,37 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                     onClick={() => setShowAssignModal(true)}
                                     className="flex-1 py-5 bg-[#2962FF] text-white rounded-[1.8rem] font-black uppercase tracking-widest shadow-xl shadow-blue-500/30 hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
                                 >
-                                    <Truck size={20}/> Affecter un collecteur
+                                    <Truck size={20}/> Affecter Collecteur
                                 </button>
                             )}
                             {selectedReport.status === 'assigned' && (
                                 <div className="flex-1 p-5 bg-blue-100 dark:bg-blue-900/20 text-blue-600 rounded-3xl border border-blue-200 font-black text-xs text-center uppercase tracking-widest flex items-center justify-center gap-2">
-                                    <Clock size={18} className="animate-spin"/> En cours de traitement
+                                    <Clock size={18} className="animate-spin"/> Mission en cours
                                 </div>
                             )}
-                            <button className="p-5 bg-white dark:bg-gray-800 text-gray-500 rounded-[1.8rem] border dark:border-gray-700"><Download size={20}/></button>
+                            {selectedReport.status === 'resolved' && (
+                                <div className="flex-1 p-5 bg-green-500 text-white rounded-3xl font-black text-xs text-center uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg">
+                                    <CheckCircle2 size={20}/> Mission Terminée
+                                </div>
+                            )}
+                            <button className="p-5 bg-white dark:bg-gray-800 text-gray-500 rounded-[1.8rem] border dark:border-gray-700 hover:text-blue-500 transition-colors"><Download size={20}/></button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Assignment Selection Modal */}
             {showAssignModal && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAssignModal(false)}></div>
                     <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-md p-8 relative z-10 shadow-2xl border dark:border-gray-800 animate-scale-up">
                         <div className="flex justify-between items-center mb-8">
-                            <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Affectation Terrain</h3>
+                            <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Déploiement</h3>
                             <button onClick={() => setShowAssignModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><X/></button>
                         </div>
 
                         <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar mb-8">
                             {collectors.length === 0 ? (
-                                <p className="text-center py-10 text-gray-400 text-xs font-bold uppercase">Aucun collecteur actif trouvé</p>
+                                <p className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">Aucun agent disponible</p>
                             ) : (
                                 collectors.map(coll => (
                                     <div 
@@ -404,7 +393,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                             <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center font-black">{coll.firstName[0]}</div>
                                             <div>
                                                 <p className="font-black text-gray-900 dark:text-white uppercase text-xs">{coll.firstName} {coll.lastName}</p>
-                                                <p className="text-[9px] text-gray-400 font-bold uppercase">{coll.phone}</p>
+                                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{coll.commune}</p>
                                             </div>
                                         </div>
                                         <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
@@ -412,8 +401,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                 ))
                             )}
                         </div>
-                        
-                        <p className="text-[9px] text-gray-400 font-bold text-center uppercase">Le collecteur recevra une alerte d'urgence immédiate.</p>
+                        <p className="text-[9px] text-gray-400 font-bold text-center uppercase tracking-widest">L'agent recevra une alerte PUSH instantanée.</p>
                     </div>
                 </div>
             )}

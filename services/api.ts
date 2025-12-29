@@ -22,7 +22,8 @@ export const mapUser = (u: any): User => ({
     type: u.type || UserType.CITIZEN,
     address: u.address || '',
     commune: u.commune || '',
-    neighborhood: u.neighborhood || ''
+    // On ignore neighborhood s'il n'existe pas en DB
+    neighborhood: u.neighborhood || '' 
 });
 
 export const mapReport = (r: any): WasteReport => ({
@@ -88,6 +89,7 @@ export const UserAPI = {
         if (u.type !== undefined) dbUpdate.type = u.type;
         if (u.permissions !== undefined) dbUpdate.permissions = u.permissions;
         if (u.commune !== undefined) dbUpdate.commune = u.commune;
+        // neighborhood est omis volontairement car il manque au schéma Supabase
         
         const { error } = await supabase.from('users').update(dbUpdate).eq('id', u.id);
         if (error) throw error;
@@ -104,7 +106,7 @@ export const UserAPI = {
             status: 'pending',
             address: u.address,
             commune: u.commune,
-            neighborhood: u.neighborhood,
+            // neighborhood est omis ici pour éviter l'erreur de cache schéma
             subscription: u.subscription || 'standard',
             points: 0,
             collections: 0,
@@ -133,12 +135,12 @@ export const ReportsAPI = {
         if (filters?.status && filters.status !== 'all') query = query.eq('status', filters.status);
         if (filters?.wasteType && filters.wasteType !== 'all') query = query.eq('waste_type', filters.wasteType);
         
-        // Date Filtering Implementation
+        // Filtrage par Date
         if (filters?.dateFrom) {
             query = query.gte('created_at', filters.dateFrom);
         }
         if (filters?.dateTo) {
-            // End of day filter to include reports from the selected end date
+            // On ajoute la fin de journée pour inclure le jour même
             query = query.lte('created_at', `${filters.dateTo}T23:59:59`);
         }
 
@@ -307,7 +309,7 @@ export const SettingsAPI = {
     },
     updateRolesConfig: async (config: Record<string, UserPermission[]>) => {
         if (!supabase) return;
-        const { error } = await supabase.from('system_settings').update({ roles_config: config }).eq('id', 1);
+        const { error = null } = await supabase.from('system_settings').update({ roles_config: config }).eq('id', 1);
         if (error) throw error;
     },
     checkDatabaseIntegrity: async (): Promise<DatabaseHealth> => {
