@@ -1,16 +1,15 @@
-
 <!DOCTYPE html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="./logobisopeto.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#2E7D32" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#050505" media="(prefers-color-scheme: dark)">
     <meta name="google-site-verification" content="7eHlwSjDZEWKHnfSR8m3p198zuON67B7tn-RJev1Tvk" />
 
     <title>KIN ECO MAP - Agir localement, impacter durablement</title>
@@ -40,15 +39,15 @@
               mono: ['Fira Code', 'monospace'] 
             },
             animation: {
-              'fade-in': 'fadeIn 0.5s ease-out',
-              'fade-in-up': 'fadeInUp 0.5s ease-out',
-              'scale-up': 'scaleUp 0.3s ease-out',
+              'fade-in': 'fadeIn 0.3s ease-out',
+              'fade-in-up': 'fadeInUp 0.4s ease-out',
+              'scale-up': 'scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
               'float': 'float 6s ease-in-out infinite',
             },
             keyframes: {
               fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-              fadeInUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-              scaleUp: { '0%': { transform: 'scale(0.95)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } },
+              fadeInUp: { '0%': { opacity: '0', transform: 'translateY(15px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+              scaleUp: { '0%': { transform: 'scale(0.9)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } },
               float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
             }
           }
@@ -64,23 +63,26 @@
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;900&family=Inter:wght@400;700&family=Fira+Code:wght@400;600&display=swap');
       
-      html, body, #root {
+      :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+      }
+
+      html, body {
         height: 100%;
         width: 100%;
         margin: 0;
         padding: 0;
         font-family: 'Poppins', sans-serif;
-        background-color: #F5F5F5;
-        overscroll-behavior-y: none;
-        font-size: 14px; /* Augmenté légèrement pour lisibilité mobile */
-      }
-
-      /* Fix pour le scroll élastique sur iOS */
-      body {
+        background-color: #F8FAFC;
+        /* Empêche le rebond élastique global sur iOS mais autorise le scroll interne */
         position: fixed;
         overflow: hidden;
-        width: 100%;
       }
+
+      body.dark { background-color: #050505; color: #e5e7eb; }
 
       #root {
         position: absolute;
@@ -90,31 +92,25 @@
         flex-direction: column;
       }
 
-      body.dark { background-color: #050505; color: #e5e7eb; }
-      ::selection { background: #4CAF50; color: white; }
-      .leaflet-container { width: 100%; height: 100%; z-index: 0; }
+      /* Scroll fluide et naturel pour mobile */
+      .scroll-container {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+      }
 
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-      .glass {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+      /* Adaptabilité aux encoches */
+      .safe-area-pb {
+        padding-bottom: calc(1.5rem + var(--sab));
       }
-      .dark .glass {
-        background: rgba(17, 24, 39, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+      .safe-area-pt {
+        padding-top: var(--sat);
       }
-
-      /* Padding pour les écrans avec encoche */
-      .safe-pb {
-        padding-bottom: env(safe-area-inset-bottom);
-      }
-      .safe-pt {
-        padding-top: env(safe-area-inset-top);
-      }
+      
+      .leaflet-container { width: 100%; height: 100%; z-index: 0; }
     </style>
 
     <script type="importmap">
