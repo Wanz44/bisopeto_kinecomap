@@ -61,7 +61,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
     const [showFilters, setShowFilters] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [isAssigning, setIsAssigning] = useState(false);
-    const [viewProof, setViewProof] = useState(false);
+    const [viewMode, setViewMode] = useState<'before' | 'after'>('before');
 
     const [filters, setFilters] = useState({
         commune: 'all',
@@ -106,11 +106,18 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
 
     useEffect(() => {
         if (supabase) {
-            const channel = supabase.channel('realtime_sig_reports_admin_v3')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waste_reports' }, (payload) => {
-                    const newReport = mapReport(payload.new);
-                    setReports(prev => [newReport, ...prev]);
-                    onToast?.(`Nouveau Signalement : ${newReport.wasteType}`, "info");
+            const channel = supabase.channel('realtime_sig_reports_admin_v4')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, (payload) => {
+                    const mapped = mapReport(payload.new);
+                    setReports(prev => {
+                        const idx = prev.findIndex(r => r.id === mapped.id);
+                        if (idx > -1) {
+                            const newArr = [...prev];
+                            newArr[idx] = mapped;
+                            return newArr;
+                        }
+                        return [mapped, ...prev];
+                    });
                 })
                 .subscribe();
             return () => { supabase.removeChannel(channel); };
@@ -250,7 +257,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                 <div 
                                     key={report.id}
                                     ref={idx === reports.length - 1 ? lastElementRef : null}
-                                    onClick={() => { setSelectedReport(report); setViewProof(false); }}
+                                    onClick={() => { setSelectedReport(report); setViewMode('before'); }}
                                     className={`p-5 bg-white dark:bg-gray-900 rounded-[2.5rem] border-2 transition-all cursor-pointer group flex items-center gap-5 ${selectedReport?.id === report.id ? 'border-blue-500 shadow-xl' : 'border-gray-50 dark:border-gray-800 shadow-sm'}`}
                                 >
                                     <div className="relative">
@@ -286,7 +293,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                         key={r.id} 
                                         position={[r.lat, r.lng]} 
                                         icon={reportIcon(r.status, r.urgency, selectedReport?.id === r.id)}
-                                        eventHandlers={{ click: () => { setSelectedReport(r); setViewProof(false); } }}
+                                        eventHandlers={{ click: () => { setSelectedReport(r); setViewMode('before'); } }}
                                     />
                                 ))}
                              </MapContainer>
@@ -311,19 +318,21 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar pb-32">
-                            <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl h-64 border-4 border-white dark:border-gray-800 bg-gray-100">
-                                <img src={viewProof && selectedReport.proofUrl ? selectedReport.proofUrl : selectedReport.imageUrl} className="w-full h-full object-cover" alt="Déchet" />
-                                <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl text-white font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-                                    <ImageIcon size={14}/> {viewProof ? 'Vérification' : 'Signalement'}
+                            {/* Comparison View */}
+                            <div className="space-y-4">
+                                <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
+                                    <button onClick={() => setViewMode('before')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'before' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-400'}`}>Signalement</button>
+                                    {selectedReport.proofUrl && (
+                                        <button onClick={() => setViewMode('after')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'after' ? 'bg-[#00C853] text-white shadow-sm' : 'text-gray-400'}`}>Preuve Collecte</button>
+                                    )}
                                 </div>
-                                {selectedReport.proofUrl && (
-                                    <button 
-                                        onClick={() => setViewProof(!viewProof)}
-                                        className="absolute bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2"
-                                    >
-                                        <RefreshCw size={14}/> Basculer Vue
-                                    </button>
-                                )}
+                                <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl h-80 border-4 border-white dark:border-gray-800 bg-gray-100">
+                                    <img src={viewMode === 'before' ? selectedReport.imageUrl : selectedReport.proofUrl} className="w-full h-full object-cover" alt="Preuve" />
+                                    <div className={`absolute bottom-4 right-4 px-4 py-2 rounded-xl text-white font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 ${viewMode === 'before' ? 'bg-orange-500' : 'bg-[#00C853]'}`}>
+                                        {viewMode === 'before' ? <AlertCircle size={14}/> : <CheckCircle2 size={14}/>}
+                                        {viewMode === 'before' ? 'État initial' : 'Post-Intervention'}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -338,7 +347,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                             </div>
 
                             <div className="space-y-3">
-                                <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes Citoyen</h4>
+                                <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes Terrain</h4>
                                 <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30">
                                     <p className="text-xs text-blue-900 dark:text-blue-200 font-bold italic leading-relaxed">"{selectedReport.comment || 'Sans commentaire particulier.'}"</p>
                                 </div>
@@ -401,7 +410,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                 ))
                             )}
                         </div>
-                        <p className="text-[9px] text-gray-400 font-bold text-center uppercase tracking-widest">L'agent recevra une alerte PUSH instantanée.</p>
                     </div>
                 </div>
             )}

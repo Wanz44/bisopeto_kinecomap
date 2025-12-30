@@ -3,6 +3,8 @@ import { User, MarketplaceItem, Vehicle, AdCampaign, Partner, UserType, SystemSe
 import { supabase } from './supabaseClient';
 
 // --- MAPPERS (Source of Truth Alignment) ---
+// Convertit les données de la BDD (snake_case) vers le Frontend (camelCase)
+
 export const mapUser = (u: any): User => ({
     ...u,
     id: u.id,
@@ -22,8 +24,8 @@ export const mapUser = (u: any): User => ({
     type: u.type || UserType.CITIZEN,
     address: u.address || '',
     commune: u.commune || '',
-    // On ignore neighborhood s'il n'existe pas en DB
-    neighborhood: u.neighborhood || '' 
+    neighborhood: u.neighborhood || '',
+    emailConsent: u.email_consent || false
 });
 
 export const mapReport = (r: any): WasteReport => ({
@@ -31,30 +33,51 @@ export const mapReport = (r: any): WasteReport => ({
     id: r.id,
     reporterId: r.reporter_id,
     imageUrl: r.image_url,
-    proofUrl: r.proof_url,
+    proofUrl: r.proof_url, // Colonne proof_url ajoutée
     wasteType: r.waste_type,
     urgency: r.urgency,
     status: r.status,
     assignedTo: r.assigned_to,
     commune: r.commune,
     comment: r.comment || '',
-    date: r.created_at || r.date
+    date: r.date || r.created_at
+});
+
+export const mapMarketplaceItem = (i: any): MarketplaceItem => ({
+    ...i,
+    sellerId: i.seller_id,
+    sellerName: i.seller_name,
+    imageUrl: i.image_url,
+    buyerId: i.buyer_id
+});
+
+export const mapPayment = (p: any): Payment => ({
+    ...p,
+    userId: p.user_id,
+    userName: p.user_name,
+    amountFC: Number(p.amount_fc || 0),
+    collectorId: p.collector_id,
+    collectorName: p.collector_name,
+    qrCodeData: p.qr_code_data,
+    createdAt: p.created_at
+});
+
+// Fix: added mapAd to map database fields to AdCampaign interface
+export const mapAd = (ad: any): AdCampaign => ({
+    ...ad,
+    startDate: ad.start_date,
+    endDate: ad.end_date
+});
+
+// Fix: added mapPartner to map database fields to Partner interface
+export const mapPartner = (p: any): Partner => ({
+    ...p,
+    contactName: p.contact_name,
+    activeCampaigns: p.active_campaigns,
+    totalBudget: p.total_budget
 });
 
 // --- API IMPLEMENTATION ---
-
-export const AuditAPI = {
-    log: async (l: Partial<AuditLog>) => {
-        if (!supabase) return;
-        await supabase.from('audit_logs').insert([{
-            user_id: l.userId,
-            action: l.action,
-            entity: l.entity,
-            entity_id: l.entityId,
-            metadata: l.metadata
-        }]);
-    }
-};
 
 export const UserAPI = {
     login: async (identifier: string, password?: string): Promise<User | null> => {
@@ -89,7 +112,7 @@ export const UserAPI = {
         if (u.type !== undefined) dbUpdate.type = u.type;
         if (u.permissions !== undefined) dbUpdate.permissions = u.permissions;
         if (u.commune !== undefined) dbUpdate.commune = u.commune;
-        // neighborhood est omis volontairement car il manque au schéma Supabase
+        if (u.neighborhood !== undefined) dbUpdate.neighborhood = u.neighborhood;
         
         const { error } = await supabase.from('users').update(dbUpdate).eq('id', u.id);
         if (error) throw error;
@@ -97,6 +120,7 @@ export const UserAPI = {
     register: async (u: User, password?: string): Promise<User> => {
         if (!supabase) throw new Error("Offline");
         const { data, error } = await supabase.from('users').insert([{
+            id: `user-${Date.now()}`,
             first_name: u.firstName,
             last_name: u.lastName,
             email: u.email,
@@ -106,7 +130,7 @@ export const UserAPI = {
             status: 'pending',
             address: u.address,
             commune: u.commune,
-            // neighborhood est omis ici pour éviter l'erreur de cache schéma
+            neighborhood: u.neighborhood, // Désormais obligatoire
             subscription: u.subscription || 'standard',
             points: 0,
             collections: 0,
@@ -135,16 +159,10 @@ export const ReportsAPI = {
         if (filters?.status && filters.status !== 'all') query = query.eq('status', filters.status);
         if (filters?.wasteType && filters.wasteType !== 'all') query = query.eq('waste_type', filters.wasteType);
         
-        // Filtrage par Date
-        if (filters?.dateFrom) {
-            query = query.gte('created_at', filters.dateFrom);
-        }
-        if (filters?.dateTo) {
-            // On ajoute la fin de journée pour inclure le jour même
-            query = query.lte('created_at', `${filters.dateTo}T23:59:59`);
-        }
+        if (filters?.dateFrom) query = query.gte('date', filters.dateFrom);
+        if (filters?.dateTo) query = query.lte('date', `${filters.dateTo}T23:59:59`);
 
-        const { data } = await query.order('created_at', { ascending: false }).range(page * pageSize, (page + 1) * pageSize - 1);
+        const { data } = await query.order('date', { ascending: false }).range(page * pageSize, (page + 1) * pageSize - 1);
         return data ? data.map(mapReport) : [];
     },
     getByUserId: async (userId: string): Promise<WasteReport[]> => {
@@ -152,12 +170,13 @@ export const ReportsAPI = {
         const { data } = await supabase.from('waste_reports')
             .select('*')
             .eq('reporter_id', userId)
-            .order('created_at', { ascending: false });
+            .order('date', { ascending: false });
         return data ? data.map(mapReport) : [];
     },
     add: async (r: WasteReport): Promise<WasteReport> => {
         if (!supabase) throw new Error("Offline");
         const { data, error } = await supabase.from('waste_reports').insert([{
+            id: `rep-${Date.now()}`,
             reporter_id: r.reporterId,
             lat: r.lat,
             lng: r.lng,
@@ -176,9 +195,79 @@ export const ReportsAPI = {
         const dbUpdate: any = {};
         if (r.status) dbUpdate.status = r.status;
         if (r.assignedTo !== undefined) dbUpdate.assigned_to = r.assignedTo;
-        if (r.proofUrl) dbUpdate.proof_url = r.proofUrl;
+        if (r.proofUrl !== undefined) dbUpdate.proof_url = r.proofUrl;
         const { error } = await supabase.from('waste_reports').update(dbUpdate).eq('id', r.id);
         if (error) throw error;
+    }
+};
+
+export const MarketplaceAPI = {
+    getAll: async (): Promise<MarketplaceItem[]> => {
+        if (!supabase) return [];
+        const { data } = await supabase.from('marketplace_items').select('*').order('created_at', { ascending: false });
+        return data ? data.map(mapMarketplaceItem) : [];
+    },
+    add: async (i: MarketplaceItem) => {
+        if (!supabase) throw new Error("Offline");
+        const { data, error } = await supabase.from('marketplace_items').insert([{
+            id: `item-${Date.now()}`,
+            seller_id: i.sellerId,
+            seller_name: i.sellerName,
+            title: i.title,
+            category: i.category,
+            description: i.description,
+            price: i.price,
+            image_url: i.imageUrl,
+            status: 'available'
+        }]).select().single();
+        if (error) throw error;
+        return mapMarketplaceItem(data);
+    },
+    update: async (i: Partial<MarketplaceItem> & { id: string }) => {
+        if (!supabase) return;
+        const dbUpdate: any = { ...i };
+        if (i.sellerId) { dbUpdate.seller_id = i.sellerId; delete dbUpdate.sellerId; }
+        if (i.imageUrl) { dbUpdate.image_url = i.imageUrl; delete dbUpdate.imageUrl; }
+        const { error } = await supabase.from('marketplace_items').update(dbUpdate).eq('id', i.id);
+        if (error) throw error;
+    }
+};
+
+export const PaymentsAPI = {
+    record: async (p: Payment): Promise<Payment> => {
+        if (!supabase) throw new Error("Offline");
+        const { data, error } = await supabase.from('payments').insert([{
+            id: p.id,
+            user_id: p.userId,
+            user_name: p.userName,
+            amount_fc: p.amountFC,
+            currency: p.currency,
+            method: p.method,
+            period: p.period,
+            collector_id: p.collectorId,
+            collector_name: p.collectorName,
+            qr_code_data: p.qrCodeData
+        }]).select().single();
+        if (error) throw error;
+        return mapPayment(data);
+    },
+    getAll: async (): Promise<Payment[]> => {
+        if (!supabase) return [];
+        const { data } = await supabase.from('payments').select('*').order('created_at', { ascending: false });
+        return data ? data.map(mapPayment) : [];
+    }
+};
+
+export const AuditAPI = {
+    log: async (l: Partial<AuditLog>) => {
+        if (!supabase) return;
+        await supabase.from('audit_logs').insert([{
+            user_id: l.userId,
+            action: l.action,
+            entity: l.entity,
+            entity_id: l.entityId,
+            metadata: l.metadata
+        }]);
     }
 };
 
@@ -186,6 +275,7 @@ export const NotificationsAPI = {
     add: async (n: Partial<NotificationItem>) => {
         if (!supabase) return;
         const { data } = await supabase.from('notifications').insert([{
+            id: `notif-${Date.now()}`,
             title: n.title,
             message: n.message,
             type: n.type || 'info',
@@ -200,34 +290,6 @@ export const NotificationsAPI = {
         if (!isAdmin) query = query.or(`target_user_id.eq.${userId},target_user_id.eq.ALL`);
         const { data } = await query;
         return data || [];
-    }
-};
-
-export const MarketplaceAPI = {
-    getAll: async (): Promise<MarketplaceItem[]> => {
-        if (!supabase) return [];
-        const { data } = await supabase.from('marketplace_items').select('*').order('created_at', { ascending: false });
-        return data || [];
-    },
-    add: async (i: MarketplaceItem) => {
-        if (!supabase) throw new Error("Offline");
-        const { data, error } = await supabase.from('marketplace_items').insert([{
-            seller_id: i.sellerId,
-            seller_name: i.sellerName,
-            title: i.title,
-            category: i.category,
-            description: i.description,
-            price: i.price,
-            image_url: i.imageUrl,
-            status: 'available'
-        }]).select().single();
-        if (error) throw error;
-        return data;
-    },
-    update: async (i: Partial<MarketplaceItem> & { id: string }) => {
-        if (!supabase) return;
-        const { error } = await supabase.from('marketplace_items').update(i).eq('id', i.id);
-        if (error) throw error;
     }
 };
 
@@ -251,6 +313,89 @@ export const VehicleAPI = {
     delete: async (id: string) => {
         if (!supabase) return;
         await supabase.from('vehicles').delete().eq('id', id);
+    }
+};
+
+// Fix: added AdsAPI implementation for AdminAds.tsx
+export const AdsAPI = {
+    getAll: async (): Promise<AdCampaign[]> => {
+        if (!supabase) return [];
+        const { data } = await supabase.from('ad_campaigns').select('*').order('created_at', { ascending: false });
+        return data ? data.map(mapAd) : [];
+    },
+    add: async (ad: AdCampaign): Promise<AdCampaign> => {
+        if (!supabase) throw new Error("Offline");
+        const { data, error } = await supabase.from('ad_campaigns').insert([{
+            id: `ad-${Date.now()}`,
+            title: ad.title,
+            partner: ad.partner,
+            status: ad.status,
+            views: ad.views,
+            clicks: ad.clicks,
+            budget: ad.budget,
+            spent: ad.spent,
+            start_date: ad.startDate,
+            end_date: ad.endDate,
+            image: ad.image
+        }]).select().single();
+        if (error) throw error;
+        return mapAd(data);
+    },
+    updateStatus: async (id: string, status: string) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('ad_campaigns').update({ status }).eq('id', id);
+        if (error) throw error;
+    },
+    delete: async (id: string) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('ad_campaigns').delete().eq('id', id);
+        if (error) throw error;
+    }
+};
+
+// Fix: added PartnersAPI implementation for AdminAds.tsx
+export const PartnersAPI = {
+    getAll: async (): Promise<Partner[]> => {
+        if (!supabase) return [];
+        const { data } = await supabase.from('partners').select('*').order('name', { ascending: true });
+        return data ? data.map(mapPartner) : [];
+    },
+    add: async (p: Partner): Promise<Partner> => {
+        if (!supabase) throw new Error("Offline");
+        const { data, error } = await supabase.from('partners').insert([{
+            id: `partner-${Date.now()}`,
+            name: p.name,
+            industry: p.industry,
+            contact_name: p.contactName,
+            email: p.email,
+            phone: p.phone,
+            active_campaigns: p.activeCampaigns,
+            total_budget: p.totalBudget,
+            logo: p.logo,
+            status: p.status
+        }]).select().single();
+        if (error) throw error;
+        return mapPartner(data);
+    },
+    update: async (p: Partner) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('partners').update({
+            name: p.name,
+            industry: p.industry,
+            contact_name: p.contactName,
+            email: p.email,
+            phone: p.phone,
+            active_campaigns: p.activeCampaigns,
+            total_budget: p.totalBudget,
+            logo: p.logo,
+            status: p.status
+        }).eq('id', p.id);
+        if (error) throw error;
+    },
+    delete: async (id: string) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('partners').delete().eq('id', id);
+        if (error) throw error;
     }
 };
 
@@ -337,63 +482,5 @@ export const SettingsAPI = {
             supabase.from('audit_logs').delete().neq('id', '0'),
             supabase.from('users').delete().neq('type', UserType.ADMIN)
         ]);
-    }
-};
-
-export const AdsAPI = {
-    getAll: async (): Promise<AdCampaign[]> => {
-        if (!supabase) return [];
-        const { data } = await supabase.from('ad_campaigns').select('*').order('created_at', { ascending: false });
-        return data || [];
-    },
-    add: async (a: AdCampaign): Promise<AdCampaign> => {
-        if (!supabase) throw new Error("Offline");
-        const { data, error } = await supabase.from('ad_campaigns').insert([a]).select().single();
-        if (error) throw error;
-        return data;
-    },
-    updateStatus: async (id: string, status: string) => {
-        if (!supabase) return;
-        await supabase.from('ad_campaigns').update({ status }).eq('id', id);
-    },
-    delete: async (id: string) => {
-        if (!supabase) return;
-        await supabase.from('ad_campaigns').delete().eq('id', id);
-    }
-};
-
-export const PartnersAPI = {
-    getAll: async (): Promise<Partner[]> => {
-        if (!supabase) return [];
-        const { data } = await supabase.from('partners').select('*').order('created_at', { ascending: false });
-        return data || [];
-    },
-    add: async (p: Partner): Promise<Partner> => {
-        if (!supabase) throw new Error("Offline");
-        const { data, error } = await supabase.from('partners').insert([p]).select().single();
-        if (error) throw error;
-        return data;
-    },
-    update: async (p: Partner) => {
-        if (!supabase) return;
-        await supabase.from('partners').update(p).eq('id', p.id);
-    },
-    delete: async (id: string) => {
-        if (!supabase) return;
-        await supabase.from('partners').delete().eq('id', id);
-    }
-};
-
-export const PaymentsAPI = {
-    record: async (p: Payment): Promise<Payment> => {
-        if (!supabase) throw new Error("Offline");
-        const { data, error } = await supabase.from('payments').insert([p]).select().single();
-        if (error) throw error;
-        return data;
-    },
-    getAll: async (): Promise<Payment[]> => {
-        if (!supabase) return [];
-        const { data } = await supabase.from('payments').select('*').order('created_at', { ascending: false });
-        return data || [];
     }
 };

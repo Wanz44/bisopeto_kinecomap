@@ -148,9 +148,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
             const user = await UserAPI.login(loginIdentifier, loginPassword);
             if (user) {
                 if(onToast) onToast(`Mbote ${user.firstName} !`, "success");
-                onComplete({ ...user, type: loginRole });
+                onComplete({ ...user });
             } else {
-                setError("Identifiants incorrects pour ce profil.");
+                setError("Identifiants incorrects ou rôle incompatible.");
             }
         } catch (err) {
             setError("Erreur de connexion réseau.");
@@ -172,7 +172,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
 
     const handleRegisterSubmit = async () => {
         if (!formData.commune) { setError("Veuillez sélectionner votre commune."); return; }
-        if (!formData.neighborhood) { setError("Veuillez renseigner votre quartier."); return; }
+        if (!formData.neighborhood || formData.neighborhood.trim() === '') { setError("Veuillez renseigner votre quartier."); return; }
         if (!formData.address) { setError("L'adresse précise est requise pour la collecte."); return; }
         if (!agreedToTerms) { setError("Vous devez accepter les conditions d'utilisation."); return; }
         
@@ -303,29 +303,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                 <div className="flex-1 space-y-8 pr-1">
                     {showLogin ? (
                         <div className="space-y-8">
-                            <div className="space-y-4">
-                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Je suis un...</label>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {ROLES_CONFIG.map((role) => (
-                                        <button
-                                            key={role.type}
-                                            onClick={() => setLoginRole(role.type)}
-                                            className={`flex flex-col items-center p-5 rounded-[2rem] border-2 transition-all duration-300 relative overflow-hidden group ${
-                                                loginRole === role.type 
-                                                ? `border-primary ${role.bg} shadow-lg scale-105` 
-                                                : 'border-transparent bg-gray-50 dark:bg-gray-800/50 opacity-60'
-                                            }`}
-                                        >
-                                            <div className={`p-4 rounded-2xl mb-3 ${role.color} bg-white dark:bg-gray-700 shadow-sm transition-transform group-hover:scale-110`}>
-                                                <role.icon className="w-6 h-6 md:w-7 md:h-7" />
-                                            </div>
-                                            <span className={`font-black text-sm md:text-base uppercase tracking-tight ${loginRole === role.type ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>{role.label}</span>
-                                            {loginRole === role.type && <div className="absolute top-2 right-2"><CheckCircle2 className="w-5 h-5 text-primary" /></div>}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
                             <form onSubmit={handleLoginSubmit} className="space-y-5 animate-fade-in pb-4">
                                 <div className="space-y-1.5">
                                     <div className="bg-gray-50 dark:bg-gray-800/80 rounded-2xl flex items-center border-2 border-transparent focus-within:border-primary transition-all overflow-hidden pr-3 shadow-sm">
@@ -379,8 +356,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                                             </select>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Quartier</label>
-                                            <input placeholder="ex: Quartier Latin" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-black text-sm md:text-base uppercase" value={formData.neighborhood} onChange={e => setFormData({...formData, neighborhood: e.target.value})} />
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Quartier <span className="text-red-500">*</span></label>
+                                            <input placeholder="ex: Quartier Latin" required className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-black text-sm md:text-base uppercase" value={formData.neighborhood} onChange={e => setFormData({...formData, neighborhood: e.target.value})} />
                                         </div>
                                     </div>
                                     <textarea rows={2} placeholder="Adresse précise (N°, Avenue)..." className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm md:text-base font-bold text-gray-900 dark:text-white outline-none resize-none" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
@@ -401,22 +378,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                                                 J'accepte les <button type="button" onClick={() => setLegalModal({ isOpen: true, type: 'terms' })} className="text-primary hover:underline">Conditions</button> et la <button type="button" onClick={() => setLegalModal({ isOpen: true, type: 'privacy' })} className="text-primary hover:underline">Confidentialité</button>. <span className="text-red-500">*</span>
                                             </span>
                                         </label>
-
-                                        <label className="flex items-start gap-4 cursor-pointer group">
-                                            <div className="relative flex items-center justify-center mt-1 shrink-0">
-                                                <input 
-                                                    type="checkbox" 
-                                                    className="sr-only peer" 
-                                                    checked={agreedToEmails} 
-                                                    onChange={(e) => setAgreedToEmails(e.target.checked)} 
-                                                />
-                                                <div className="w-6 h-6 md:w-7 md:h-7 border-2 border-gray-300 dark:border-gray-700 rounded-lg peer-checked:bg-secondary peer-checked:border-secondary transition-all"></div>
-                                                <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
-                                            </div>
-                                            <span className="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-bold leading-tight select-none">
-                                                J'autorise l'usage de mon courriel pour les communications (facultatif).
-                                            </span>
-                                        </label>
                                     </div>
                                 </div>
                             )}
@@ -433,9 +394,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                         )}
                         <button 
                             onClick={showLogin ? handleLoginSubmit : (regStep === 3 ? handleRegisterSubmit : nextStep)} 
-                            disabled={isLoading || (!showLogin && regStep === 3 && !agreedToTerms)} 
+                            disabled={isLoading || (!showLogin && regStep === 3 && (!agreedToTerms || !formData.neighborhood))} 
                             className={`flex-1 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs md:text-sm flex items-center justify-center gap-3 group transition-all shadow-lg ${
-                                !showLogin && regStep === 3 && !agreedToTerms ? 'bg-gray-300 dark:bg-gray-800 cursor-not-allowed grayscale' : 'bg-primary'
+                                !showLogin && regStep === 3 && (!agreedToTerms || !formData.neighborhood) ? 'bg-gray-300 dark:bg-gray-800 cursor-not-allowed grayscale' : 'bg-primary'
                             }`}
                         >
                             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (showLogin ? 'Se connecter' : (regStep === 3 ? 'S\'inscrire' : 'Suivant'))}
