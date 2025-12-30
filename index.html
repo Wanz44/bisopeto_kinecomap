@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
   <head>
@@ -68,12 +69,25 @@
         width: 100%;
         margin: 0;
         padding: 0;
-        overflow: hidden; 
         font-family: 'Poppins', sans-serif;
         background-color: #F5F5F5;
-        overscroll-behavior: none;
-        /* RÉDUCTION À 75% : 12px au lieu de 16px */
-        font-size: 12px; 
+        overscroll-behavior-y: none;
+        font-size: 14px; /* Augmenté légèrement pour lisibilité mobile */
+      }
+
+      /* Fix pour le scroll élastique sur iOS */
+      body {
+        position: fixed;
+        overflow: hidden;
+        width: 100%;
+      }
+
+      #root {
+        position: absolute;
+        top: 0; bottom: 0; left: 0; right: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
 
       body.dark { background-color: #050505; color: #e5e7eb; }
@@ -92,6 +106,14 @@
       .dark .glass {
         background: rgba(17, 24, 39, 0.7);
         border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      /* Padding pour les écrans avec encoche */
+      .safe-pb {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .safe-pt {
+        padding-top: env(safe-area-inset-top);
       }
     </style>
 

@@ -9,7 +9,7 @@ import {
     History, UserCog, Trash2, ArrowRight, CheckCircle2, AlertCircle, Ban,
     Maximize2, ChevronRight, MessageCircle, Check, Calendar, User, UserPlus,
     RotateCcw, Target, FileSpreadsheet, Eraser, CalendarDays, SlidersHorizontal,
-    UserCircle, Activity, BarChart3, Image as ImageIcon, RefreshCw
+    UserCircle, Activity, BarChart3, Image as ImageIcon, RefreshCw, SortAsc, SortDesc
 } from 'lucide-react';
 import { WasteReport, User as AppUser, UserType } from '../types';
 import { ReportsAPI, UserAPI, mapReport } from '../services/api';
@@ -68,7 +68,9 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
         status: 'all',
         wasteType: 'all',
         dateFrom: '',
-        dateTo: ''
+        dateTo: '',
+        sortBy: 'date',
+        sortOrder: 'desc'
     });
 
     const observer = useRef<IntersectionObserver | null>(null);
@@ -136,7 +138,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
     };
 
     const handleResetFilters = () => {
-        setFilters({ commune: 'all', status: 'all', wasteType: 'all', dateFrom: '', dateTo: '' });
+        setFilters({ commune: 'all', status: 'all', wasteType: 'all', dateFrom: '', dateTo: '', sortBy: 'date', sortOrder: 'desc' });
         setPage(0);
         setHasMore(true);
         setTimeout(() => loadData(0, true), 10);
@@ -175,7 +177,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                             onClick={() => setShowFilters(!showFilters)} 
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${showFilters ? 'bg-[#2962FF] text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}
                         >
-                            <CalendarDays size={14} /> Calendrier
+                            <SlidersHorizontal size={14} /> Filtres & Tri
                         </button>
                         <button onClick={() => loadData(0, true)} className="p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-500 rounded-xl hover:text-primary transition-all"><RefreshCw size={18} className={isLoading ? 'animate-spin' : ''}/></button>
                     </div>
@@ -183,7 +185,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
 
                 {showFilters && (
                     <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2rem] border dark:border-gray-800 mt-4 animate-fade-in shadow-inner space-y-5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Début Période</label>
                                 <div className="relative">
@@ -231,9 +233,31 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                 </select>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
-                            <button onClick={handleResetFilters} className="px-4 py-2 text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors flex items-center gap-2"><Eraser size={14}/> Reset</button>
-                            <button onClick={handleApplyFilters} className="px-6 py-2 bg-gray-900 dark:bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Appliquer</button>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t dark:border-gray-700">
+                             <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Trier par</label>
+                                <div className="flex gap-2">
+                                    <select 
+                                        value={filters.sortBy} 
+                                        onChange={e => setFilters({ ...filters, sortBy: e.target.value })}
+                                        className="flex-1 p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-black text-[10px] uppercase dark:text-white"
+                                    >
+                                        <option value="date">Date de création</option>
+                                        <option value="urgency">Urgence (Priorité)</option>
+                                    </select>
+                                    <button 
+                                        onClick={() => setFilters({ ...filters, sortOrder: filters.sortOrder === 'asc' ? 'desc' : 'asc' })}
+                                        className="p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none text-blue-600 hover:bg-blue-50 transition-all"
+                                    >
+                                        {filters.sortOrder === 'asc' ? <SortAsc size={18} /> : <SortDesc size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex justify-end items-end gap-3">
+                                <button onClick={handleResetFilters} className="px-4 py-2 text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors flex items-center gap-2"><Eraser size={14}/> Reset</button>
+                                <button onClick={handleApplyFilters} className="px-8 py-3 bg-gray-900 dark:bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 transition-all">Appliquer</button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -244,7 +268,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                     <div className="space-y-4">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><List size={16}/> Rapports SIG</h3>
-                            <span className="text-[10px] font-black text-blue-500 uppercase">{reports.length} missions</span>
+                            <span className="text-[10px] font-black text-blue-500 uppercase">{reports.length} missions affichées</span>
                         </div>
                         
                         {reports.length === 0 && !isLoading ? (
@@ -262,7 +286,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                 >
                                     <div className="relative">
                                         <img src={report.imageUrl} className="w-16 h-16 rounded-2xl object-cover border dark:border-gray-700" alt="Déchet" />
-                                        <div className={`absolute -top-2 -right-2 w-4 h-4 rounded-full border-2 border-white ${report.urgency === 'high' ? 'bg-red-500 animate-pulse' : 'bg-orange-500'}`}></div>
+                                        <div className={`absolute -top-2 -right-2 w-4 h-4 rounded-full border-2 border-white ${report.urgency === 'high' ? 'bg-red-500 animate-pulse' : report.urgency === 'medium' ? 'bg-orange-500' : 'bg-blue-400'}`}></div>
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start mb-1">

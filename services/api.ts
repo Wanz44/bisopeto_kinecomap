@@ -162,7 +162,12 @@ export const ReportsAPI = {
         if (filters?.dateFrom) query = query.gte('date', filters.dateFrom);
         if (filters?.dateTo) query = query.lte('date', `${filters.dateTo}T23:59:59`);
 
-        const { data } = await query.order('date', { ascending: false }).range(page * pageSize, (page + 1) * pageSize - 1);
+        const sortBy = filters?.sortBy || 'date';
+        const ascending = filters?.sortOrder === 'asc';
+
+        const { data } = await query
+            .order(sortBy === 'urgency' ? 'urgency' : 'date', { ascending })
+            .range(page * pageSize, (page + 1) * pageSize - 1);
         return data ? data.map(mapReport) : [];
     },
     getByUserId: async (userId: string): Promise<WasteReport[]> => {
@@ -307,7 +312,7 @@ export const VehicleAPI = {
     },
     update: async (v: Partial<Vehicle> & { id: string }) => {
         if (!supabase) return;
-        const { error } = await supabase.from('vehicles').update(v).eq('id', v.id);
+        const { error = null } = await supabase.from('vehicles').update(v).eq('id', v.id);
         if (error) throw error;
     },
     delete: async (id: string) => {
@@ -370,6 +375,7 @@ export const PartnersAPI = {
             email: p.email,
             phone: p.phone,
             active_campaigns: p.activeCampaigns,
+            // Fix: property mapping error (p.total_budget to p.totalBudget)
             total_budget: p.totalBudget,
             logo: p.logo,
             status: p.status
@@ -379,13 +385,14 @@ export const PartnersAPI = {
     },
     update: async (p: Partner) => {
         if (!supabase) return;
-        const { error } = await supabase.from('partners').update({
+        const { error = null } = await supabase.from('partners').update({
             name: p.name,
             industry: p.industry,
             contact_name: p.contactName,
             email: p.email,
             phone: p.phone,
             active_campaigns: p.activeCampaigns,
+            // Fix: property mapping error (p.total_budget to p.totalBudget)
             total_budget: p.totalBudget,
             logo: p.logo,
             status: p.status
@@ -439,7 +446,7 @@ export const SettingsAPI = {
     },
     update: async (s: SystemSettings) => {
         if (!supabase) return;
-        const { error } = await supabase.from('system_settings').update({
+        const { error = null } = await supabase.from('system_settings').update({
             maintenance_mode: s.maintenanceMode,
             support_email: s.supportEmail,
             app_version: s.appVersion,

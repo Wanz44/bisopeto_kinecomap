@@ -114,16 +114,14 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast, onN
                 OfflineManager.addToQueue('ADD_REPORT', report);
             }
 
-            // Notification immédiate pour les administrateurs
             if (onNotifyAdmin) {
                 onNotifyAdmin(
-                    `Nouveau Signalement : ${wasteType} 🚨`,
-                    `Un tas d'immondices (${urgency}) a été signalé à ${user.commune} par ${user.firstName}.`
+                    `Signalement : ${wasteType} 🚨`,
+                    `Un tas d'immondices (${urgency}) à ${user.commune}.`
                 );
             }
 
             setStep('success');
-            onToast?.("Signalement transmis au Centre SIG", "success");
         } catch (e) {
             onToast?.("Erreur lors de l'envoi", "error");
         } finally {
@@ -133,118 +131,107 @@ export const Reporting: React.FC<ReportingProps> = ({ user, onBack, onToast, onN
 
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 overflow-hidden">
-            {/* Header Interne propre à la vue */}
-            <div className="bg-white dark:bg-gray-900 p-5 shadow-md flex items-center justify-between border-b dark:border-gray-800 shrink-0 z-50">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all"><ArrowLeft className="w-5 h-5"/></button>
-                    <h2 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Biso Peto Alert</h2>
+            <div className="bg-white dark:bg-gray-900 p-4 shadow-sm flex items-center justify-between border-b dark:border-gray-800 shrink-0 z-50 safe-pt">
+                <div className="flex items-center gap-3">
+                    <button onClick={onBack} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"><ArrowLeft size={20}/></button>
+                    <h2 className="text-sm font-black dark:text-white uppercase tracking-tighter">Biso Peto Alert</h2>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center animate-pulse"><AlertTriangle className="w-4 h-4 text-red-500" /></div>
+                <div className="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center animate-pulse"><AlertTriangle className="w-3 h-3 text-red-500" /></div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 no-scrollbar pb-24">
+            <div className="flex-1 relative flex flex-col overflow-hidden">
                 {step === 'camera' && (
-                    <div className="flex flex-col items-center justify-center min-h-[70vh] gap-10 animate-fade-in">
+                    <div className="flex flex-col items-center justify-center h-full p-6 gap-8 animate-fade-in">
                         <div className="relative">
-                            <div className="w-40 h-40 bg-blue-50 dark:bg-blue-900/10 text-blue-600 rounded-[3rem] flex items-center justify-center animate-float shadow-inner"><Camera className="w-16 h-16" /></div>
-                            <div className="absolute -bottom-2 -right-2 bg-primary text-white p-3 rounded-2xl shadow-xl"><Sparkles className="w-5 h-5 animate-pulse" /></div>
+                            <div className="w-32 h-32 bg-blue-50 dark:bg-blue-900/10 text-blue-600 rounded-[2.5rem] flex items-center justify-center animate-float shadow-inner"><Camera className="w-12 h-12" /></div>
+                            <div className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-xl"><Sparkles size={16} className="animate-pulse" /></div>
                         </div>
-                        <div className="text-center space-y-3">
-                            <h3 className="text-2xl font-black dark:text-white uppercase tracking-tighter">Capture d'Urgence</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 font-bold max-w-xs mx-auto">Prenez une photo claire des déchets. Notre IA s'occupe de l'identification.</p>
+                        <div className="text-center space-y-2">
+                            <h3 className="text-xl font-black dark:text-white uppercase tracking-tighter">Photo Obligatoire</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold max-w-[200px] mx-auto">Prenez une photo claire pour que l'IA puisse identifier les déchets.</p>
                         </div>
-                        <button onClick={() => fileInputRef.current?.click()} className="w-full max-w-sm bg-primary text-white py-5 rounded-[2rem] font-black uppercase shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all">Lancer l'Appareil <Camera className="w-5 h-5" /></button>
+                        <button onClick={() => fileInputRef.current?.click()} className="w-full max-w-xs bg-primary text-white py-5 rounded-3xl font-black uppercase shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-sm">Lancer l'Appareil <Camera size={20} /></button>
                         <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageCapture} />
                     </div>
                 )}
 
                 {step === 'analysis' && (
-                    <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8">
+                    <div className="flex flex-col items-center justify-center h-full p-6 gap-6">
                         <div className="relative">
-                            <div className="w-24 h-24 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                            <div className="absolute inset-0 flex items-center justify-center"><Bot className="w-10 h-10 text-primary" /></div>
+                            <div className="w-20 h-20 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            <div className="absolute inset-0 flex items-center justify-center"><Bot className="w-8 h-8 text-primary" /></div>
                         </div>
-                        <div className="text-center">
-                            <p className="text-xs font-black text-gray-400 uppercase tracking-[0.3em] animate-pulse">Traitement IA en cours</p>
-                            <p className="text-sm font-bold dark:text-white mt-2">Identification du type de déchet...</p>
-                        </div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] animate-pulse">Analyse Gemini Vision...</p>
                     </div>
                 )}
 
                 {step === 'location' && (
-                    <div className="animate-fade-in flex flex-col h-full gap-6">
-                        <div className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] border dark:border-gray-800 shadow-xl flex-1 flex flex-col min-h-[400px]">
-                            <h3 className="text-lg font-black dark:text-white uppercase mb-4 flex items-center gap-2"><MapPin className="w-5 h-5 text-red-500" /> Précisez le lieu</h3>
-                            <div className="flex-1 rounded-[2rem] overflow-hidden border-2 border-gray-100 dark:border-gray-800 relative shadow-inner">
-                                <MapContainer center={location ? [location.lat, location.lng] : [-4.325, 15.322]} zoom={16} zoomControl={false} style={{height: '100%', width: '100%'}}>
-                                    <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                                    <LocationPicker initialPos={location!} onLocationChange={setLocation} />
-                                </MapContainer>
-                                <div className="absolute bottom-4 right-4 z-[1000]"><button onClick={() => setLocation(location)} className="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-xl"><Locate className="text-primary w-6 h-6"/></button></div>
+                    <div className="flex flex-col h-full animate-fade-in">
+                        <div className="flex-1 relative">
+                            <MapContainer center={location ? [location.lat, location.lng] : [-4.325, 15.322]} zoom={16} zoomControl={false} style={{height: '100%', width: '100%'}}>
+                                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                                <LocationPicker initialPos={location!} onLocationChange={setLocation} />
+                            </MapContainer>
+                            <div className="absolute top-4 left-4 right-4 z-[1000] p-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/20">
+                                <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Localisation SIG</p>
+                                <p className="text-xs font-bold dark:text-white truncate flex items-center gap-2"><MapPin size={14} className="text-red-500"/> Déplacez la carte pour pointer le tas.</p>
                             </div>
-                            <button onClick={() => setStep('confirm')} className="w-full mt-6 py-5 bg-[#2962FF] text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 active:scale-95 transition-all">Valider la position <ChevronRight className="w-5 h-5"/></button>
+                            <button onClick={handleLocateMe} className="absolute bottom-28 right-4 z-[1000] p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl"><Locate className="text-primary w-6 h-6"/></button>
+                        </div>
+                        <div className="p-6 bg-white dark:bg-gray-900 border-t dark:border-gray-800 safe-pb">
+                            <button onClick={() => setStep('confirm')} className="w-full py-5 bg-[#2962FF] text-white rounded-[1.8rem] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 active:scale-95 transition-all">Confirmer Position <ChevronRight size={18}/></button>
                         </div>
                     </div>
                 )}
 
                 {step === 'confirm' && (
-                    <div className="animate-scale-up space-y-6 pb-20">
-                        <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl h-[300px] border-4 border-white dark:border-gray-800">
+                    <div className="p-6 space-y-6 animate-scale-up h-full overflow-y-auto no-scrollbar safe-pb">
+                        <div className="relative rounded-[2rem] overflow-hidden shadow-2xl h-56 border-4 border-white dark:border-gray-800 shrink-0">
                             <img src={capturedImage!} className="w-full h-full object-cover" alt="Capture" />
-                            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl text-white font-black text-[10px] uppercase tracking-widest">Aperçu SIG</div>
                         </div>
-                        <div className="bg-white dark:bg-gray-900 p-8 rounded-[2.5rem] border dark:border-gray-700 shadow-sm">
-                            <div className="flex justify-between items-center mb-4">
-                                <h4 className="text-sm font-black dark:text-white uppercase tracking-widest">Analyse Automatique</h4>
-                                <span className="bg-green-50 text-green-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle className="w-3 h-3"/> IA OK</span>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
-                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Type détecté</p>
-                                    <p className="text-base font-black dark:text-white uppercase">{wasteType}</p>
+                        <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border dark:border-gray-700 shadow-sm space-y-4">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Rapport IA</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1">Type</p>
+                                    <p className="text-xs font-black dark:text-white truncate">{wasteType}</p>
                                 </div>
-                                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
-                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Observation IA</p>
-                                    <p className="text-xs text-gray-500 font-bold italic leading-relaxed">"{comment || 'Aucun commentaire'}"</p>
+                                <div className={`p-3 rounded-xl ${urgency === 'high' ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
+                                    <p className="text-[8px] font-black uppercase mb-1 opacity-50">Urgence</p>
+                                    <p className="text-xs font-black truncate uppercase">{urgency}</p>
                                 </div>
                             </div>
+                            <p className="text-[10px] text-gray-500 font-bold italic leading-relaxed">"{comment || 'Analyse visuelle terminée.'}"</p>
                         </div>
-                        <button onClick={handleFinalSubmit} disabled={isSubmitting} className="w-full py-6 rounded-[2rem] font-black bg-[#00C853] text-white shadow-2xl shadow-green-500/20 flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 transition-all">
-                            {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Send className="w-6 h-6" /> Envoyer au Centre SIG</>}
+                        <button onClick={handleFinalSubmit} disabled={isSubmitting} className="w-full py-5 rounded-[1.8rem] font-black bg-[#00C853] text-white shadow-xl shadow-green-500/20 flex items-center justify-center gap-3 uppercase tracking-widest text-sm active:scale-95 transition-all">
+                            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send size={20} /> Diffuser Alerte SIG</>}
                         </button>
                     </div>
                 )}
 
                 {step === 'success' && (
-                    <div className="flex flex-col items-center justify-center min-h-[75vh] gap-10 animate-scale-up text-center">
-                        <div className="relative">
-                            <div className="w-32 h-32 bg-green-50 rounded-[3rem] flex items-center justify-center text-green-500 shadow-inner">
-                                <CheckCircle2 size={64} strokeWidth={3} className="animate-bounce" />
-                            </div>
-                            <div className="absolute -top-4 -right-4 p-3 bg-blue-600 text-white rounded-2xl shadow-xl animate-pulse">
-                                <Satellite size={24} />
-                            </div>
+                    <div className="flex flex-col items-center justify-center h-full p-8 gap-8 animate-scale-up text-center">
+                        <div className="w-24 h-24 bg-green-50 rounded-[2rem] flex items-center justify-center text-green-500 shadow-inner">
+                            <CheckCircle2 size={56} strokeWidth={3} className="animate-bounce" />
                         </div>
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <h3 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Signalement Reçu !</h3>
-                                <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Code SIG: BP-{Date.now().toString().slice(-6)}</p>
-                            </div>
-                            <div className="p-8 bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-xl space-y-4 max-w-sm">
-                                <p className="text-sm text-gray-500 dark:text-gray-400 font-bold leading-relaxed">
-                                    Félicitations {user.firstName}! Votre alerte a été transmise au centre de commandement de **{user.commune}**. 
-                                </p>
-                                <div className="flex items-center gap-2 justify-center py-3 px-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl">
-                                    <Zap size={14} className="fill-current"/>
-                                    <span className="text-[10px] font-black uppercase tracking-widest">+50 Eco-Points en attente</span>
-                                </div>
-                                <p className="text-[10px] text-gray-400 font-bold italic">Nos équipes de collecte vont analyser l'urgence dans les plus brefs délais.</p>
-                            </div>
+                        <div className="space-y-4">
+                            <h3 className="text-3xl font-black dark:text-white uppercase tracking-tighter">Signalement Reçu !</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold max-w-xs mx-auto leading-relaxed">
+                                Merci {user.firstName}! Votre alerte a été transmise à la base opérationnelle de **{user.commune}**.
+                            </p>
                         </div>
-                        <button onClick={onBack} className="w-full max-w-xs py-5 bg-gray-900 dark:bg-white dark:text-black text-white rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-2xl active:scale-95 transition-all">Retour au Dashboard</button>
+                        <button onClick={onBack} className="w-full max-w-xs py-5 bg-gray-900 dark:bg-white dark:text-black text-white rounded-[1.8rem] font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Fermer</button>
                     </div>
                 )}
             </div>
         </div>
     );
+    
+    function handleLocateMe() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            });
+        }
+    }
 };

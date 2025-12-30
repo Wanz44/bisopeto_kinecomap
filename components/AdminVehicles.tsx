@@ -5,8 +5,7 @@ import {
     Radio, X, AlertTriangle, Filter, Layers, Sun, Moon, Globe, Wrench, 
     User, Fuel, Calendar, Edit2, Save, Activity, Map as MapIcon, List, 
     Navigation, Lock, Unlock, History, Zap, BarChart3, Gauge, MapPin,
-    // Added Clock and Check to imports
-    Eye, ChevronRight, Loader2, Info, Clock, Check
+    Eye, ChevronRight, Loader2, Info, Clock, Check, Users, PhoneCall, UserCheck
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { 
@@ -14,8 +13,8 @@ import {
     LineChart, Line 
 } from 'recharts';
 import L from 'leaflet';
-import { Vehicle } from '../types';
-import { VehicleAPI } from '../services/api';
+import { Vehicle, User as AppUser, UserType } from '../types';
+import { VehicleAPI, UserAPI } from '../services/api';
 import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 // --- MAP CONSTANTS ---
@@ -68,19 +67,6 @@ const getVehicleIcon = (v: Vehicle, isSelected: boolean) => {
                 ">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-5l-4-4h-3v10"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
                 </div>
-                <!-- Indicateur de direction -->
-                <div style="
-                    position: absolute; 
-                    top: -10px; 
-                    left: 50%; 
-                    transform: translateX(-50%) rotate(${rotation}deg);
-                    width: 0; 
-                    height: 0; 
-                    border-left: 5px solid transparent; 
-                    border-right: 5px solid transparent; 
-                    border-bottom: 8px solid ${color};
-                    opacity: ${v.status === 'active' ? 1 : 0};
-                "></div>
             </div>
         `,
         iconSize: [size, size],
@@ -106,10 +92,11 @@ interface AdminVehiclesProps {
 
 export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast }) => {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [collectors, setCollectors] = useState<AppUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+    const [sidebarTab, setSidebarTab] = useState<'vehicles' | 'collectors'>('vehicles');
     
-    // Map Layers
     const [mapType, setMapType] = useState<'streets' | 'satellite'>('streets');
     const [showTraffic, setShowTraffic] = useState(false);
     const [mapCenter, setMapCenter] = useState<[number, number]>([-4.325, 15.322]);
@@ -132,7 +119,7 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
     });
 
     useEffect(() => {
-        loadVehicles();
+        loadData();
         if (isSupabaseConfigured() && supabase) {
             const channel = supabase.channel('realtime:vehicles_admin_v2')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicles' }, (payload) => {
@@ -152,11 +139,15 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
         }
     }, []);
 
-    const loadVehicles = async () => {
+    const loadData = async () => {
         setIsLoading(true);
         try {
-            const data = await VehicleAPI.getAll(); 
-            setVehicles(data);
+            const [vData, uData] = await Promise.all([
+                VehicleAPI.getAll(),
+                UserAPI.getAll()
+            ]);
+            setVehicles(vData);
+            setCollectors(uData.filter(u => u.type === UserType.COLLECTOR));
         } catch (e) {
             console.error(e);
         } finally {
@@ -206,7 +197,6 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
         }
     };
 
-    // Fix: Added missing handleDeleteVehicle function
     const handleDeleteVehicle = async (id: string) => {
         if (!window.confirm("Supprimer définitivement ce véhicule ?")) return;
         try {
@@ -227,6 +217,11 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
         return matchesStatus && matchesSearch;
     });
 
+    const filteredCollectors = collectors.filter(c => {
+        return `${c.firstName} ${c.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+               (c.commune || '').toLowerCase().includes(searchQuery.toLowerCase());
+    });
+
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 transition-colors duration-300 relative overflow-hidden">
             
@@ -240,13 +235,12 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                         <div>
                             <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Supervision Flotte</h2>
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
-                                <Radio size={12} className="text-red-500 animate-pulse" /> Télémétrie en temps réel
+                                <Radio size={12} className="text-red-500 animate-pulse" /> Télémétrie & Agents Live
                             </p>
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        {/* Map Style Switcher */}
                         <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl border dark:border-gray-700">
                             <button 
                                 onClick={() => setMapType('streets')}
@@ -262,11 +256,9 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                             </button>
                         </div>
 
-                        {/* Traffic Toggle */}
                         <button 
                             onClick={() => setShowTraffic(!showTraffic)}
                             className={`p-3 rounded-2xl transition-all border dark:border-gray-700 flex items-center gap-2 ${showTraffic ? 'bg-orange-500 text-white shadow-lg border-orange-500' : 'bg-white dark:bg-gray-800 text-gray-500'}`}
-                            title="Trafic temps réel"
                         >
                             <Zap size={18} />
                             <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Trafic</span>
@@ -295,66 +287,107 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                 {/* Lateral Fleet List */}
                 <div className={`w-full md:w-96 bg-white dark:bg-gray-950 border-r dark:border-gray-800 flex flex-col overflow-hidden ${viewMode === 'map' ? 'hidden lg:flex' : 'flex'}`}>
                     <div className="p-6 space-y-4 border-b dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30">
+                        {/* Selector Tab for Sidebar */}
+                        <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl mb-2">
+                            <button 
+                                onClick={() => setSidebarTab('vehicles')}
+                                className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${sidebarTab === 'vehicles' ? 'bg-white dark:bg-gray-700 text-[#2962FF] shadow-sm' : 'text-gray-400'}`}
+                            >
+                                <Truck size={14}/> Engins
+                            </button>
+                            <button 
+                                onClick={() => setSidebarTab('collectors')}
+                                className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${sidebarTab === 'collectors' ? 'bg-white dark:bg-gray-700 text-[#2962FF] shadow-sm' : 'text-gray-400'}`}
+                            >
+                                <Users size={14}/> Agents
+                            </button>
+                        </div>
+
                         <div className="relative">
                             <Search size={16} className="absolute left-4 top-3.5 text-gray-400" />
                             <input 
                                 type="text" 
-                                placeholder="Plaque, Nom..." 
+                                placeholder={sidebarTab === 'vehicles' ? "Plaque, Nom..." : "Rechercher agent..."}
                                 className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white dark:bg-gray-800 border-none text-sm font-bold shadow-inner outline-none focus:ring-2 ring-blue-500/20 dark:text-white"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                            {['all', 'active', 'maintenance', 'stopped'].map(s => (
-                                <button 
-                                    key={s} 
-                                    onClick={() => setFilterStatus(s as any)}
-                                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all border-2 whitespace-nowrap ${filterStatus === s ? 'bg-gray-900 border-gray-900 text-white shadow-lg' : 'bg-white dark:bg-gray-800 border-transparent text-gray-400'}`}
-                                >
-                                    {s === 'all' ? 'Tous' : s}
-                                </button>
-                            ))}
-                        </div>
+                        {sidebarTab === 'vehicles' && (
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                                {['all', 'active', 'maintenance', 'stopped'].map(s => (
+                                    <button 
+                                        key={s} 
+                                        onClick={() => setFilterStatus(s as any)}
+                                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all border-2 whitespace-nowrap ${filterStatus === s ? 'bg-gray-900 border-gray-900 text-white shadow-lg' : 'bg-white dark:bg-gray-800 border-transparent text-gray-400'}`}
+                                    >
+                                        {s === 'all' ? 'Tous' : s}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
                         {isLoading ? (
                             <div className="flex flex-col items-center justify-center py-20 gap-4">
                                 <Loader2 className="animate-spin text-blue-500" size={32} />
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Initialisation GPS...</p>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Initialisation SIG...</p>
                             </div>
-                        ) : filteredVehicles.map(v => (
-                            <div 
-                                key={v.id} 
-                                onClick={() => handleSelectVehicle(v)}
-                                className={`p-5 rounded-[2.5rem] border-2 transition-all cursor-pointer group ${selectedVehicle?.id === v.id ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-blue-100'}`}
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg ${v.status === 'active' ? 'bg-[#00C853]' : v.status === 'maintenance' ? 'bg-orange-500' : 'bg-red-500'}`}>
-                                        <Truck size={28} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start">
-                                            <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tight truncate leading-none mb-1">{v.name}</h4>
-                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${v.status === 'active' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>{v.status}</span>
+                        ) : sidebarTab === 'vehicles' ? (
+                            filteredVehicles.map(v => (
+                                <div 
+                                    key={v.id} 
+                                    onClick={() => handleSelectVehicle(v)}
+                                    className={`p-5 rounded-[2.5rem] border-2 transition-all cursor-pointer group ${selectedVehicle?.id === v.id ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-blue-100'}`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg ${v.status === 'active' ? 'bg-[#00C853]' : v.status === 'maintenance' ? 'bg-orange-500' : 'bg-red-500'}`}>
+                                            <Truck size={28} />
                                         </div>
-                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">{v.plateNumber}</p>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center gap-1 text-[9px] font-bold text-gray-500">
-                                                <Battery size={10} className={v.batteryLevel < 30 ? 'text-red-500 animate-pulse' : 'text-green-500'} /> {v.batteryLevel}%
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start">
+                                                <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tight truncate leading-none mb-1">{v.name}</h4>
+                                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${v.status === 'active' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>{v.status}</span>
                                             </div>
-                                            <div className="flex items-center gap-1 text-[9px] font-bold text-gray-500">
-                                                <Navigation size={10} className="text-blue-500" /> {v.heading || 0}°
-                                            </div>
-                                            <div className="flex items-center gap-1 text-[9px] font-bold text-gray-500">
-                                                <Activity size={10} className="text-purple-500" /> Live
+                                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">{v.plateNumber}</p>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1 text-[9px] font-bold text-gray-500">
+                                                    <Battery size={10} className={v.batteryLevel < 30 ? 'text-red-500 animate-pulse' : 'text-green-500'} /> {v.batteryLevel}%
+                                                </div>
+                                                <div className="flex items-center gap-1 text-[9px] font-bold text-gray-500">
+                                                    <Navigation size={10} className="text-blue-500" /> {v.heading || 0}°
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            filteredCollectors.map(agent => (
+                                <div key={agent.id} className="p-5 bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all flex items-center justify-between group">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner ${agent.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                                            {agent.firstName[0]}
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-black text-gray-900 dark:text-white uppercase text-xs truncate">{agent.firstName} {agent.lastName}</h4>
+                                                {agent.status === 'active' && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>}
+                                            </div>
+                                            <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mt-1">{agent.commune || 'Zone non définie'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <a href={`tel:${agent.phone}`} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all"><PhoneCall size={16}/></a>
+                                        <button className="p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-400 rounded-xl"><UserCheck size={16}/></button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                        {!isLoading && sidebarTab === 'collectors' && filteredCollectors.length === 0 && (
+                            <div className="py-20 text-center text-gray-400 font-black uppercase text-[10px] tracking-widest opacity-50">Aucun collecteur trouvé</div>
+                        )}
                     </div>
                 </div>
 
@@ -442,7 +475,6 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                                 <div className="flex-1 overflow-y-auto p-8 space-y-10 no-scrollbar pb-32">
                                     {activeDetailTab === 'overview' && (
                                         <div className="space-y-8 animate-fade-in">
-                                            {/* LIVE DATA GRID */}
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] border dark:border-gray-800 shadow-sm relative overflow-hidden group">
                                                     <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12 group-hover:scale-110 transition-transform"><Gauge size={100}/></div>
@@ -458,7 +490,6 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                                                 </div>
                                             </div>
 
-                                            {/* ENGINE CONTROL */}
                                             <div className="bg-red-50 dark:bg-red-900/10 border-2 border-dashed border-red-200 dark:border-red-900/40 p-8 rounded-[3rem] space-y-6">
                                                 <div className="flex items-center justify-between">
                                                     <h4 className="text-sm font-black text-red-600 dark:text-red-400 uppercase tracking-widest flex items-center gap-3"><Lock size={20}/> Sécurité Remote</h4>
@@ -471,7 +502,6 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                                                 </div>
                                             </div>
 
-                                            {/* SPEED CHART */}
                                             <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border dark:border-gray-800 shadow-sm space-y-6">
                                                 <div className="flex justify-between items-center">
                                                     <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><Activity size={16} className="text-blue-500"/> Courbe de Vitesse</h4>
@@ -537,7 +567,7 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                 </div>
             </div>
 
-            {/* ADD/EDIT MODAL (Identique mais logic heading conservée) */}
+            {/* ADD/EDIT MODAL */}
             {showAddModal && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowAddModal(false)}></div>

@@ -35,7 +35,6 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         initDashboard();
 
-        // Écouteur temps réel pour maintenir les compteurs EXACTS
         const channel = supabase?.channel('dashboard_realtime_sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, () => refreshData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => refreshData())
@@ -58,7 +57,6 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
 
     const refreshData = async () => {
         try {
-            // Lecture directe de la base de données
             const [usersData, reportsData, paymentsData] = await Promise.all([
                 UserAPI.getAll(),
                 ReportsAPI.getAll(0, 200),
@@ -77,16 +75,14 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
         const tonnage = allUsers.reduce((acc, u) => acc + (u.totalTonnage || 0), 0);
         const activeAlerts = allReports.filter(r => r.status === 'pending' || r.status === 'assigned').length;
         const pendingUsers = allUsers.filter(u => u.status === 'pending').length;
-        
-        // Exactitude DB : On compte les utilisateurs ayant le statut 'active' comme étant opérationnels/connectés
         const onlineUsers = allUsers.filter(u => u.status === 'active').length;
         
         return {
             revenue: revenue,
             tonnage: tonnage,
             reports: activeAlerts,
-            members: allUsers.length, // Nombres des user total
-            online: onlineUsers,      // Nombres des user connecter/actifs
+            members: allUsers.length, 
+            online: onlineUsers,      
             pendingUsers: pendingUsers,
             successRate: allReports.length > 0 ? Math.round((allReports.filter(r => r.status === 'resolved').length / allReports.length) * 100) : 0
         };
@@ -115,7 +111,6 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
 
     return (
         <div className="p-4 md:p-8 space-y-8 animate-fade-in pb-32 max-w-[120rem] mx-auto">
-            {/* STATUS BAR */}
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
@@ -123,21 +118,12 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                             <div className={`w-2 h-2 rounded-full ${isCloudSynced ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
                             <span className="text-[8px] font-black uppercase tracking-widest">{isCloudSynced ? 'Biso Peto Cloud Connecté' : 'Mode Hors-ligne'}</span>
                         </div>
-                        <div className="px-3 py-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-full flex items-center gap-2">
-                            <Wifi className="w-3 h-3 text-blue-500" />
-                            <span className="text-[8px] font-black uppercase text-gray-400">Sync: Temps Réel</span>
-                        </div>
                     </div>
-                    <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Console Cloud</h1>
-                </div>
-                <div className="bg-gray-900 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-4 border border-white/5">
-                    <Clock className="w-5 h-5 text-blue-400" />
-                    <span className="text-sm font-black font-mono">{currentTime.toLocaleTimeString('fr-FR')}</span>
+                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Console Cloud</h1>
                 </div>
             </div>
 
-            {/* LIVE KPI GRID - Priorité aux compteurs d'utilisateurs demandés */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
                 {[
                     { label: 'Utilisateurs Totaux', val: stats.members, icon: Users, color: 'text-blue-600', perm: 'manage_users', view: AppView.ADMIN_USERS },
                     { label: 'Utilisateurs Connectés', val: stats.online, icon: Globe, color: 'text-green-500', perm: 'manage_users', view: AppView.ADMIN_USERS, pulse: true },
@@ -146,36 +132,24 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                     { label: 'Chiffre d\'Affaires (FC)', val: stats.revenue.toLocaleString(), icon: DollarSign, color: 'text-green-600', perm: 'view_finance', view: AppView.ADMIN_SUBSCRIPTIONS },
                     { label: 'Tonnage Global', val: `${stats.tonnage}kg`, icon: Trash2, color: 'text-purple-600', perm: 'manage_recovery', view: AppView.ADMIN_RECOVERY }
                 ].map((kpi, i) => hasPermission(kpi.perm as UserPermission) && (
-                    <div key={i} onClick={() => kpi.view && onChangeView(kpi.view)} className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] border dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-all">
-                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform"><kpi.icon size={80}/></div>
-                        <div className={`w-12 h-12 bg-gray-50 dark:bg-gray-800 ${kpi.color} rounded-2xl flex items-center justify-center mb-4 shadow-inner relative`}>
-                            <kpi.icon size={24}/>
-                            {kpi.pulse && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping border-2 border-white dark:border-gray-900"></div>}
+                    <div key={i} onClick={() => kpi.view && onChangeView(kpi.view)} className="bg-white dark:bg-gray-900 p-5 rounded-[2rem] border dark:border-gray-800 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-all">
+                        <div className={`w-10 h-10 bg-gray-50 dark:bg-gray-800 ${kpi.color} rounded-xl flex items-center justify-center mb-3 shadow-inner relative`}>
+                            <kpi.icon size={20}/>
+                            {kpi.pulse && <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-ping border-2 border-white dark:border-gray-900"></div>}
                         </div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{kpi.label}</p>
-                        <h3 className="text-3xl font-black text-gray-900 dark:text-white leading-none mt-1">{kpi.val}</h3>
-                        {/* Indicateur visuel pour les actions requises */}
-                        {(kpi.icon === UserPlus && typeof kpi.val === 'number' && kpi.val > 0) && (
-                            <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
-                        )}
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{kpi.label}</p>
+                        <h3 className="text-2xl font-black text-gray-900 dark:text-white leading-none mt-1">{kpi.val}</h3>
                     </div>
                 ))}
             </div>
 
-            {/* ANALYTICS SECTION */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-white dark:bg-gray-900 p-8 rounded-[3.5rem] border dark:border-gray-800 shadow-sm space-y-8">
+                <div className="lg:col-span-2 bg-white dark:bg-gray-900 p-6 md:p-8 rounded-[3rem] border dark:border-gray-800 shadow-sm space-y-6">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Activity size={24}/></div>
-                            <div>
-                                <h3 className="text-xl font-black dark:text-white uppercase tracking-tighter">Flux des Signalements</h3>
-                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Données Cloud des 7 derniers jours</p>
-                            </div>
-                        </div>
-                        <button onClick={refreshData} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl hover:rotate-180 transition-all duration-700 shadow-inner"><RefreshCw size={18}/></button>
+                        <h3 className="text-lg font-black dark:text-white uppercase tracking-tighter">Flux des Signalements</h3>
+                        <button onClick={refreshData} className="p-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl shadow-inner"><RefreshCw size={16}/></button>
                     </div>
-                    <div className="h-[300px] w-full">
+                    <div className="h-[250px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData}>
                                 <defs>
@@ -185,54 +159,34 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.1)" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} />
-                                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} />
-                                <Tooltip contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 'bold'}} />
-                                <Area type="monotone" dataKey="val" stroke="#2962FF" strokeWidth={4} fillOpacity={1} fill="url(#colorCloud)" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#94a3b8'}} />
+                                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#94a3b8'}} />
+                                <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)'}} />
+                                <Area type="monotone" dataKey="val" stroke="#2962FF" strokeWidth={3} fillOpacity={1} fill="url(#colorCloud)" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-900 p-8 rounded-[3.5rem] border dark:border-gray-800 shadow-sm flex flex-col">
-                    <div className="flex items-center gap-3 mb-8">
-                        <History size={20} className="text-blue-500" />
-                        <h3 className="text-sm font-black dark:text-white uppercase tracking-widest">Journal d'Activité</h3>
-                    </div>
-                    <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar pr-1">
+                <div className="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-[3rem] border dark:border-gray-800 shadow-sm flex flex-col">
+                    <h3 className="text-xs font-black dark:text-white uppercase tracking-widest mb-6 flex items-center gap-2"><History size={16} className="text-blue-500" /> Journal d'Activité</h3>
+                    <div className="flex-1 space-y-5 overflow-y-auto no-scrollbar">
                         {allReports.slice(0, 8).map(report => (
-                            <div key={report.id} className="flex gap-4 items-start group border-b dark:border-gray-800 pb-4 last:border-none">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${report.status === 'resolved' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                                    {report.status === 'resolved' ? <CheckCircle2 size={18}/> : <Activity size={18}/>}
+                            <div key={report.id} className="flex gap-4 items-start border-b dark:border-gray-800 pb-4 last:border-none">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${report.status === 'resolved' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                    {report.status === 'resolved' ? <CheckCircle2 size={16}/> : <Activity size={16}/>}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start">
-                                        <p className="text-[10px] font-black dark:text-white uppercase truncate">{report.wasteType}</p>
+                                        <p className="text-[9px] font-black dark:text-white uppercase truncate">{report.wasteType}</p>
                                         <span className="text-[8px] font-bold text-gray-400">{new Date(report.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                     </div>
-                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium leading-tight mt-1">{report.commune}</p>
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium truncate mt-1">{report.commune}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
-            </div>
-
-            {/* QUICK ACTIONS */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {[
-                    { label: 'Signalements', view: AppView.ADMIN_REPORTS, icon: AlertTriangle, perm: 'manage_reports' },
-                    { label: 'Membres', view: AppView.ADMIN_USERS, icon: Users, perm: 'manage_users' },
-                    { label: 'Paiements', view: AppView.ADMIN_SUBSCRIPTIONS, icon: CreditCard, perm: 'view_finance' },
-                    { label: 'Marketplace', view: AppView.ADMIN_MARKETPLACE, icon: ShoppingBag, perm: 'manage_marketplace' },
-                    { label: 'Sécurité', view: AppView.ADMIN_PERMISSIONS, icon: Lock, perm: 'system_settings' },
-                    { label: 'Alertes Push', view: AppView.NOTIFICATIONS, icon: Bell, perm: 'manage_communications' }
-                ].map((act, i) => hasPermission(act.perm as UserPermission) && (
-                    <button key={i} onClick={() => onChangeView(act.view)} className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border dark:border-gray-800 flex flex-col items-center gap-3 group hover:border-blue-500 transition-all shadow-sm active:scale-95">
-                        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all"><act.icon size={20}/></div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white text-center">{act.label}</span>
-                    </button>
-                ))}
             </div>
         </div>
     );
@@ -271,51 +225,51 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
     }, [user.id]);
 
     return (
-        <div className="p-4 md:p-8 space-y-8 animate-fade-in pb-32">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8">
+        <div className="p-5 md:p-8 space-y-8 animate-fade-in">
+            <div className="flex flex-col gap-6">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
                         <div className={`px-2 py-0.5 rounded-full flex items-center gap-1.5 border ${isCloudSynced ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600'}`}>
                             <div className={`w-1.5 h-1.5 rounded-full ${isCloudSynced ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                            <span className="text-[7px] font-black uppercase tracking-widest">{isCloudSynced ? 'Connecté au Cloud SIG' : 'Mode local'}</span>
+                            <span className="text-[7px] font-black uppercase tracking-widest">{isCloudSynced ? 'Connecté' : 'Mode local'}</span>
                         </div>
                     </div>
-                    <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none truncate">Mbote, {user.firstName}!</h1>
-                    <div className="flex items-center gap-3 mt-4">
-                        <div className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-primary-light border border-green-100 dark:border-green-800 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
-                           <Sparkles size={10}/> Citoyen de {user.commune}
-                        </div>
-                    </div>
+                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none truncate">Mbote, {user.firstName}!</h1>
+                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-3 flex items-center gap-2"><MapPin size={10} className="text-primary"/> Commune de {user.commune}</p>
                 </div>
-                <div className="w-full sm:w-auto bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-xl text-center">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Eco-Points</p>
-                    <div className="text-5xl font-black text-blue-600 flex items-center justify-center gap-3"><Zap size={32} className="text-yellow-500 fill-yellow-500" /> {user.points}</div>
+                
+                <div className="w-full bg-white dark:bg-gray-800 p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-xl flex items-center justify-between">
+                    <div>
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Mon Solde</p>
+                        <div className="text-4xl font-black text-blue-600 flex items-center gap-2"><Zap size={24} className="text-yellow-500 fill-yellow-500" /> {user.points}</div>
+                    </div>
+                    <button onClick={() => onChangeView(AppView.PROFILE)} className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><ChevronRight size={20}/></button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <button onClick={() => onChangeView(AppView.REPORTING)} className="relative group overflow-hidden bg-primary p-12 rounded-[3.5rem] shadow-2xl flex flex-col gap-10 transition-all hover:scale-[1.02] text-left border-4 border-white dark:border-gray-800">
-                    <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:rotate-12 transition-all duration-700 text-white"><Camera className="w-40 h-40" /></div>
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-[2rem] flex items-center justify-center text-white shadow-xl"><Camera size={40} /></div>
-                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Signaler <br/> un tas</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button onClick={() => onChangeView(AppView.REPORTING)} className="relative group overflow-hidden bg-primary px-8 py-10 rounded-[3rem] shadow-2xl flex flex-col gap-6 transition-all hover:scale-[1.02] text-left border-4 border-white dark:border-gray-800">
+                    <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:rotate-12 transition-all duration-700 text-white"><Camera className="w-32 h-32" /></div>
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-white shadow-xl"><Camera size={32} /></div>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight">Signaler <br/> un tas de déchets</h3>
                 </button>
                 
-                <div className="bg-white dark:bg-gray-900 p-10 rounded-[3.5rem] border dark:border-gray-800 shadow-sm flex flex-col overflow-hidden">
-                    <h3 className="text-xl font-black dark:text-white uppercase tracking-tighter flex items-center gap-3 mb-8"><History size={24} className="text-blue-500"/> Mes Signalements Live</h3>
+                <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border dark:border-gray-800 shadow-sm flex flex-col min-h-[350px]">
+                    <h3 className="text-lg font-black dark:text-white uppercase tracking-tighter flex items-center gap-3 mb-6"><History size={20} className="text-blue-500"/> Historique</h3>
                     
                     <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar">
                         {isLoading ? (
                             <div className="py-10 text-center"><Loader2 className="animate-spin text-primary mx-auto" /></div>
                         ) : myReports.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-10 opacity-20 font-black uppercase text-xs">Aucun signalement trouvé</div>
+                            <div className="flex flex-col items-center justify-center py-10 opacity-20 font-black uppercase text-[10px]">Aucun signalement</div>
                         ) : myReports.map(report => (
-                            <div key={report.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-3xl border border-transparent hover:border-blue-100 transition-all">
-                                <img src={report.imageUrl} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                            <div key={report.id} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-transparent hover:border-blue-100 transition-all">
+                                <img src={report.imageUrl} className="w-10 h-10 rounded-xl object-cover shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] font-black dark:text-white uppercase truncate">{report.wasteType}</p>
-                                    <p className="text-[8px] text-gray-400 font-bold uppercase">{new Date(report.date).toLocaleDateString()}</p>
+                                    <p className="text-[9px] font-black dark:text-white uppercase truncate">{report.wasteType}</p>
+                                    <p className="text-[7px] text-gray-400 font-bold uppercase">{new Date(report.date).toLocaleDateString()}</p>
                                 </div>
-                                <span className={`px-2 py-1 rounded-lg text-[7px] font-black uppercase text-white ${
+                                <span className={`px-2 py-1 rounded-lg text-[6px] font-black uppercase text-white ${
                                     report.status === 'resolved' ? 'bg-green-500' : 
                                     report.status === 'assigned' ? 'bg-blue-500' : 'bg-yellow-500'
                                 }`}>
@@ -324,9 +278,6 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                             </div>
                         ))}
                     </div>
-                    {myReports.length > 0 && (
-                        <button className="w-full mt-6 py-4 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">Voir tout l'historique <ChevronRight size={14}/></button>
-                    )}
                 </div>
             </div>
         </div>
@@ -336,10 +287,10 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
 export const Dashboard: React.FC<DashboardProps> = (props) => {
     if (props.user.type !== UserType.ADMIN && props.user.status === 'pending') {
         return (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-[#F5F7FA] dark:bg-gray-950">
-                <div className="w-32 h-32 bg-orange-100 dark:bg-orange-900/20 rounded-[3.5rem] flex items-center justify-center text-orange-600 mb-8 border border-orange-200"><AlertTriangle size={64} /></div>
-                <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">Dossier en Analyse</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-bold max-w-sm leading-relaxed mb-8">Mbote {props.user.firstName}! Votre compte est en cours de validation par nos agents.</p>
+            <div className="flex flex-col items-center justify-center h-full p-10 text-center bg-[#F5F7FA] dark:bg-gray-950">
+                <div className="w-24 h-24 bg-orange-100 dark:bg-orange-900/20 rounded-[2.5rem] flex items-center justify-center text-orange-600 mb-8 border border-orange-200"><AlertTriangle size={48} /></div>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4 leading-tight">Dossier en attente de validation</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-bold max-w-xs leading-relaxed mb-10">Mbote {props.user.firstName}! Votre compte est en cours d'analyse par l'administration Biso Peto.</p>
             </div>
         );
     }
