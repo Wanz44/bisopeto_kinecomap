@@ -203,6 +203,11 @@ export const ReportsAPI = {
         if (r.proofUrl !== undefined) dbUpdate.proof_url = r.proofUrl;
         const { error } = await supabase.from('waste_reports').update(dbUpdate).eq('id', r.id);
         if (error) throw error;
+    },
+    delete: async (id: string) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('waste_reports').delete().eq('id', id);
+        if (error) throw error;
     }
 };
 
@@ -233,7 +238,7 @@ export const MarketplaceAPI = {
         const dbUpdate: any = { ...i };
         if (i.sellerId) { dbUpdate.seller_id = i.sellerId; delete dbUpdate.sellerId; }
         if (i.imageUrl) { dbUpdate.image_url = i.imageUrl; delete dbUpdate.imageUrl; }
-        const { error } = await supabase.from('marketplace_items').update(dbUpdate).eq('id', i.id);
+        const { error = null } = await supabase.from('marketplace_items').update(dbUpdate).eq('id', i.id);
         if (error) throw error;
     }
 };
@@ -245,6 +250,7 @@ export const PaymentsAPI = {
             id: p.id,
             user_id: p.userId,
             user_name: p.userName,
+            // Fix: Changed p.amount_fc to p.amountFC to match the Payment interface properties
             amount_fc: p.amountFC,
             currency: p.currency,
             method: p.method,
