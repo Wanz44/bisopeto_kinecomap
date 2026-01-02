@@ -10,9 +10,11 @@ import {
 import { UserPermission, UserType } from '../types';
 import { SettingsAPI } from '../services/api';
 
-interface AdminPermissionsProps {
-    onBack: () => void;
-    onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+interface RoleItem {
+    id: string;
+    label: string;
+    isSystem: boolean;
+    icon: any;
 }
 
 const ALL_PERMISSIONS: { key: UserPermission; label: string; category: string; description: string; icon: any }[] = [
@@ -35,7 +37,7 @@ const ALL_PERMISSIONS: { key: UserPermission; label: string; category: string; d
     { key: 'export_data', label: 'Audit & Export Data', category: 'Données', description: 'Extraire les rapports CSV, logs et données SIG.', icon: Database },
 ];
 
-const INITIAL_ROLES = [
+const INITIAL_ROLES: RoleItem[] = [
     { id: UserType.ADMIN, label: 'Administrateur', isSystem: true, icon: Shield },
     { id: UserType.COLLECTOR, label: 'Collecteur', isSystem: true, icon: Truck },
     { id: UserType.BUSINESS, label: 'Entreprise', isSystem: true, icon: DollarSign },
@@ -45,7 +47,7 @@ const INITIAL_ROLES = [
 const CRITICAL_PERMS: UserPermission[] = ['manage_users', 'system_settings'];
 
 export const AdminPermissions: React.FC<AdminPermissionsProps> = ({ onBack, onToast }) => {
-    const [roles, setRoles] = useState(INITIAL_ROLES);
+    const [roles, setRoles] = useState<RoleItem[]>(INITIAL_ROLES);
     const [rolePermissions, setRolePermissions] = useState<Record<string, UserPermission[]>>({});
     const [selectedRoleId, setSelectedRoleId] = useState<string>(UserType.ADMIN);
     const [isLoading, setIsLoading] = useState(true);
@@ -377,3 +379,8 @@ export const AdminPermissions: React.FC<AdminPermissionsProps> = ({ onBack, onTo
         </div>
     );
 };
+
+interface AdminPermissionsProps {
+    onBack: () => void;
+    onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+}
