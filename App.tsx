@@ -235,7 +235,25 @@ function App() {
 
     const renderContent = () => {
         if (!user) {
-            if (view === AppView.LANDING) return <LandingPage onStart={() => navigateTo(AppView.ONBOARDING)} onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} appLogo={appLogo} impactData={impactData} />;
+            if ([
+                AppView.LANDING, 
+                AppView.LANDING_ABOUT, 
+                AppView.LANDING_ECOSYSTEM, 
+                AppView.LANDING_PROCESS, 
+                AppView.LANDING_IMPACT, 
+                AppView.LANDING_CONTACT
+            ].includes(view)) {
+                return (
+                    <LandingPage 
+                        onStart={() => navigateTo(AppView.ONBOARDING)} 
+                        onLogin={() => { setOnboardingStartWithLogin(true); navigateTo(AppView.ONBOARDING); }} 
+                        appLogo={appLogo} 
+                        impactData={impactData}
+                        onChangeView={navigateTo}
+                        currentView={view}
+                    />
+                );
+            }
             if (view === AppView.ONBOARDING) return <Onboarding initialShowLogin={onboardingStartWithLogin} onBackToLanding={() => setHistory([AppView.LANDING])} onComplete={(data) => { setUser(data as User); localStorage.setItem('kinecomap_user', JSON.stringify(data)); setHistory([AppView.DASHBOARD]); }} appLogo={appLogo} onToast={showToast} onNotifyAdmin={(t, m) => handleNotify('ADMIN', t, m, 'alert')} />;
             return null;
         }
@@ -263,7 +281,9 @@ function App() {
         }
     };
 
-    if (view === AppView.LANDING || (!user && view === AppView.ONBOARDING)) return renderContent();
+    if (view === AppView.LANDING || 
+        [AppView.LANDING_ABOUT, AppView.LANDING_ECOSYSTEM, AppView.LANDING_PROCESS, AppView.LANDING_IMPACT, AppView.LANDING_CONTACT].includes(view) || 
+        (!user && view === AppView.ONBOARDING)) return renderContent();
 
     return (
         <Layout currentView={view} onChangeView={navigateTo} onLogout={handleLogout} onRefresh={handleRefresh} isRefreshing={isRefreshing} user={user} unreadNotifications={notifications.filter(n => !n.read).length} appLogo={appLogo} toast={toast} onCloseToast={() => setToast(p => ({...p, visible: false}))}>
