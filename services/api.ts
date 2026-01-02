@@ -268,7 +268,8 @@ export const PaymentsAPI = {
             period: p.period,
             collector_id: p.collectorId,
             collector_name: p.collectorName,
-            qr_code_data: p.qr_code_data
+            // Fix: qrCodeData instead of qr_code_data from p object (Frontend uses camelCase)
+            qr_code_data: p.qrCodeData
         }]).select().single();
         if (error) throw error;
         return mapPayment(data);

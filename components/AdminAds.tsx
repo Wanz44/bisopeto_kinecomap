@@ -1,853 +1,462 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Plus, Megaphone, TrendingUp, Eye, MousePointer, Calendar, DollarSign, PauseCircle, PlayCircle, Trash2, BarChart3, Filter, ListFilter, Upload, Building2, Mail, Phone, MoreVertical, Edit2, User, X, Check, Image as ImageIcon, PieChart } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { 
+    ArrowLeft, Plus, Megaphone, TrendingUp, Eye, MousePointer, Calendar, 
+    DollarSign, PauseCircle, PlayCircle, Trash2, BarChart3, Filter, 
+    Upload, Building2, Mail, Phone, MoreVertical, Edit2, User, X, 
+    // Add CheckCircle2 to imports
+    Check, Image as ImageIcon, PieChart, Target, MapPin, Activity, 
+    ArrowUpRight, Download, Zap, ShieldCheck, Clock, Layers, Briefcase,
+    CheckCircle2
+} from 'lucide-react';
+import { 
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    BarChart, Bar, Cell
+} from 'recharts';
 import { AdCampaign, Partner } from '../types';
 import { AdsAPI, PartnersAPI } from '../services/api';
 
-interface AdminAdsProps {
-    onBack: () => void;
-    onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
-}
+const KINSHASA_COMMUNES = ["Gombe", "Ngaliema", "Limete", "Bandalungwa", "Kintambo", "Lemba", "Victoire", "Matete"];
+
+const MOCK_PERF_DATA = [
+    { day: 'Lun', views: 400, clicks: 24 },
+    { day: 'Mar', views: 300, clicks: 18 },
+    { day: 'Mer', views: 600, clicks: 42 },
+    { day: 'Jeu', views: 800, clicks: 56 },
+    { day: 'Ven', views: 700, clicks: 48 },
+    { day: 'Sam', views: 1100, clicks: 82 },
+    { day: 'Dim', views: 1200, clicks: 94 },
+];
 
 export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
-    const [activeTab, setActiveTab] = useState<'campaigns' | 'partners'>('campaigns');
-    
-    // Ads State
+    const [activeTab, setActiveTab] = useState<'campaigns' | 'partners' | 'analytics'>('campaigns');
     const [ads, setAds] = useState<AdCampaign[]>([]);
-    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'ended'>('all');
-    const [sortBy, setSortBy] = useState<'startDate' | 'endDate'>('startDate');
-    const [dateStart, setDateStart] = useState('');
-    const [dateEnd, setDateEnd] = useState('');
-    const [selectedCampaign, setSelectedCampaign] = useState<AdCampaign | null>(null);
-    
-    // Campaign Modal State
-    const [showCampaignModal, setShowCampaignModal] = useState(false);
-    const [newCampaign, setNewCampaign] = useState<Partial<AdCampaign>>({
-        status: 'active',
-        budget: 1000,
-        spent: 0,
-        views: 0,
-        clicks: 0
-    });
-
-    // Partners State
     const [partners, setPartners] = useState<Partner[]>([]);
-    const [showPartnerModal, setShowPartnerModal] = useState(false);
-    const [isEditingPartner, setIsEditingPartner] = useState(false);
-    const [currentPartner, setCurrentPartner] = useState<Partial<Partner>>({});
+    const [isLoading, setIsLoading] = useState(true);
     
-    const partnerFileInputRef = useRef<HTMLInputElement>(null);
+    // Filters
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'ended'>('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
-    // Initial Data Load
+    // Detail / Modal states
+    const [selectedCampaign, setSelectedCampaign] = useState<AdCampaign | null>(null);
+    const [showCampaignModal, setShowCampaignModal] = useState(false);
+    const [showPartnerModal, setShowPartnerModal] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
     useEffect(() => {
         loadData();
     }, []);
 
     const loadData = async () => {
-        const p = await PartnersAPI.getAll();
-        setPartners(p);
-        const a = await AdsAPI.getAll();
-        setAds(a);
+        setIsLoading(true);
+        try {
+            const [p, a] = await Promise.all([PartnersAPI.getAll(), AdsAPI.getAll()]);
+            setPartners(p);
+            setAds(a);
+        } catch (e) {
+            onToast?.("Erreur de chargement Cloud", "error");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    // --- Campaign Logic ---
-    const handleToggleStatus = async (id: string) => {
-        const ad = ads.find(a => a.id === id);
-        if (!ad) return;
+    // --- Enterprise Calculations ---
+    const globalStats = useMemo(() => {
+        const totalViews = ads.reduce((acc, ad) => acc + (ad.views || 0), 0);
+        const totalClicks = ads.reduce((acc, ad) => acc + (ad.clicks || 0), 0);
+        const totalSpend = ads.reduce((acc, ad) => acc + (ad.spent || 0), 0);
+        const ctr = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(2) : "0";
+        return { totalViews, totalClicks, totalSpend, ctr };
+    }, [ads]);
+
+    const handleToggleStatus = async (ad: AdCampaign) => {
         const newStatus = ad.status === 'active' ? 'paused' : 'active';
-        
-        await AdsAPI.updateStatus(id, newStatus);
-        
-        setAds(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
-        if (onToast) onToast(`Campagne ${newStatus === 'active' ? 'activée' : 'mise en pause'}`, "info");
+        try {
+            await AdsAPI.updateStatus(ad.id, newStatus);
+            setAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: newStatus } : a));
+            onToast?.(`Campagne ${newStatus === 'active' ? 'activée' : 'suspendue'}`, "success");
+        } catch (e) {
+            onToast?.("Erreur lors de la mise à jour", "error");
+        }
     };
 
     const handleDeleteAd = async (id: string) => {
-        if (confirm('Êtes-vous sûr de vouloir supprimer cette campagne ?')) {
+        if (!window.confirm("Supprimer cette campagne ? Les données analytics seront perdues.")) return;
+        try {
             await AdsAPI.delete(id);
-            setAds(prev => prev.filter(ad => ad.id !== id));
-            if (onToast) onToast("Campagne supprimée", "success");
-        }
-    };
-
-    const handleSaveCampaign = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const campaign: AdCampaign = {
-            id: '',
-            title: newCampaign.title || 'Nouvelle Campagne',
-            partner: newCampaign.partner || 'Partenaire Inconnu',
-            status: newCampaign.status || 'active',
-            views: 0,
-            clicks: 0,
-            budget: newCampaign.budget || 1000,
-            spent: 0,
-            startDate: newCampaign.startDate || new Date().toLocaleDateString('fr-FR'),
-            endDate: newCampaign.endDate || new Date(Date.now() + 86400000 * 30).toLocaleDateString('fr-FR'),
-            image: newCampaign.image || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=800&q=80'
-        };
-        
-        const created = await AdsAPI.add(campaign);
-        setAds([created, ...ads]);
-        setShowCampaignModal(false);
-        setNewCampaign({ status: 'active', budget: 1000, spent: 0, views: 0, clicks: 0 });
-        if (onToast) onToast("Campagne publicitaire créée avec succès", "success");
-    };
-
-    // Helper pour convertir "JJ/MM/AAAA" en objet Date pour comparaison
-    const parseFrenchDate = (dateStr: string) => {
-        if (!dateStr) return null;
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-            return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-        }
-        return null;
-    };
-
-    const filteredAds = ads
-        .filter(ad => statusFilter === 'all' || ad.status === statusFilter)
-        .filter(ad => {
-            // Logique de filtrage par date
-            if (!dateStart && !dateEnd) return true;
-
-            const adStart = parseFrenchDate(ad.startDate);
-            const adEnd = parseFrenchDate(ad.endDate);
-            
-            // Les inputs date retournent YYYY-MM-DD
-            const filterStart = dateStart ? new Date(dateStart) : null;
-            const filterEnd = dateEnd ? new Date(dateEnd) : null;
-
-            // Vérifier chevauchement des périodes
-            // La campagne est valide si elle se termine après le début du filtre ET commence avant la fin du filtre
-            if (filterStart && adEnd && adEnd < filterStart) return false;
-            if (filterEnd && adStart && adStart > filterEnd) return false;
-
-            return true;
-        })
-        .sort((a, b) => {
-            const dateA = parseFrenchDate(a[sortBy]);
-            const dateB = parseFrenchDate(b[sortBy]);
-            if (dateA && dateB) return dateB.getTime() - dateA.getTime();
-            return 0; 
-        });
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-            case 'paused': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-            case 'ended': return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
-            default: return 'bg-gray-100';
-        }
-    };
-
-    // --- Partner Logic ---
-    const handleSavePartner = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        if (isEditingPartner && currentPartner.id) {
-            await PartnersAPI.update(currentPartner as Partner);
-            setPartners(prev => prev.map(p => p.id === currentPartner.id ? { ...p, ...currentPartner } as Partner : p));
-            if (onToast) onToast("Partenaire mis à jour", "success");
-        } else {
-            const newPartner: Partner = {
-                id: '',
-                name: currentPartner.name || 'Nouveau Partenaire',
-                industry: currentPartner.industry || 'Autre',
-                contactName: currentPartner.contactName || '',
-                email: currentPartner.email || '',
-                phone: currentPartner.phone || '',
-                activeCampaigns: 0,
-                totalBudget: 0,
-                logo: currentPartner.logo || `https://ui-avatars.com/api/?name=${(currentPartner.name || 'N').substring(0,2)}&background=random&color=fff`,
-                status: 'active'
-            };
-            const created = await PartnersAPI.add(newPartner);
-            setPartners([...partners, created]);
-            if (onToast) onToast("Nouveau partenaire ajouté", "success");
-        }
-        setShowPartnerModal(false);
-        setCurrentPartner({});
-    };
-
-    const handleDeletePartner = async (id: string) => {
-        if (confirm('Supprimer ce partenaire ? Cela archivera toutes ses campagnes.')) {
-            await PartnersAPI.delete(id);
-            setPartners(prev => prev.filter(p => p.id !== id));
-            if (onToast) onToast("Partenaire supprimé", "success");
-        }
-    };
-
-    const openPartnerModal = (partner?: Partner) => {
-        if (partner) {
-            setCurrentPartner(partner);
-            setIsEditingPartner(true);
-        } else {
-            setCurrentPartner({});
-            setIsEditingPartner(false);
-        }
-        setShowPartnerModal(true);
-    };
-
-    const handlePartnerLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCurrentPartner(prev => ({ ...prev, logo: reader.result as string }));
-            };
-            reader.readAsDataURL(file);
+            setAds(prev => prev.filter(a => a.id !== id));
+            onToast?.("Campagne supprimée définitivement", "success");
+        } catch (e) {
+            onToast?.("Erreur suppression", "error");
         }
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-900 transition-colors duration-300">
-            {/* Header */}
-            <div className="bg-white dark:bg-gray-800 p-4 shadow-sm flex flex-col gap-4 sticky top-0 z-10 border-b border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                        <button onClick={onBack} className="mr-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-                            <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
-                        </button>
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Publicités & Partenaires</h2>
-                    </div>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
-                    <button 
-                        onClick={() => setActiveTab('campaigns')}
-                        className={`flex-1 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'campaigns' ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
-                    >
-                        <Megaphone size={16} /> Campagnes
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('partners')}
-                        className={`flex-1 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'partners' ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
-                    >
-                        <Building2 size={16} /> Partenaires
-                    </button>
-                </div>
-            </div>
-
-            <div className="p-5 flex-1 overflow-y-auto space-y-6">
-                
-                {/* === CAMPAIGNS VIEW === */}
-                {activeTab === 'campaigns' && (
-                    <div className="space-y-6 animate-fade-in">
-                        {/* Stats Overview */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
-                                        <DollarSign size={20} />
-                                    </div>
-                                    <span className="text-xs font-bold text-gray-400 flex items-center gap-1">0% <TrendingUp size={12} /></span>
-                                </div>
-                                <h3 className="text-2xl font-bold text-gray-800 dark:text-white">$0.00</h3>
-                                <p className="text-xs text-gray-500">Revenus Publicitaires</p>
-                            </div>
-
-                            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-lg">
-                                        <Eye size={20} />
-                                    </div>
-                                    <span className="text-xs font-bold text-gray-400 flex items-center gap-1">0% <TrendingUp size={12} /></span>
-                                </div>
-                                <h3 className="text-2xl font-bold text-gray-800 dark:text-white">0</h3>
-                                <p className="text-xs text-gray-500">Impressions Totales</p>
-                            </div>
-
-                            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="p-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-lg">
-                                        <Megaphone size={20} />
-                                    </div>
-                                </div>
-                                <h3 className="text-2xl font-bold text-gray-800 dark:text-white">{ads.filter(a => a.status === 'active').length}</h3>
-                                <p className="text-xs text-gray-500">Campagnes Actives</p>
-                            </div>
-                        </div>
-
-                        {/* Combined Filter Toolbar */}
-                        <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <div className="flex w-full xl:w-auto p-1 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-x-auto no-scrollbar">
-                                {[
-                                    { id: 'all', label: 'Tous' },
-                                    { id: 'active', label: 'Actifs' },
-                                    { id: 'paused', label: 'En Pause' },
-                                    { id: 'ended', label: 'Terminés' }
-                                ].map((filter) => (
-                                    <button
-                                        key={filter.id}
-                                        onClick={() => setStatusFilter(filter.id as any)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
-                                            statusFilter === filter.id 
-                                            ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' 
-                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                                        }`}
-                                    >
-                                        {filter.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto items-center">
-                                {/* Date Filters Integrated */}
-                                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-600 w-full sm:w-auto">
-                                    <Calendar size={16} className="text-gray-400 shrink-0" />
-                                    <input 
-                                        type="date" 
-                                        value={dateStart}
-                                        onChange={(e) => setDateStart(e.target.value)}
-                                        className="bg-transparent text-sm font-semibold text-gray-800 dark:text-white outline-none w-28 lg:w-auto"
-                                        title="Date de début"
-                                    />
-                                    <span className="text-gray-400">-</span>
-                                    <input 
-                                        type="date" 
-                                        value={dateEnd}
-                                        onChange={(e) => setDateEnd(e.target.value)}
-                                        className="bg-transparent text-sm font-semibold text-gray-800 dark:text-white outline-none w-28 lg:w-auto"
-                                        title="Date de fin"
-                                    />
-                                    {(dateStart || dateEnd) && (
-                                        <button onClick={() => { setDateStart(''); setDateEnd(''); }} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full ml-1">
-                                            <X size={14} className="text-gray-500" />
-                                        </button>
-                                    )}
-                                </div>
-
-                                <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
-
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <select 
-                                        value={sortBy}
-                                        onChange={(e) => setSortBy(e.target.value as any)}
-                                        className="w-full sm:w-auto bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-white text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                    >
-                                        <option value="startDate">Date de début</option>
-                                        <option value="endDate">Date de fin</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                         {/* Quick Actions */}
+        <div className="flex flex-col h-full bg-[#F8FAFC] dark:bg-gray-950 transition-colors duration-300 overflow-hidden">
+            
+            {/* --- REGIE HEADER --- */}
+            <div className="bg-white dark:bg-gray-900 p-6 border-b dark:border-gray-800 sticky top-0 z-40 shrink-0">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8">
+                    <div className="flex items-center gap-4">
+                        <button onClick={onBack} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all"><ArrowLeft/></button>
                         <div>
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Actions Rapides</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <button 
-                                    onClick={() => setShowCampaignModal(true)}
-                                    className="flex items-center justify-center gap-3 py-4 rounded-xl bg-white dark:bg-gray-800 border-2 border-dashed border-blue-200 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all hover:border-blue-300 dark:hover:border-blue-700 group"
-                                >
-                                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full group-hover:scale-110 transition-transform">
-                                        <Plus size={20} />
-                                    </div>
-                                    Créer une nouvelle campagne
-                                </button>
-                                <button 
-                                    onClick={() => alert("Importation bientôt disponible")}
-                                    className="flex items-center justify-center gap-3 py-4 rounded-xl bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-gray-750 transition-all hover:border-gray-300 dark:hover:border-gray-600 group"
-                                >
-                                    <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full group-hover:scale-110 transition-transform">
-                                        <Upload size={20} />
-                                    </div>
-                                    Importer des campagnes
-                                </button>
+                            <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Régie Publicitaire</h2>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                                <Activity size={12} className="text-blue-500"/> Console Ad-Manager Enterprise
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Global Performance KPIs */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1 max-w-3xl">
+                        {[
+                            { label: 'Revenu Total', val: `$${globalStats.totalSpend.toLocaleString()}`, icon: DollarSign, color: 'text-green-600' },
+                            { label: 'Portée (Impressions)', val: `${(globalStats.totalViews / 1000).toFixed(1)}k`, icon: Eye, color: 'text-blue-600' },
+                            { label: 'Efficacité (CTR)', val: `${globalStats.ctr}%`, icon: MousePointer, color: 'text-purple-600' },
+                            { label: 'Partenaires', val: partners.length, icon: Building2, color: 'text-orange-600' }
+                        ].map((kpi, i) => (
+                            <div key={i} className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border dark:border-gray-700/50">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <kpi.icon size={12} className={kpi.color} />
+                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{kpi.label}</span>
+                                </div>
+                                <p className="text-lg font-black dark:text-white leading-none">{kpi.val}</p>
                             </div>
-                        </div>
-
-                        {/* Ads List */}
-                        <div className="space-y-4">
-                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 px-1">Liste des campagnes ({filteredAds.length})</h3>
-                            {filteredAds.length === 0 && (
-                                <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
-                                    <Filter size={40} className="mx-auto text-gray-300 mb-3" />
-                                    <p className="text-gray-500">Aucune campagne ne correspond aux filtres.</p>
-                                </div>
-                            )}
-                            {filteredAds.map(ad => (
-                                <div key={ad.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col md:flex-row transition-all hover:shadow-md">
-                                    <div className="w-full md:w-48 h-32 md:h-auto bg-gray-200 relative shrink-0">
-                                        <img src={ad.image} alt={ad.title} className="w-full h-full object-cover" />
-                                        <div className="absolute top-2 left-2 px-2 py-1 bg-black/50 backdrop-blur-md rounded-md text-white text-[10px] font-bold">APERÇU</div>
-                                    </div>
-                                    <div className="p-5 flex-1 flex flex-col justify-between">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <h4 className="font-bold text-lg text-gray-800 dark:text-white">{ad.title}</h4>
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${getStatusColor(ad.status)}`}>{ad.status === 'active' ? 'Actif' : ad.status === 'paused' ? 'En Pause' : 'Terminé'}</span>
-                                                </div>
-                                                <p className="text-sm text-gray-500 flex items-center gap-1"><BarChart3 size={14} /> {ad.partner}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={() => handleToggleStatus(ad.id)} className={`p-2 rounded-full transition-colors ${ad.status === 'active' ? 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50' : 'text-green-500 hover:bg-green-50'}`}>
-                                                    {ad.status === 'active' ? <PauseCircle size={20} /> : <PlayCircle size={20} />}
-                                                </button>
-                                                <button onClick={() => handleDeleteAd(ad.id)} className="p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
-                                                    <Trash2 size={20} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-400 text-xs">Vues</span>
-                                                <div className="font-bold text-gray-800 dark:text-white flex items-center gap-1"><Eye size={14} className="text-blue-500" /> {(ad.views / 1000).toFixed(1)}k</div>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-400 text-xs">Clics</span>
-                                                <div className="font-bold text-gray-800 dark:text-white flex items-center gap-1"><MousePointer size={14} className="text-purple-500" /> {ad.clicks}</div>
-                                            </div>
-                                            <div className="flex flex-col md:col-span-2">
-                                                <div className="flex justify-between items-end mb-1">
-                                                    <span className="text-gray-400 text-xs">Budget Utilisé</span>
-                                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">${ad.spent} / ${ad.budget}</span>
-                                                </div>
-                                                <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                    <div className={`h-full rounded-full ${ad.spent / ad.budget > 0.9 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${(ad.spent / ad.budget) * 100}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-4 pt-3 border-t border-gray-50 dark:border-gray-700 flex items-center justify-between text-xs text-gray-400">
-                                            <div className="flex items-center gap-1">
-                                                <Calendar size={12} />
-                                                <span className={sortBy === 'startDate' ? 'text-blue-600 font-medium' : ''}>Début: {ad.startDate}</span>
-                                                <span className="mx-1">-</span>
-                                                <span className={sortBy === 'endDate' ? 'text-blue-600 font-medium' : ''}>Fin: {ad.endDate}</span>
-                                            </div>
-                                            <button onClick={() => setSelectedCampaign(ad)} className="text-blue-600 hover:underline">Voir détails</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        ))}
                     </div>
-                )}
 
-                {/* === PARTNERS VIEW === */}
-                {activeTab === 'partners' && (
-                    <div className="space-y-6 animate-fade-in">
-                         <div className="flex justify-between items-center">
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider px-1">
-                                Partenaires ({partners.length})
-                            </h3>
-                            <button 
-                                onClick={() => openPartnerModal()}
-                                className="bg-[#2962FF] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 dark:shadow-none"
-                            >
-                                <Plus size={18} /> Nouveau Partenaire
-                            </button>
-                         </div>
+                    <button onClick={() => setShowCampaignModal(true)} className="bg-[#2962FF] text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                        <Plus size={18}/> Créer Campagne
+                    </button>
+                </div>
 
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {partners.map(partner => (
-                                <div key={partner.id} className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="flex gap-4">
-                                            <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-gray-700 overflow-hidden flex items-center justify-center">
-                                                <img src={partner.logo} alt={partner.name} className="w-full h-full object-cover" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-lg text-gray-800 dark:text-white leading-tight">{partner.name}</h4>
-                                                <span className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 px-2 py-0.5 rounded-full font-medium inline-block mt-1">
-                                                    {partner.industry}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button 
-                                                onClick={() => openPartnerModal(partner)}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
-                                            >
-                                                <Edit2 size={18} />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeletePartner(partner.id)}
-                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2 mb-4">
-                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                                            <User size={14} className="text-gray-400" />
-                                            <span className="font-medium">{partner.contactName}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                                            <Mail size={14} className="text-gray-400" />
-                                            <span>{partner.email}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                                            <Phone size={14} className="text-gray-400" />
-                                            <span>{partner.phone}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-auto pt-4 border-t border-gray-50 dark:border-gray-700 grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-xs text-gray-400">Campagnes Actives</p>
-                                            <p className="font-bold text-gray-800 dark:text-white">{partner.activeCampaigns}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-400">Budget Total</p>
-                                            <p className="font-bold text-gray-800 dark:text-white">${partner.totalBudget.toLocaleString()}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {/* Add New Card (Empty State-ish) */}
-                            <button 
-                                onClick={() => openPartnerModal()}
-                                className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-[#2962FF] hover:border-[#2962FF] hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all min-h-[250px] group"
-                            >
-                                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors">
-                                    <Plus size={32} />
-                                </div>
-                                <span className="font-bold text-sm">Ajouter un partenaire</span>
-                            </button>
-                         </div>
-                    </div>
-                )}
-
+                <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
+                    {[
+                        { id: 'campaigns', label: 'Campagnes', icon: Megaphone },
+                        { id: 'partners', label: 'Annonceurs', icon: Briefcase },
+                        { id: 'analytics', label: 'Rapports Globaux', icon: PieChart }
+                    ].map(tab => (
+                        <button 
+                            key={tab.id} 
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-[#2962FF] shadow-lg' : 'text-gray-400'}`}
+                        >
+                            <tab.icon size={14}/> {tab.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* PARTNER MODAL */}
-            {showPartnerModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowPartnerModal(false)}></div>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg p-6 relative z-10 shadow-2xl animate-fade-in-up">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">{isEditingPartner ? 'Modifier Partenaire' : 'Nouveau Partenaire'}</h3>
-                            <button onClick={() => setShowPartnerModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-                                <X size={20} className="text-gray-500" />
-                            </button>
+            {/* --- MAIN CONTENT AREA --- */}
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 no-scrollbar pb-32">
+                
+                {activeTab === 'campaigns' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
+                        {ads.length === 0 ? (
+                            <div className="col-span-full py-20 text-center opacity-30">
+                                <Megaphone size={64} className="mx-auto mb-4" />
+                                <p className="text-xs font-black uppercase tracking-widest">Aucune campagne configurée</p>
+                            </div>
+                        ) : ads.map(ad => {
+                            const ctr = ad.views > 0 ? ((ad.clicks / ad.views) * 100).toFixed(1) : "0";
+                            return (
+                                <div key={ad.id} className="bg-white dark:bg-gray-900 rounded-[2.5rem] border-2 border-gray-50 dark:border-gray-800 overflow-hidden group hover:border-blue-500 transition-all shadow-sm">
+                                    <div className="h-40 relative overflow-hidden">
+                                        <img src={ad.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={ad.title} />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                        <div className="absolute top-4 right-4 flex gap-2">
+                                            <button onClick={() => handleToggleStatus(ad)} className={`p-2 rounded-xl backdrop-blur-md text-white transition-all ${ad.status === 'active' ? 'bg-green-500/80' : 'bg-orange-500/80'}`}>
+                                                {ad.status === 'active' ? <PauseCircle size={18}/> : <PlayCircle size={18}/>}
+                                            </button>
+                                            <button onClick={() => handleDeleteAd(ad.id)} className="p-2 rounded-xl bg-black/40 backdrop-blur-md text-white/60 hover:text-red-500 transition-all"><Trash2 size={18}/></button>
+                                        </div>
+                                        <div className="absolute bottom-4 left-6 right-6">
+                                            <h4 className="text-white font-black uppercase tracking-tight truncate">{ad.title}</h4>
+                                            <p className="text-[9px] text-white/70 font-bold uppercase tracking-widest flex items-center gap-1"><Building2 size={10}/> {ad.partner}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 space-y-6">
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                                <p className="text-[7px] font-black text-gray-400 uppercase mb-1">Vues</p>
+                                                <p className="text-xs font-black dark:text-white">{(ad.views / 1000).toFixed(1)}k</p>
+                                            </div>
+                                            <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                                <p className="text-[7px] font-black text-gray-400 uppercase mb-1">Clics</p>
+                                                <p className="text-xs font-black dark:text-white">{ad.clicks}</p>
+                                            </div>
+                                            <div className="text-center p-2 bg-blue-50 dark:bg-blue-900/10 rounded-xl">
+                                                <p className="text-[7px] font-black text-blue-400 uppercase mb-1">CTR</p>
+                                                <p className="text-xs font-black text-blue-600">{ctr}%</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-end">
+                                                <span className="text-[8px] font-black text-gray-400 uppercase">Utilisation Budget</span>
+                                                <span className="text-[10px] font-black dark:text-white">${ad.spent} / ${ad.budget}</span>
+                                            </div>
+                                            <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                <div className={`h-full transition-all duration-1000 ${ad.spent/ad.budget > 0.9 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${(ad.spent / ad.budget) * 100}%` }}></div>
+                                            </div>
+                                        </div>
+
+                                        <button 
+                                            onClick={() => setSelectedCampaign(ad)}
+                                            className="w-full py-3 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-300 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-blue-50 hover:text-blue-600 transition-all border border-transparent hover:border-blue-100"
+                                        >
+                                            Ouvrir Analytics détaillés
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {activeTab === 'partners' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                        {partners.map(p => (
+                            <div key={p.id} className="bg-white dark:bg-gray-900 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center text-center group relative">
+                                <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-[2rem] overflow-hidden mb-6 p-2 flex items-center justify-center border-2 border-transparent group-hover:border-blue-500 transition-all">
+                                    <img src={p.logo} alt={p.name} className="max-w-full max-h-full object-contain" />
+                                </div>
+                                <h3 className="text-lg font-black dark:text-white uppercase tracking-tighter mb-1">{p.name}</h3>
+                                <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg text-[9px] font-black uppercase tracking-widest mb-6">{p.industry}</span>
+                                
+                                <div className="w-full grid grid-cols-2 gap-3 mb-6">
+                                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-2xl">
+                                        <p className="text-[7px] font-black text-gray-400 uppercase mb-1">Campagnes</p>
+                                        <p className="text-sm font-black dark:text-white">{p.activeCampaigns}</p>
+                                    </div>
+                                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-2xl">
+                                        <p className="text-[7px] font-black text-gray-400 uppercase mb-1">Total Investi</p>
+                                        <p className="text-sm font-black text-green-600">${p.totalBudget.toLocaleString()}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2 w-full">
+                                    <a href={`mailto:${p.email}`} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-blue-50 hover:text-white transition-all flex items-center justify-center gap-2"><Mail size={14}/> Contact</a>
+                                    <button className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl hover:text-red-500 transition-all"><Trash2 size={16}/></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {activeTab === 'analytics' && (
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border dark:border-gray-800 shadow-sm">
+                            <h3 className="text-xl font-black dark:text-white uppercase tracking-tighter mb-8 flex items-center gap-3"><Activity className="text-blue-500"/> Trafic Publicitaire Global</h3>
+                            <div className="h-[400px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={MOCK_PERF_DATA}>
+                                        <defs>
+                                            <linearGradient id="colorViewsAdm" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#2962FF" stopOpacity={0.3}/>
+                                                <stop offset="95%" stopColor="#2962FF" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.05)" />
+                                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 'bold', fill: '#94a3b8'}} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 'bold', fill: '#94a3b8'}} />
+                                        <Tooltip contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.1)'}} />
+                                        <Area type="monotone" dataKey="views" stroke="#2962FF" strokeWidth={4} fillOpacity={1} fill="url(#colorViewsAdm)" />
+                                        <Area type="monotone" dataKey="clicks" stroke="#00C853" strokeWidth={4} fill="transparent" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
 
-                        <form onSubmit={handleSavePartner} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nom de l'entreprise</label>
-                                <div className="relative">
-                                    <Building2 size={18} className="absolute left-3 top-3.5 text-gray-400" />
-                                    <input 
-                                        required
-                                        type="text" 
-                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                        value={currentPartner.name || ''}
-                                        onChange={e => setCurrentPartner({...currentPartner, name: e.target.value})}
-                                    />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                             <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border dark:border-gray-800 shadow-sm">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Répartition par Secteur</h4>
+                                <div className="h-64 flex items-center justify-center">
+                                    <div className="text-center opacity-30"><PieChart size={64} className="mx-auto mb-2"/><p className="text-[10px] font-black uppercase">Data Engine en cours...</p></div>
+                                </div>
+                             </div>
+                             <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border dark:border-gray-800 shadow-sm">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Top Zones de Portée (Communes)</h4>
+                                <div className="space-y-4">
+                                    {['Ngaliema', 'Gombe', 'Limete', 'Bandal'].map((commune, i) => (
+                                        <div key={commune} className="flex items-center gap-4">
+                                            <span className="text-[10px] font-black text-gray-500 w-20">{commune}</span>
+                                            <div className="flex-1 h-3 bg-gray-50 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                <div className="h-full bg-primary" style={{ width: `${90 - (i*15)}%` }}></div>
+                                            </div>
+                                            <span className="text-[10px] font-black dark:text-white">{90 - (i*15)}k</span>
+                                        </div>
+                                    ))}
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* --- DRAWER DÉTAILLÉ (Enterprise Analytics) --- */}
+            {selectedCampaign && (
+                <div className="fixed inset-0 z-[100] flex justify-end">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedCampaign(null)}></div>
+                    <div className="w-full max-w-2xl bg-white dark:bg-gray-950 h-full relative z-10 shadow-2xl animate-fade-in-left flex flex-col border-l dark:border-gray-800 overflow-hidden">
+                        <div className="p-8 border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 bg-white dark:bg-gray-800 rounded-2xl p-2 border-2 border-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/10">
+                                    <img src={selectedCampaign.image} className="w-full h-full object-cover rounded-lg" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black dark:text-white uppercase tracking-tighter leading-none">{selectedCampaign.title}</h3>
+                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                                        <CheckCircle2 size={12}/> Campagne certifiée active
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedCampaign(null)} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all"><X size={24}/></button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 space-y-10 no-scrollbar pb-32">
+                            {/* Detailed Graph */}
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center px-2">
+                                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Performance Hebdomadaire</h4>
+                                    <div className="flex gap-4 text-[9px] font-black uppercase">
+                                        <span className="flex items-center gap-1.5 text-blue-500"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Vues</span>
+                                        <span className="flex items-center gap-1.5 text-green-500"><div className="w-2 h-2 rounded-full bg-green-500"></div> Clics</span>
+                                    </div>
+                                </div>
+                                <div className="h-64 bg-gray-50 dark:bg-gray-900 p-6 rounded-[2.5rem] border dark:border-gray-800 shadow-inner">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={MOCK_PERF_DATA}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
+                                            <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: '900', fill: '#94a3b8'}} />
+                                            <Tooltip cursor={{fill: 'rgba(0,0,0,0.02)'}} contentStyle={{borderRadius: '16px', border: 'none'}} />
+                                            <Bar dataKey="views" fill="#2962FF" radius={[4, 4, 0, 0]} barSize={20} />
+                                            <Bar dataKey="clicks" fill="#00C853" radius={[4, 4, 0, 0]} barSize={10} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Industrie</label>
-                                    <select 
-                                        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                        value={currentPartner.industry || ''}
-                                        onChange={e => setCurrentPartner({...currentPartner, industry: e.target.value})}
-                                    >
-                                        <option value="">Choisir...</option>
-                                        <option>Gouvernement</option>
-                                        <option>Industrie</option>
-                                        <option>Commerce</option>
-                                        <option>Technologie</option>
-                                        <option>ONG</option>
+                                <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-[2rem] border dark:border-gray-800 space-y-4">
+                                    <h5 className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Target size={12}/> Ciblage Zones</h5>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['Limete', 'Gombe', 'Ngaliema'].map(c => (
+                                            <span key={c} className="px-3 py-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-[8px] font-black uppercase dark:text-white">{c}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-[2rem] border dark:border-gray-800 space-y-4">
+                                    <h5 className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Clock size={12}/> Calendrier</h5>
+                                    <div>
+                                        <p className="text-[10px] font-black dark:text-white uppercase leading-none">{selectedCampaign.startDate}</p>
+                                        <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">Date Lancement</p>
+                                    </div>
+                                    <div className="pt-2 border-t dark:border-gray-800">
+                                        <p className="text-[10px] font-black dark:text-white uppercase leading-none">{selectedCampaign.endDate}</p>
+                                        <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">Échéance Prévue</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Financial Summary */}
+                            <div className="bg-blue-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl shadow-blue-500/20">
+                                <div className="absolute top-0 right-0 p-8 opacity-10"><DollarSign size={150}/></div>
+                                <div className="relative z-10">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-4 text-white">Bilan Financier Campagne</p>
+                                    <div className="flex items-end gap-3 mb-8">
+                                        <span className="text-5xl font-black tracking-tighter leading-none">${selectedCampaign.spent}</span>
+                                        <span className="text-sm font-black uppercase opacity-60 mb-1.5">consommés sur ${selectedCampaign.budget}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-8 border-t border-white/20 pt-6">
+                                        <div>
+                                            <p className="text-[8px] font-black uppercase tracking-widest opacity-60">CPC Moyen</p>
+                                            <p className="text-xl font-black">${(selectedCampaign.spent / selectedCampaign.clicks || 0).toFixed(2)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] font-black uppercase tracking-widest opacity-60">Estimation Portée</p>
+                                            <p className="text-xl font-black">{(selectedCampaign.views / 1000).toFixed(1)}k pers.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t dark:border-gray-800 bg-white dark:bg-gray-950 flex gap-4 shrink-0 shadow-2xl">
+                             <button className="flex-1 py-5 bg-gray-900 dark:bg-white dark:text-black text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3"><Download size={18}/> Rapport CSV</button>
+                             <button onClick={() => setSelectedCampaign(null)} className="p-5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-2xl"><X size={24}/></button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL CRÉATION CAMPAGNE --- */}
+            {showCampaignModal && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCampaignModal(false)}></div>
+                    <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-xl p-10 relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800">
+                        <div className="flex justify-between items-center mb-8">
+                            <h3 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Nouvelle Diffusion</h3>
+                            <button onClick={() => setShowCampaignModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"><X size={24}/></button>
+                        </div>
+                        
+                        <form className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Annonceur</label>
+                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white">
+                                        <option value="">Sélectionner un partenaire</option>
+                                        {partners.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Principal</label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                        value={currentPartner.contactName || ''}
-                                        onChange={e => setCurrentPartner({...currentPartner, contactName: e.target.value})}
-                                    />
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Type de média</label>
+                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white">
+                                        <option>Bannière Dashboard</option>
+                                        <option>Splash Screen</option>
+                                        <option>Notif Push Sponsorisée</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                                <div className="relative">
-                                    <Mail size={18} className="absolute left-3 top-3.5 text-gray-400" />
-                                    <input 
-                                        type="email" 
-                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                        value={currentPartner.email || ''}
-                                        onChange={e => setCurrentPartner({...currentPartner, email: e.target.value})}
-                                    />
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Titre de la campagne</label>
+                                <input className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-sm dark:text-white focus:ring-2 ring-blue-500/20" placeholder="ex: Sensibilisation Plastique 2025" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Budget Initial ($)</label>
+                                    <input type="number" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-sm dark:text-white focus:ring-2 ring-blue-500/20" placeholder="1000" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Zone de Ciblage</label>
+                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white">
+                                        <option>Tout Kinshasa</option>
+                                        {KINSHASA_COMMUNES.map(c => <option key={c}>{c}</option>)}
+                                    </select>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Téléphone</label>
-                                    <input 
-                                        type="tel" 
-                                        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                        value={currentPartner.phone || ''}
-                                        onChange={e => setCurrentPartner({...currentPartner, phone: e.target.value})}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Logo</label>
-                                    <div className="flex gap-4 items-start">
-                                        <div 
-                                            onClick={() => partnerFileInputRef.current?.click()}
-                                            className="w-32 h-32 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors relative overflow-hidden bg-gray-50 dark:bg-gray-800 shrink-0"
-                                        >
-                                            {currentPartner.logo ? (
-                                                <>
-                                                    <img 
-                                                        src={currentPartner.logo} 
-                                                        alt="Logo" 
-                                                        className="w-full h-full object-contain" 
-                                                    />
-                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-white font-bold text-xs">
-                                                        Modifier
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="text-center p-2">
-                                                    <Upload size={24} className="mx-auto text-gray-400 mb-1" />
-                                                    <span className="text-[10px] text-gray-500 uppercase font-bold">Uploader</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        <div className="flex-1 space-y-3">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                Format recommandé : PNG Transparent, 512x512px.
-                                                Cliquez sur le carré pour uploader un fichier local.
-                                            </p>
-                                            <div>
-                                                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Ou via URL</label>
-                                                <input 
-                                                    type="text" 
-                                                    className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF] text-sm"
-                                                    placeholder="https://..."
-                                                    value={currentPartner.logo || ''}
-                                                    onChange={e => setCurrentPartner({...currentPartner, logo: e.target.value})}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <input 
-                                        type="file" 
-                                        ref={partnerFileInputRef} 
-                                        className="hidden" 
-                                        accept="image/*" 
-                                        onChange={handlePartnerLogoUpload}
-                                    />
-                                </div>
+                            <div className="p-6 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-[2rem] flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-blue-50 transition-colors">
+                                <ImageIcon size={32} className="text-gray-300" />
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Glisser l'image créative (HD)</span>
                             </div>
 
-                            <button 
-                                type="submit"
-                                className="w-full py-3.5 mt-4 bg-[#2962FF] hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
-                            >
-                                <Check size={20} /> Enregistrer
+                            <button className="w-full py-5 bg-[#2962FF] text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3">
+                                <ShieldCheck size={20}/> Valider et Mettre en Ligne
                             </button>
                         </form>
-                    </div>
-                </div>
-            )}
-
-            {/* CAMPAIGN MODAL */}
-            {showCampaignModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCampaignModal(false)}></div>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg p-6 relative z-10 shadow-2xl animate-fade-in-up">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Nouvelle Campagne</h3>
-                            <button onClick={() => setShowCampaignModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-                                <X size={20} className="text-gray-500" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSaveCampaign} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Titre de la campagne</label>
-                                <input 
-                                    required
-                                    type="text" 
-                                    className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                    value={newCampaign.title || ''}
-                                    onChange={e => setNewCampaign({...newCampaign, title: e.target.value})}
-                                    placeholder="Ex: Sensibilisation Tri 2024"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Partenaire</label>
-                                <select 
-                                    required
-                                    className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                    value={newCampaign.partner || ''}
-                                    onChange={e => setNewCampaign({...newCampaign, partner: e.target.value})}
-                                >
-                                    <option value="">Sélectionner un partenaire</option>
-                                    {partners.map(p => (
-                                        <option key={p.id} value={p.name}>{p.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Budget ($)</label>
-                                    <input 
-                                        type="number" 
-                                        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                        value={newCampaign.budget}
-                                        onChange={e => setNewCampaign({...newCampaign, budget: parseInt(e.target.value)})}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Image (URL)</label>
-                                    <div className="relative">
-                                        <ImageIcon size={18} className="absolute left-3 top-3.5 text-gray-400" />
-                                        <input 
-                                            type="text" 
-                                            className="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                            value={newCampaign.image || ''}
-                                            onChange={e => setNewCampaign({...newCampaign, image: e.target.value})}
-                                            placeholder="https://..."
-                                        />
-                                    </div>
-                                    {newCampaign.image && (
-                                        <div className="mt-2 relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 h-24 bg-gray-100 dark:bg-gray-700">
-                                            <img
-                                                src={newCampaign.image}
-                                                alt="Preview"
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => (e.currentTarget.style.display = 'none')}
-                                            />
-                                            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-[9px] px-2 py-0.5 rounded backdrop-blur-sm">
-                                                Aperçu
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date Début</label>
-                                    <input 
-                                        type="date" 
-                                        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                        onChange={e => setNewCampaign({...newCampaign, startDate: new Date(e.target.value).toLocaleDateString('fr-FR')})}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date Fin</label>
-                                    <input 
-                                        type="date" 
-                                        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#2962FF]"
-                                        onChange={e => setNewCampaign({...newCampaign, endDate: new Date(e.target.value).toLocaleDateString('fr-FR')})}
-                                    />
-                                </div>
-                            </div>
-
-                            <button 
-                                type="submit"
-                                className="w-full py-3.5 mt-4 bg-[#00C853] hover:bg-green-600 text-white font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
-                            >
-                                <Megaphone size={20} /> Lancer la campagne
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Campaign Details Modal */}
-            {selectedCampaign && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedCampaign(null)}></div>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg p-6 relative z-10 shadow-2xl animate-fade-in-up">
-                        {/* Header */}
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-800 dark:text-white">{selectedCampaign.title}</h3>
-                                <p className="text-sm text-gray-500">{selectedCampaign.partner}</p>
-                            </div>
-                            <button onClick={() => setSelectedCampaign(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-                                <X size={20} className="text-gray-500" />
-                            </button>
-                        </div>
-
-                        {/* Image */}
-                        <div className="w-full h-40 bg-gray-200 rounded-xl mb-6 overflow-hidden">
-                            <img src={selectedCampaign.image} alt={selectedCampaign.title} className="w-full h-full object-cover" />
-                        </div>
-
-                        {/* Budget Progression Section */}
-                        <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-750 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 mb-6 shadow-sm">
-                            <div className="flex justify-between items-center mb-4">
-                                <h4 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                    <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
-                                        <DollarSign size={16} />
-                                    </div>
-                                    Budget Consommé
-                                </h4>
-                                <span className="text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-lg">
-                                    {((selectedCampaign.spent / selectedCampaign.budget) * 100).toFixed(1)}%
-                                </span>
-                            </div>
-
-                            {/* Progress Bar */}
-                            <div className="relative h-4 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-3">
-                                <div 
-                                    className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out ${
-                                        selectedCampaign.spent / selectedCampaign.budget > 0.9 
-                                        ? 'bg-gradient-to-r from-red-500 to-red-600' 
-                                        : 'bg-gradient-to-r from-blue-500 to-blue-600'
-                                    }`} 
-                                    style={{ width: `${Math.min(100, (selectedCampaign.spent / selectedCampaign.budget) * 100)}%` }}
-                                >
-                                    {/* Shine effect */}
-                                    <div className="absolute top-0 left-0 w-full h-full bg-white/20 animate-[shimmer_2s_infinite]"></div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between items-center text-sm">
-                                <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Dépensé</p>
-                                    <p className="font-bold text-gray-800 dark:text-white">${selectedCampaign.spent.toLocaleString()}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Total</p>
-                                    <p className="font-bold text-gray-800 dark:text-white">${selectedCampaign.budget.toLocaleString()}</p>
-                                </div>
-                            </div>
-                            
-                            {/* Remaining info */}
-                            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                                 <span className="text-xs text-gray-500">Reste disponible</span>
-                                 <span className="text-xs font-bold text-green-600 dark:text-green-400">
-                                    ${(selectedCampaign.budget - selectedCampaign.spent).toLocaleString()}
-                                 </span>
-                            </div>
-                        </div>
-
-                        {/* Other stats briefly */}
-                        <div className="grid grid-cols-2 gap-4">
-                             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-center">
-                                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{selectedCampaign.views}</div>
-                                <div className="text-xs text-gray-500">Vues</div>
-                             </div>
-                             <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-center">
-                                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{selectedCampaign.clicks}</div>
-                                <div className="text-xs text-gray-500">Clics</div>
-                             </div>
-                        </div>
                     </div>
                 </div>
             )}
         </div>
     );
 };
+
+interface AdminAdsProps {
+    onBack: () => void;
+    onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+}
