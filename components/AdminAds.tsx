@@ -6,7 +6,8 @@ import {
     Upload, Building2, Mail, Phone, MoreVertical, Edit2, User, X, 
     Check, Image as ImageIcon, PieChart, Target, MapPin, Activity, 
     ArrowUpRight, Download, Zap, ShieldCheck, Clock, Layers, Briefcase,
-    CheckCircle2, Bot, Loader2, Sparkles, Link as LinkIcon
+    CheckCircle2, Bot, Loader2, Sparkles, Link as LinkIcon, Smartphone,
+    ChevronRight, ExternalLink
 } from 'lucide-react';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -87,7 +88,7 @@ export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: `Génère une accroche publicitaire courte (max 60 caractères) pour un partenaire de Biso Peto nommé "${adForm.partner}". Le style doit être professionnel mais kinois (mélange français/lingala). Réponds uniquement par le texte brut.`,
+                contents: `Génère une accroche publicitaire courte (max 60 caractères) pour un partenaire de Biso Peto nommé "${adForm.partner}". Le style doit être professionnel mais kinois (mélange français/lingala). Réponds uniquement par le texte brut sans guillemets.`,
             });
             setAdForm({ ...adForm, title: response.text.replace(/"/g, '') });
             onToast?.("Slogan IA généré !", "success");
@@ -158,7 +159,7 @@ export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
                             { label: 'Budget Total', val: `$${globalStats.totalSpend.toLocaleString()}`, icon: DollarSign, color: 'text-green-600' },
                             { label: 'Annonceurs', val: partners.length, icon: Building2, color: 'text-orange-600' }
                         ].map((kpi, i) => (
-                            <div key={i} className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border dark:border-gray-700/50">
+                            <div key={i} className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border dark:border-gray-700/50 shadow-inner">
                                 <div className="flex items-center gap-2 mb-1">
                                     <kpi.icon size={12} className={kpi.color} />
                                     <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{kpi.label}</span>
@@ -249,93 +250,139 @@ export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
                 )}
             </div>
 
-            {/* MODAL CRÉATION CAMPAGNE ENTERPRISE */}
+            {/* MODAL CRÉATION CAMPAGNE ENTERPRISE AVEC LIVE PREVIEW */}
             {showCampaignModal && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowCampaignModal(false)}></div>
-                    <form onSubmit={handleCreateAd} className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-xl p-10 relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800 max-h-[90vh] overflow-y-auto no-scrollbar">
-                        <div className="flex justify-between items-center mb-8">
-                            <h3 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Slot Publicitaire</h3>
-                            <button type="button" onClick={() => setShowCampaignModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"><X size={24}/></button>
-                        </div>
+                    <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-5xl relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800 flex flex-col md:flex-row overflow-hidden max-h-[95vh]">
                         
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Annonceur Pro</label>
-                                    <select required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white" value={adForm.partner} onChange={e => setAdForm({...adForm, partner: e.target.value})}>
-                                        <option value="">Sélectionner</option>
-                                        {partners.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Format de Diffusion</label>
-                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white">
-                                        <option>Carousel Dashboard Citoyen</option>
-                                        <option>Notif Push Sponsorisée</option>
-                                        <option>Splash Screen Premium</option>
-                                    </select>
-                                </div>
+                        {/* 1. Formulaire à gauche */}
+                        <div className="flex-1 p-8 md:p-12 overflow-y-auto no-scrollbar border-r dark:border-gray-800">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Slot Publicitaire</h3>
+                                <button type="button" onClick={() => setShowCampaignModal(false)} className="p-2 md:hidden hover:bg-gray-100 rounded-full transition-colors"><X size={24}/></button>
                             </div>
-
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center px-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Slogan Marketing</label>
-                                    <button 
-                                        type="button" 
-                                        onClick={handleGenerateCopyIA} 
-                                        disabled={isGeneratingIA}
-                                        className="text-[9px] font-black text-blue-500 uppercase flex items-center gap-1.5 hover:underline disabled:opacity-50"
-                                    >
-                                        {isGeneratingIA ? <Loader2 size={10} className="animate-spin"/> : <Bot size={10}/>}
-                                        Copywriting IA
-                                    </button>
-                                </div>
-                                <input required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-sm dark:text-white shadow-inner" placeholder="ex: Mbote Kinshasa! Profitez de..." value={adForm.title} onChange={e => setAdForm({...adForm, title: e.target.value})} />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ciblage Géographique</label>
-                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white shadow-inner" value={adForm.targetCommune} onChange={e => setAdForm({...adForm, targetCommune: e.target.value})}>
-                                        <option value="all">Tout Kinshasa</option>
-                                        {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ciblage Profil</label>
-                                    <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white shadow-inner" value={adForm.targetUserType} onChange={e => setAdForm({...adForm, targetUserType: e.target.value as any})}>
-                                        <option value="all">Tous les profils</option>
-                                        <option value={UserType.CITIZEN}>Citoyens</option>
-                                        <option value={UserType.BUSINESS}>Entreprises</option>
-                                        <option value={UserType.COLLECTOR}>Collecteurs</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Image URL (HD)</label>
-                                    <div className="relative group">
-                                        <ImageIcon size={14} className="absolute left-4 top-4 text-gray-400" />
-                                        <input required className="w-full pl-10 pr-4 py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-[10px] dark:text-white shadow-inner" placeholder="https://..." value={adForm.image} onChange={e => setAdForm({...adForm, image: e.target.value})} />
+                            
+                            <form onSubmit={handleCreateAd} className="space-y-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Annonceur Pro</label>
+                                        <select required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white" value={adForm.partner} onChange={e => setAdForm({...adForm, partner: e.target.value})}>
+                                            <option value="">Sélectionner</option>
+                                            {partners.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Format</label>
+                                        <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white">
+                                            <option>Carousel Citoyen</option>
+                                            <option>Notif Sponsorisée</option>
+                                        </select>
                                     </div>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center px-1">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Slogan Marketing</label>
+                                        <button 
+                                            type="button" 
+                                            onClick={handleGenerateCopyIA} 
+                                            disabled={isGeneratingIA}
+                                            className="text-[9px] font-black text-blue-500 uppercase flex items-center gap-1.5 hover:underline disabled:opacity-50"
+                                        >
+                                            {isGeneratingIA ? <Loader2 size={10} className="animate-spin"/> : <Bot size={10}/>}
+                                            Suggérer par IA
+                                        </button>
+                                    </div>
+                                    <input required className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-sm dark:text-white shadow-inner" placeholder="ex: Mbote Kinshasa! Profitez de..." value={adForm.title} onChange={e => setAdForm({...adForm, title: e.target.value})} />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ciblage Géo</label>
+                                        <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none font-black text-xs dark:text-white" value={adForm.targetCommune} onChange={e => setAdForm({...adForm, targetCommune: e.target.value})}>
+                                            <option value="all">Tout Kinshasa</option>
+                                            {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Profil Cible</label>
+                                        <select className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none font-black text-xs dark:text-white" value={adForm.targetUserType} onChange={e => setAdForm({...adForm, targetUserType: e.target.value as any})}>
+                                            <option value="all">Tous</option>
+                                            <option value={UserType.CITIZEN}>Citoyens</option>
+                                            <option value={UserType.BUSINESS}>Entreprises</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Image URL (Lien Cloud)</label>
+                                    <div className="relative">
+                                        <ImageIcon size={18} className="absolute left-4 top-4 text-gray-400" />
+                                        <input required className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-xs dark:text-white shadow-inner" placeholder="https://..." value={adForm.image} onChange={e => setAdForm({...adForm, image: e.target.value})} />
+                                    </div>
+                                </div>
+
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Lien de Destination</label>
-                                    <div className="relative group">
-                                        <LinkIcon size={14} className="absolute left-4 top-4 text-gray-400" />
-                                        <input className="w-full pl-10 pr-4 py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-[10px] dark:text-white shadow-inner" placeholder="https://votre-site.com" value={adForm.link} onChange={e => setAdForm({...adForm, link: e.target.value})} />
+                                    <div className="relative">
+                                        <LinkIcon size={18} className="absolute left-4 top-4 text-gray-400" />
+                                        <input className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-xs dark:text-white shadow-inner" placeholder="https://site-annonceur.com" value={adForm.link} onChange={e => setAdForm({...adForm, link: e.target.value})} />
                                     </div>
                                 </div>
-                            </div>
 
-                            <button disabled={isSaving} className="w-full py-5 bg-[#2962FF] text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3">
-                                {isSaving ? <Loader2 size={18} className="animate-spin"/> : <ShieldCheck size={18}/>}
-                                Déployer la Campagne
-                            </button>
+                                <button disabled={isSaving} className="w-full py-5 bg-[#2962FF] text-white rounded-[1.8rem] font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
+                                    {isSaving ? <Loader2 size={18} className="animate-spin"/> : <ShieldCheck size={18}/>}
+                                    {isSaving ? "Synchronisation..." : "Valider et Diffuser"}
+                                </button>
+                            </form>
                         </div>
-                    </form>
+
+                        {/* 2. Prévisualisation Live à droite */}
+                        <div className="hidden md:flex w-[400px] bg-gray-50 dark:bg-gray-900 p-12 flex-col items-center justify-center gap-8 border-l dark:border-gray-800 relative">
+                             <div className="absolute top-8 left-8 flex items-center gap-2">
+                                <Smartphone size={16} className="text-blue-500"/>
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Prévisualisation mobile</span>
+                             </div>
+                             
+                             <button onClick={() => setShowCampaignModal(false)} className="absolute top-8 right-8 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl transition-all"><X size={20}/></button>
+
+                             {/* Le téléphone simulé */}
+                             <div className="w-[280px] h-[580px] bg-white dark:bg-black rounded-[3.5rem] border-[10px] border-gray-900 dark:border-gray-800 shadow-2xl overflow-hidden relative">
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl z-20"></div>
+                                <div className="p-4 pt-10 space-y-6 opacity-40">
+                                    <div className="h-4 w-24 bg-gray-100 dark:bg-gray-800 rounded-full"></div>
+                                    <div className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>
+                                        <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>
+                                        <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>
+                                    </div>
+                                </div>
+                                
+                                {/* L'annonce injectée */}
+                                <div className="absolute top-1/2 left-4 right-4 -translate-y-1/2 animate-bounce-slow">
+                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2 px-2"><Megaphone size={10} className="text-blue-500"/> Bons Plans {adForm.targetCommune === 'all' ? 'Kinshasa' : adForm.targetCommune}</p>
+                                    <div className="bg-white dark:bg-gray-900 rounded-[2.2rem] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                                        <div className="h-32 bg-gray-200 dark:bg-gray-800 relative">
+                                            {adForm.image ? (
+                                                <img src={adForm.image} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="flex items-center justify-center h-full text-gray-400"><ImageIcon size={40}/></div>
+                                            )}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                                            <div className="absolute bottom-3 left-6 right-6">
+                                                <p className="text-[7px] font-black text-blue-400 uppercase tracking-widest mb-1">{adForm.partner || 'Annonceur'}</p>
+                                                <h5 className="text-white font-black uppercase text-sm leading-tight truncate">{adForm.title || 'Votre slogan apparaîtra ici'}</h5>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full"></div>
+                             </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -43,11 +43,20 @@ export const mapReport = (r: any): WasteReport => ({
 
 export const mapAd = (ad: any): AdCampaign => ({
     ...ad,
-    startDate: ad.start_date,
-    endDate: ad.end_date,
+    id: ad.id,
+    title: ad.title || 'Sans titre',
+    partner: ad.partner || 'Partenaire Anonyme',
+    status: ad.status || 'paused',
+    views: Number(ad.views || 0),
+    clicks: Number(ad.clicks || 0),
+    budget: Number(ad.budget || 0),
+    spent: Number(ad.spent || 0),
+    startDate: ad.start_date || new Date().toISOString(),
+    endDate: ad.end_date || '',
+    image: ad.image || '',
     targetCommune: ad.target_commune || 'all',
     targetUserType: ad.target_user_type || 'all',
-    link: ad.link
+    link: ad.link || ''
 });
 
 export const mapPartner = (p: any): Partner => ({
@@ -238,7 +247,6 @@ export const AdsAPI = {
     },
     getForUser: async (commune: string, type: UserType): Promise<AdCampaign[]> => {
         if (!supabase) return [];
-        // Filtrage Enterprise par Commune et Rôle
         const { data } = await supabase.from('ad_campaigns')
             .select('*')
             .eq('status', 'active')
@@ -248,12 +256,10 @@ export const AdsAPI = {
     },
     recordImpression: async (adId: string) => {
         if (!supabase) return;
-        // RPC function expected in Postgres: increment_views(ad_id)
         await supabase.rpc('increment_ad_views', { ad_id: adId });
     },
     recordClick: async (adId: string) => {
         if (!supabase) return;
-        // RPC function expected in Postgres: increment_clicks(ad_id)
         await supabase.rpc('increment_ad_clicks', { ad_id: adId });
     },
     add: async (ad: AdCampaign): Promise<AdCampaign> => {
