@@ -2,9 +2,7 @@
 import { User, MarketplaceItem, Vehicle, AdCampaign, Partner, UserType, SystemSettings, WasteReport, GlobalImpact, DatabaseHealth, NotificationItem, Payment, AuditLog, UserPermission } from '../types';
 import { supabase } from './supabaseClient';
 
-// --- MAPPERS (Source of Truth Alignment) ---
-// Convertit les données de la BDD (snake_case) vers le Frontend (camelCase)
-
+// --- MAPPERS ---
 export const mapUser = (u: any): User => ({
     ...u,
     id: u.id,
@@ -33,7 +31,7 @@ export const mapReport = (r: any): WasteReport => ({
     id: r.id,
     reporterId: r.reporter_id,
     imageUrl: r.image_url,
-    proofUrl: r.proof_url, // Colonne proof_url ajoutée
+    proofUrl: r.proof_url,
     wasteType: r.waste_type,
     urgency: r.urgency,
     status: r.status,
@@ -43,12 +41,30 @@ export const mapReport = (r: any): WasteReport => ({
     date: r.date || r.created_at
 });
 
+export const mapAd = (ad: any): AdCampaign => ({
+    ...ad,
+    startDate: ad.start_date,
+    endDate: ad.end_date,
+    targetCommune: ad.target_commune || 'all',
+    targetUserType: ad.target_user_type || 'all',
+    link: ad.link
+});
+
+export const mapPartner = (p: any): Partner => ({
+    ...p,
+    contactName: p.contact_name,
+    activeCampaigns: p.active_campaigns,
+    totalBudget: p.total_budget
+});
+
 export const mapMarketplaceItem = (i: any): MarketplaceItem => ({
     ...i,
+    id: i.id,
     sellerId: i.seller_id,
     sellerName: i.seller_name,
+    buyerId: i.buyer_id,
     imageUrl: i.image_url,
-    buyerId: i.buyer_id
+    date: i.date || i.created_at
 });
 
 export const mapPayment = (p: any): Payment => ({
@@ -61,23 +77,6 @@ export const mapPayment = (p: any): Payment => ({
     qrCodeData: p.qr_code_data,
     createdAt: p.created_at
 });
-
-// Fix: added mapAd to map database fields to AdCampaign interface
-export const mapAd = (ad: any): AdCampaign => ({
-    ...ad,
-    startDate: ad.start_date,
-    endDate: ad.end_date
-});
-
-// Fix: added mapPartner to map database fields to Partner interface
-export const mapPartner = (p: any): Partner => ({
-    ...p,
-    contactName: p.contact_name,
-    activeCampaigns: p.active_campaigns,
-    totalBudget: p.total_budget
-});
-
-// --- API IMPLEMENTATION ---
 
 export const UserAPI = {
     login: async (identifier: string, password?: string): Promise<User | null> => {
@@ -130,7 +129,7 @@ export const UserAPI = {
             status: 'pending',
             address: u.address,
             commune: u.commune,
-            neighborhood: u.neighborhood, // Désormais obligatoire
+            neighborhood: u.neighborhood,
             subscription: u.subscription || 'standard',
             points: 0,
             collections: 0,
@@ -154,28 +153,14 @@ export const ReportsAPI = {
     getAll: async (page = 0, pageSize = 50, filters?: any): Promise<WasteReport[]> => {
         if (!supabase) return [];
         let query = supabase.from('waste_reports').select('*');
-        
         if (filters?.commune && filters.commune !== 'all') query = query.eq('commune', filters.commune);
         if (filters?.status && filters.status !== 'all') query = query.eq('status', filters.status);
-        if (filters?.wasteType && filters.wasteType !== 'all') query = query.eq('waste_type', filters.wasteType);
-        
-        if (filters?.dateFrom) query = query.gte('date', filters.dateFrom);
-        if (filters?.dateTo) query = query.lte('date', `${filters.dateTo}T23:59:59`);
-
-        const sortBy = filters?.sortBy || 'date';
-        const ascending = filters?.sortOrder === 'asc';
-
-        const { data } = await query
-            .order(sortBy === 'urgency' ? 'urgency' : 'date', { ascending })
-            .range(page * pageSize, (page + 1) * pageSize - 1);
+        const { data } = await query.order('date', { ascending: false }).range(page * pageSize, (page + 1) * pageSize - 1);
         return data ? data.map(mapReport) : [];
     },
     getByUserId: async (userId: string): Promise<WasteReport[]> => {
         if (!supabase) return [];
-        const { data } = await supabase.from('waste_reports')
-            .select('*')
-            .eq('reporter_id', userId)
-            .order('date', { ascending: false });
+        const { data } = await supabase.from('waste_reports').select('*').eq('reporter_id', userId).order('date', { ascending: false });
         return data ? data.map(mapReport) : [];
     },
     add: async (r: WasteReport): Promise<WasteReport> => {
@@ -201,23 +186,13 @@ export const ReportsAPI = {
         if (r.status) dbUpdate.status = r.status;
         if (r.assignedTo !== undefined) dbUpdate.assigned_to = r.assignedTo;
         if (r.proofUrl !== undefined) dbUpdate.proof_url = r.proofUrl;
-        const { error = null } = await supabase.from('waste_reports').update(dbUpdate).eq('id', r.id);
+        const { error } = await supabase.from('waste_reports').update(dbUpdate).eq('id', r.id);
         if (error) throw error;
     },
     delete: async (id: string) => {
         if (!supabase) return;
-        // Correction de la suppression : s'assurer que Supabase exécute bien la requête
-        const { error, status } = await supabase
-            .from('waste_reports')
-            .delete()
-            .eq('id', id);
-        
-        if (error) {
-            console.error("[ReportsAPI] Delete Error:", error);
-            throw error;
-        }
-
-        // Note: status 204 signifie succès
+        const { error, status } = await supabase.from('waste_reports').delete().eq('id', id);
+        if (error) throw error;
         return status === 204;
     }
 };
@@ -228,18 +203,18 @@ export const MarketplaceAPI = {
         const { data } = await supabase.from('marketplace_items').select('*').order('created_at', { ascending: false });
         return data ? data.map(mapMarketplaceItem) : [];
     },
-    add: async (i: MarketplaceItem) => {
+    add: async (item: MarketplaceItem): Promise<MarketplaceItem> => {
         if (!supabase) throw new Error("Offline");
         const { data, error } = await supabase.from('marketplace_items').insert([{
             id: `item-${Date.now()}`,
-            // Fix: property mapping on MarketplaceItem interface (i.seller_id to i.sellerId)
-            seller_id: i.sellerId,
-            seller_name: i.sellerName,
-            title: i.title,
-            category: i.category,
-            description: i.description,
-            price: i.price,
-            image_url: i.imageUrl,
+            seller_id: item.sellerId,
+            seller_name: item.sellerName,
+            title: item.title,
+            category: item.category,
+            description: item.description,
+            weight: item.weight,
+            price: item.price,
+            image_url: item.imageUrl,
             status: 'available'
         }]).select().single();
         if (error) throw error;
@@ -247,11 +222,78 @@ export const MarketplaceAPI = {
     },
     update: async (i: Partial<MarketplaceItem> & { id: string }) => {
         if (!supabase) return;
-        const dbUpdate: any = { ...i };
-        if (i.sellerId) { dbUpdate.seller_id = i.sellerId; delete dbUpdate.sellerId; }
-        if (i.imageUrl) { dbUpdate.image_url = i.imageUrl; delete dbUpdate.imageUrl; }
-        const { error = null } = await supabase.from('marketplace_items').update(dbUpdate).eq('id', i.id);
+        const dbUpdate: any = {};
+        if (i.status) dbUpdate.status = i.status;
+        if (i.buyerId !== undefined) dbUpdate.buyer_id = i.buyerId;
+        const { error } = await supabase.from('marketplace_items').update(dbUpdate).eq('id', i.id);
         if (error) throw error;
+    }
+};
+
+export const AdsAPI = {
+    getAll: async (): Promise<AdCampaign[]> => {
+        if (!supabase) return [];
+        const { data } = await supabase.from('ad_campaigns').select('*').order('created_at', { ascending: false });
+        return data ? data.map(mapAd) : [];
+    },
+    getForUser: async (commune: string, type: UserType): Promise<AdCampaign[]> => {
+        if (!supabase) return [];
+        // Filtrage Enterprise par Commune et Rôle
+        const { data } = await supabase.from('ad_campaigns')
+            .select('*')
+            .eq('status', 'active')
+            .or(`target_commune.eq.${commune},target_commune.eq.all`)
+            .or(`target_user_type.eq.${type},target_user_type.eq.all`);
+        return data ? data.map(mapAd) : [];
+    },
+    recordImpression: async (adId: string) => {
+        if (!supabase) return;
+        // RPC function expected in Postgres: increment_views(ad_id)
+        await supabase.rpc('increment_ad_views', { ad_id: adId });
+    },
+    recordClick: async (adId: string) => {
+        if (!supabase) return;
+        // RPC function expected in Postgres: increment_clicks(ad_id)
+        await supabase.rpc('increment_ad_clicks', { ad_id: adId });
+    },
+    add: async (ad: AdCampaign): Promise<AdCampaign> => {
+        if (!supabase) throw new Error("Offline");
+        const { data, error } = await supabase.from('ad_campaigns').insert([{
+            id: `ad-${Date.now()}`,
+            title: ad.title,
+            partner: ad.partner,
+            status: ad.status,
+            views: 0,
+            clicks: 0,
+            budget: ad.budget,
+            spent: 0,
+            start_date: ad.startDate,
+            end_date: ad.endDate,
+            image: ad.image,
+            target_commune: ad.targetCommune || 'all',
+            target_user_type: ad.targetUserType || 'all',
+            link: ad.link
+        }]).select().single();
+        if (error) throw error;
+        return mapAd(data);
+    },
+    updateStatus: async (id: string, status: string) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('ad_campaigns').update({ status }).eq('id', id);
+        if (error) throw error;
+    },
+    delete: async (id: string) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('ad_campaigns').delete().eq('id', id);
+        if (error) throw error;
+    }
+};
+
+export const PartnersAPI = {
+    getAll: async (): Promise<Partner[]> => {
+        if (!supabase) return [];
+        const { data } = await supabase.from('partners').select('*').order('name', { ascending: true });
+        return data ? data.map(mapPartner) : [];
     }
 };
 
@@ -268,7 +310,6 @@ export const PaymentsAPI = {
             period: p.period,
             collector_id: p.collectorId,
             collector_name: p.collectorName,
-            // Fix: qrCodeData instead of qr_code_data from p object (Frontend uses camelCase)
             qr_code_data: p.qrCodeData
         }]).select().single();
         if (error) throw error;
@@ -311,7 +352,7 @@ export const NotificationsAPI = {
         if (!supabase) return [];
         let query = supabase.from('notifications').select('*').order('created_at', { ascending: false });
         if (!isAdmin) query = query.or(`target_user_id.eq.${userId},target_user_id.eq.ALL`);
-        const { data } = query;
+        const { data } = await query;
         return data || [];
     }
 };
@@ -336,87 +377,6 @@ export const VehicleAPI = {
     delete: async (id: string) => {
         if (!supabase) return;
         await supabase.from('vehicles').delete().eq('id', id);
-    }
-};
-
-export const AdsAPI = {
-    getAll: async (): Promise<AdCampaign[]> => {
-        if (!supabase) return [];
-        const { data } = await supabase.from('ad_campaigns').select('*').order('created_at', { ascending: false });
-        return data ? data.map(mapAd) : [];
-    },
-    add: async (ad: AdCampaign): Promise<AdCampaign> => {
-        if (!supabase) throw new Error("Offline");
-        const { data, error } = await supabase.from('ad_campaigns').insert([{
-            id: `ad-${Date.now()}`,
-            title: ad.title,
-            partner: ad.partner,
-            status: ad.status,
-            views: ad.views,
-            clicks: ad.clicks,
-            budget: ad.budget,
-            spent: ad.spent,
-            start_date: ad.startDate,
-            end_date: ad.endDate,
-            image: ad.image
-        }]).select().single();
-        if (error) throw error;
-        return mapAd(data);
-    },
-    updateStatus: async (id: string, status: string) => {
-        if (!supabase) return;
-        const { error } = await supabase.from('ad_campaigns').update({ status }).eq('id', id);
-        if (error) throw error;
-    },
-    delete: async (id: string) => {
-        if (!supabase) return;
-        const { error } = await supabase.from('ad_campaigns').delete().eq('id', id);
-        if (error) throw error;
-    }
-};
-
-export const PartnersAPI = {
-    getAll: async (): Promise<Partner[]> => {
-        if (!supabase) return [];
-        const { data } = await supabase.from('partners').select('*').order('name', { ascending: true });
-        return data ? data.map(mapPartner) : [];
-    },
-    add: async (p: Partner): Promise<Partner> => {
-        if (!supabase) throw new Error("Offline");
-        const { data, error } = await supabase.from('partners').insert([{
-            id: `partner-${Date.now()}`,
-            name: p.name,
-            industry: p.industry,
-            contact_name: p.contactName,
-            email: p.email,
-            phone: p.phone,
-            active_campaigns: p.activeCampaigns,
-            total_budget: p.totalBudget,
-            logo: p.logo,
-            status: p.status
-        }]).select().single();
-        if (error) throw error;
-        return mapPartner(data);
-    },
-    update: async (p: Partner) => {
-        if (!supabase) return;
-        const { error = null } = await supabase.from('partners').update({
-            name: p.name,
-            industry: p.industry,
-            contact_name: p.contactName,
-            email: p.email,
-            phone: p.phone,
-            active_campaigns: p.activeCampaigns,
-            total_budget: p.totalBudget,
-            logo: p.logo,
-            status: p.status
-        }).eq('id', p.id);
-        if (error) throw error;
-    },
-    delete: async (id: string) => {
-        if (!supabase) return;
-        const { error } = await supabase.from('partners').delete().eq('id', id);
-        if (error) throw error;
     }
 };
 
@@ -467,7 +427,6 @@ export const SettingsAPI = {
             exchange_rate: s.exchangeRate,
             marketplace_commission: s.marketplaceCommission,
             logo_url: s.logoUrl,
-            // Fix: Fixed property access on SystemSettings object (force_2fa to force2FA)
             force_2fa: s.force2FA,
             session_timeout: s.sessionTimeout,
             password_policy: s.passwordPolicy

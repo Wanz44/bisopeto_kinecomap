@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Trash2, Map as MapIcon, Users, TrendingUp, AlertTriangle, 
@@ -5,14 +6,13 @@ import {
     RefreshCw, Zap, History, Loader2, Sparkles, ArrowUpRight, 
     DollarSign, Database, Wifi, CreditCard, ShoppingBag, Bell, Lock, CheckCircle2,
     Camera, UserPlus, ChevronRight, UserCheck, Globe,
-    // Fix: Added missing Search and Check icons
-    Search, Check
+    Search, Check, Megaphone, ExternalLink, Play
 } from 'lucide-react';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { User, AppView, UserType, WasteReport, UserPermission, Payment } from '../types';
-import { UserAPI, ReportsAPI, PaymentsAPI } from '../services/api';
+import { User, AppView, UserType, WasteReport, UserPermission, Payment, AdCampaign } from '../types';
+import { UserAPI, ReportsAPI, PaymentsAPI, AdsAPI } from '../services/api';
 import { supabase, testSupabaseConnection } from '../services/supabaseClient';
 
 interface DashboardProps {
@@ -195,6 +195,7 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
 
 function CitizenDashboard({ user, onChangeView }: DashboardProps) {
     const [myReports, setMyReports] = useState<WasteReport[]>([]);
+    const [myAds, setMyAds] = useState<AdCampaign[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCloudSynced, setIsCloudSynced] = useState(false);
 
@@ -205,8 +206,15 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
             setIsCloudSynced(live);
             try {
                 if (user.id) {
-                    const data = await ReportsAPI.getByUserId(user.id);
-                    setMyReports(data);
+                    const [reportsData, adsData] = await Promise.all([
+                        ReportsAPI.getByUserId(user.id),
+                        AdsAPI.getForUser(user.commune || 'all', user.type)
+                    ]);
+                    setMyReports(reportsData);
+                    setMyAds(adsData);
+                    
+                    // Track impressions
+                    adsData.forEach(ad => AdsAPI.recordImpression(ad.id));
                 }
             } catch(e) {
                 console.error(e);
@@ -227,7 +235,12 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                 .subscribe();
             return () => { supabase.removeChannel(channel); };
         }
-    }, [user.id]);
+    }, [user.id, user.commune, user.type]);
+
+    const handleAdClick = (ad: AdCampaign) => {
+        AdsAPI.recordClick(ad.id);
+        if (ad.link) window.open(ad.link, '_blank');
+    };
 
     return (
         <div className="p-5 md:p-10 space-y-8 animate-fade-in max-w-4xl mx-auto">
@@ -251,6 +264,34 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                     <button onClick={() => onChangeView(AppView.PROFILE)} className="p-4 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-white rounded-3xl group-hover:bg-primary group-hover:text-white transition-all"><ChevronRight size={24}/></button>
                 </div>
             </div>
+
+            {/* AD BANNER CAROUSEL (Enterprise Implementation) */}
+            {myAds.length > 0 && (
+                <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center justify-between px-4">
+                        <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Megaphone size={12}/> Bons Plans {user.commune}</h4>
+                        <span className="text-[8px] font-bold text-gray-300 uppercase tracking-widest">Sponsorisé</span>
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
+                        {myAds.map(ad => (
+                            <div 
+                                key={ad.id} 
+                                onClick={() => handleAdClick(ad)}
+                                className="snap-center shrink-0 w-[85%] sm:w-full max-w-sm bg-white dark:bg-[#111827] rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 cursor-pointer relative group"
+                            >
+                                <div className="h-32 relative overflow-hidden">
+                                    <img src={ad.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={ad.title} />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                                    <div className="absolute bottom-3 left-6 right-6">
+                                        <p className="text-[7px] font-black text-blue-400 uppercase tracking-widest mb-1">{ad.partner}</p>
+                                        <h5 className="text-white font-black uppercase text-sm leading-tight truncate">{ad.title}</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <button onClick={() => onChangeView(AppView.REPORTING)} className="relative group overflow-hidden bg-primary px-8 py-12 rounded-[3.5rem] shadow-2xl shadow-green-500/20 flex flex-col gap-6 transition-all hover:scale-[1.02] active:scale-95 text-left border-4 border-white/20">
@@ -315,7 +356,6 @@ export const Dashboard: React.FC<DashboardProps> = (props) => {
     return props.user.type === UserType.ADMIN ? <AdminDashboard {...props} /> : <CitizenDashboard {...props} />;
 };
 
-// Internal icon component helper
 const CalendarDays = ({ size }: { size: number }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
 );

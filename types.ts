@@ -233,6 +233,9 @@ export interface AdCampaign {
     startDate: string;
     endDate: string;
     image: string;
+    targetCommune?: string; // Enterprise Targeting
+    targetUserType?: UserType | 'all'; // Enterprise Targeting
+    link?: string; // Destination URL
 }
 
 export interface Partner {
