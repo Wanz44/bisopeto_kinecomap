@@ -201,7 +201,7 @@ export const ReportsAPI = {
         if (r.status) dbUpdate.status = r.status;
         if (r.assignedTo !== undefined) dbUpdate.assigned_to = r.assignedTo;
         if (r.proofUrl !== undefined) dbUpdate.proof_url = r.proofUrl;
-        const { error } = await supabase.from('waste_reports').update(dbUpdate).eq('id', r.id);
+        const { error = null } = await supabase.from('waste_reports').update(dbUpdate).eq('id', r.id);
         if (error) throw error;
     },
     delete: async (id: string) => {
@@ -268,7 +268,7 @@ export const PaymentsAPI = {
             period: p.period,
             collector_id: p.collectorId,
             collector_name: p.collectorName,
-            qr_code_data: p.qrCodeData
+            qr_code_data: p.qr_code_data
         }]).select().single();
         if (error) throw error;
         return mapPayment(data);
@@ -466,7 +466,8 @@ export const SettingsAPI = {
             exchange_rate: s.exchangeRate,
             marketplace_commission: s.marketplaceCommission,
             logo_url: s.logoUrl,
-            force_2fa: s.force_2fa,
+            // Fix: Fixed property access on SystemSettings object (force_2fa to force2FA)
+            force_2fa: s.force2FA,
             session_timeout: s.sessionTimeout,
             password_policy: s.passwordPolicy
         }).eq('id', 1);
