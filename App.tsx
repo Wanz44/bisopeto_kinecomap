@@ -254,6 +254,7 @@ function App() {
             case AppView.ADMIN_VEHICLES: return <AdminVehicles onBack={goBack} onToast={showToast} />;
             case AppView.ADMIN_REPORTS: return <AdminReports onBack={goBack} onToast={showToast} onNotify={handleNotify} currentUser={user} />;
             case AppView.ADMIN_SUBSCRIPTIONS: return <AdminSubscriptions onBack={goBack} plans={[]} exchangeRate={systemSettings.exchangeRate} onUpdatePlan={() => {}} onUpdateExchangeRate={() => {}} currentLogo={appLogo} onUpdateLogo={setAppLogo} systemSettings={systemSettings} onUpdateSystemSettings={s => SettingsAPI.update(s)} onToast={showToast} />;
+            case AppView.ADMIN_ADS: return <AdminAds onBack={goBack} onToast={showToast} />;
             case AppView.ADMIN_MARKETPLACE: return <AdminMarketplace onBack={goBack} onToast={showToast} />;
             case AppView.ADMIN_RECOVERY: return <AdminRecovery onBack={goBack} currentUser={user} onToast={showToast} />;
             case AppView.ADMIN_PERMISSIONS: return <AdminPermissions onBack={goBack} onToast={showToast} />;
