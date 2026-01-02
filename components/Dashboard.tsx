@@ -105,7 +105,7 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
         return (
             <div className="flex flex-col items-center justify-center h-full bg-[#F5F7FA] dark:bg-gray-950">
                 <Loader2 className="animate-spin text-primary mb-4" size={48} />
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest animate-pulse">Lecture des flux Cloud...</p>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest animate-pulse">Lecture des flux Cloud...</p>
             </div>
         );
     }
@@ -117,10 +117,10 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                     <div className="flex items-center gap-3 mb-2">
                         <div className={`px-3 py-1 rounded-full flex items-center gap-2 border shadow-sm ${isCloudSynced ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
                             <div className={`w-2 h-2 rounded-full ${isCloudSynced ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                            <span className="text-[8px] font-black uppercase tracking-widest">{isCloudSynced ? 'Biso Peto Cloud Connecté' : 'Mode Hors-ligne'}</span>
+                            <span className="text-[8px] font-bold uppercase tracking-widest">{isCloudSynced ? 'Biso Peto Cloud Connecté' : 'Mode Hors-ligne'}</span>
                         </div>
                     </div>
-                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Console Cloud</h1>
+                    <h1 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Console Cloud</h1>
                 </div>
             </div>
 
@@ -138,8 +138,8 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                             <kpi.icon size={20}/>
                             {kpi.pulse && <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-ping border-2 border-white dark:border-gray-900"></div>}
                         </div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{kpi.label}</p>
-                        <h3 className="text-2xl font-black text-gray-900 dark:text-white leading-none mt-1">{kpi.val}</h3>
+                        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest">{kpi.label}</p>
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white leading-none mt-1">{kpi.val}</h3>
                     </div>
                 ))}
             </div>
@@ -147,7 +147,7 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 bg-white dark:bg-gray-900 p-8 rounded-[3rem] border dark:border-gray-800 shadow-sm space-y-6">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-black dark:text-white uppercase tracking-tighter">Flux des Signalements</h3>
+                        <h3 className="text-lg font-semibold dark:text-white uppercase tracking-tighter">Flux des Signalements</h3>
                         <button onClick={refreshData} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-inner hover:scale-110 active:scale-95 transition-all"><RefreshCw size={16}/></button>
                     </div>
                     <div className="h-[280px] w-full">
@@ -160,17 +160,17 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.1)" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} />
-                                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}} />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: '500', fill: '#94a3b8'}} />
+                                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: '500', fill: '#94a3b8'}} />
                                 <Tooltip contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.15)'}} />
-                                <Area type="monotone" dataKey="val" stroke="#2962FF" strokeWidth={4} fillOpacity={1} fill="url(#colorCloud)" />
+                                <Area type="monotone" dataKey="val" stroke="#2962FF" strokeWidth={3} fillOpacity={1} fill="url(#colorCloud)" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
                 <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border dark:border-gray-800 shadow-sm flex flex-col">
-                    <h3 className="text-xs font-black dark:text-white uppercase tracking-widest mb-6 flex items-center gap-2"><History size={16} className="text-blue-500" /> Journal d'Activité</h3>
+                    <h3 className="text-xs font-semibold dark:text-white uppercase tracking-widest mb-6 flex items-center gap-2"><History size={16} className="text-blue-500" /> Journal d'Activité</h3>
                     <div className="flex-1 space-y-5 overflow-y-auto no-scrollbar">
                         {allReports.slice(0, 10).map(report => (
                             <div key={report.id} className="flex gap-4 items-start border-b dark:border-gray-800 pb-4 last:border-none group">
@@ -179,10 +179,10 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start">
-                                        <p className="text-[10px] font-black dark:text-white uppercase truncate">{report.wasteType}</p>
-                                        <span className="text-[8px] font-bold text-gray-400">{new Date(report.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                        <p className="text-[10px] font-bold dark:text-white uppercase truncate">{report.wasteType}</p>
+                                        <span className="text-[8px] font-medium text-gray-400">{new Date(report.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                     </div>
-                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate mt-1">{report.commune}</p>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 font-normal truncate mt-1">{report.commune}</p>
                                 </div>
                             </div>
                         ))}
@@ -213,7 +213,6 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                     setMyReports(reportsData);
                     setMyAds(adsData);
                     
-                    // Track impressions
                     adsData.forEach(ad => AdsAPI.recordImpression(ad.id));
                 }
             } catch(e) {
@@ -249,28 +248,27 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                     <div className="flex items-center gap-3 mb-2">
                         <div className={`px-3 py-1 rounded-full flex items-center gap-2 border shadow-sm ${isCloudSynced ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
                             <div className={`w-2 h-2 rounded-full ${isCloudSynced ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                            <span className="text-[9px] font-black uppercase tracking-widest">{isCloudSynced ? 'Connecté' : 'Mode local'}</span>
+                            <span className="text-[9px] font-semibold uppercase tracking-widest">{isCloudSynced ? 'Connecté' : 'Mode local'}</span>
                         </div>
                     </div>
-                    <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-tight truncate">Mbote, <br className="sm:hidden"/> {user.firstName}!</h1>
-                    <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em] mt-4 flex items-center gap-2 leading-none"><MapPin size={12} className="text-primary"/> Commune de {user.commune}</p>
+                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tighter uppercase leading-tight truncate">Mbote, <br className="sm:hidden"/> {user.firstName}!</h1>
+                    <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-[0.2em] mt-4 flex items-center gap-2 leading-none"><MapPin size={12} className="text-primary"/> Commune de {user.commune}</p>
                 </div>
                 
                 <div className="w-full bg-white dark:bg-[#111827] p-8 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-2xl shadow-gray-200/50 dark:shadow-none flex items-center justify-between group hover:border-primary/30 transition-all">
                     <div className="space-y-1">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Points Eco accumulés</p>
-                        <div className="text-5xl font-black text-blue-600 flex items-center gap-3"><Zap size={28} className="text-yellow-500 fill-yellow-500" /> {user.points}</div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Points Eco accumulés</p>
+                        <div className="text-5xl font-bold text-blue-600 flex items-center gap-3"><Zap size={28} className="text-yellow-500 fill-yellow-500" /> {user.points}</div>
                     </div>
                     <button onClick={() => onChangeView(AppView.PROFILE)} className="p-4 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-white rounded-3xl group-hover:bg-primary group-hover:text-white transition-all"><ChevronRight size={24}/></button>
                 </div>
             </div>
 
-            {/* AD BANNER CAROUSEL (Enterprise Implementation) */}
             {myAds.length > 0 && (
                 <div className="space-y-4 animate-fade-in">
                     <div className="flex items-center justify-between px-4">
-                        <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Megaphone size={12}/> Bons Plans {user.commune}</h4>
-                        <span className="text-[8px] font-bold text-gray-300 uppercase tracking-widest">Sponsorisé</span>
+                        <h4 className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2"><Megaphone size={12}/> Bons Plans {user.commune}</h4>
+                        <span className="text-[8px] font-medium text-gray-300 uppercase tracking-widest">Sponsorisé</span>
                     </div>
                     <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
                         {myAds.map(ad => (
@@ -283,8 +281,8 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                                     <img src={ad.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={ad.title} />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                                     <div className="absolute bottom-3 left-6 right-6">
-                                        <p className="text-[7px] font-black text-blue-400 uppercase tracking-widest mb-1">{ad.partner}</p>
-                                        <h5 className="text-white font-black uppercase text-sm leading-tight truncate">{ad.title}</h5>
+                                        <p className="text-[7px] font-semibold text-blue-400 uppercase tracking-widest mb-1">{ad.partner}</p>
+                                        <h5 className="text-white font-bold uppercase text-sm leading-tight truncate">{ad.title}</h5>
                                     </div>
                                 </div>
                             </div>
@@ -298,22 +296,22 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 group-hover:scale-125 transition-all duration-700 text-white"><Camera className="w-48 h-48" /></div>
                     <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center text-white shadow-inner relative z-10"><Camera size={38} /></div>
                     <div className="relative z-10">
-                        <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-tight">SIGNALER <br/> UN TAS</h3>
-                        <p className="text-white/60 text-[10px] font-black uppercase mt-2 tracking-widest">+50 Points Eco par collecte</p>
+                        <h3 className="text-3xl font-bold text-white uppercase tracking-tighter leading-tight">SIGNALER <br/> UN TAS</h3>
+                        <p className="text-white/60 text-[10px] font-semibold uppercase mt-2 tracking-widest">+50 Points Eco par collecte</p>
                     </div>
                 </button>
                 
                 <div className="bg-white dark:bg-[#111827] p-8 rounded-[3.5rem] border border-gray-100 dark:border-white/5 shadow-sm flex flex-col min-h-[420px]">
                     <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-xl font-black dark:text-white uppercase tracking-tighter flex items-center gap-3"><History size={24} className="text-blue-500"/> Historique</h3>
-                        {myReports.length > 0 && <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{myReports.length} signalements</span>}
+                        <h3 className="text-xl font-bold dark:text-white uppercase tracking-tighter flex items-center gap-3"><History size={24} className="text-blue-500"/> Historique</h3>
+                        {myReports.length > 0 && <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">{myReports.length} signalements</span>}
                     </div>
                     
                     <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar scroll-container pr-1">
                         {isLoading ? (
                             <div className="py-20 text-center"><Loader2 className="animate-spin text-primary mx-auto" size={32} /></div>
                         ) : myReports.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 opacity-20 font-black uppercase text-[11px] gap-4">
+                            <div className="flex flex-col items-center justify-center py-20 opacity-20 font-bold uppercase text-[11px] gap-4">
                                 <Search size={48} />
                                 <span>Aucun signalement</span>
                             </div>
@@ -324,10 +322,10 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                                     {report.status === 'resolved' && <div className="absolute -top-1 -right-1 bg-green-500 text-white p-1 rounded-full border-2 border-white"><Check size={8} strokeWidth={5}/></div>}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-black dark:text-white uppercase truncate tracking-tight">{report.wasteType}</p>
-                                    <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 flex items-center gap-1.5"><CalendarDays size={10} /> {new Date(report.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</p>
+                                    <p className="text-xs font-bold dark:text-white uppercase truncate tracking-tight">{report.wasteType}</p>
+                                    <p className="text-[9px] text-gray-400 font-medium uppercase mt-1 flex items-center gap-1.5"><CalendarDays size={10} /> {new Date(report.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</p>
                                 </div>
-                                <div className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase text-white shadow-sm ${
+                                <div className={`px-3 py-1.5 rounded-xl text-[8px] font-bold uppercase text-white shadow-sm ${
                                     report.status === 'resolved' ? 'bg-green-500' : 
                                     report.status === 'assigned' ? 'bg-blue-500' : 'bg-yellow-500'
                                 }`}>
@@ -347,8 +345,8 @@ export const Dashboard: React.FC<DashboardProps> = (props) => {
         return (
             <div className="flex flex-col items-center justify-center h-full p-10 text-center bg-[#F8FAFC] dark:bg-[#050505]">
                 <div className="w-28 h-28 bg-orange-100 dark:bg-orange-900/20 rounded-[3rem] flex items-center justify-center text-orange-600 mb-10 border border-orange-200 animate-float"><AlertTriangle size={56} /></div>
-                <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4 leading-tight">Dossier en attente</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-bold max-w-xs leading-relaxed mb-12">Mbote {props.user.firstName}! Votre compte est en cours d'analyse par l'administration Biso Peto pour garantir la sécurité du réseau.</p>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white uppercase tracking-tighter mb-4 leading-tight">Dossier en attente</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium max-w-xs leading-relaxed mb-12">Mbote {props.user.firstName}! Votre compte est en cours d'analyse par l'administration Biso Peto pour garantir la sécurité du réseau.</p>
                 <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full max-w-xs overflow-hidden"><div className="h-full bg-orange-500 w-[60%] animate-pulse"></div></div>
             </div>
         );

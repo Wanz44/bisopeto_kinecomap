@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
     Home, Map as MapIcon, GraduationCap, User as UserIcon, LogOut, Settings, RotateCw, 
@@ -116,13 +117,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
     return (
         <div className="w-full h-full flex bg-[#F8FAFC] dark:bg-[#050505] transition-colors duration-500 overflow-hidden relative font-sans">
             
-            {/* SIDEBAR (Desktop) */}
             <aside className="hidden md:flex flex-col w-[18rem] h-[calc(100vh-3rem)] m-6 rounded-[2.5rem] bg-white dark:bg-[#111827] border border-gray-100 dark:border-white/5 shadow-2xl transition-all duration-300 relative z-50 shrink-0">
                 <div className="p-8 flex flex-col gap-1 text-center items-center">
                     <div className="w-14 h-14 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg border border-gray-50 p-1.5 shrink-0 mb-3"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
                     <div className="flex flex-col">
-                        <span className="font-black text-xl text-primary tracking-tighter leading-none uppercase">BISO PETO</span>
-                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.3em] mt-1">Plateforme SIG</span>
+                        <span className="font-bold text-xl text-primary tracking-tighter leading-none uppercase">BISO PETO</span>
+                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-[0.3em] mt-1">Plateforme SIG</span>
                     </div>
                 </div>
                 
@@ -136,56 +136,52 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                                 className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 group ${isActive ? 'bg-primary text-white shadow-xl scale-[1.02]' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'}`}
                             >
                                 <item.icon size={18} className={`${isActive ? 'text-white' : 'text-gray-400 group-hover:text-primary'}`} />
-                                <span className={`font-black text-[0.75rem] uppercase tracking-tight ${isActive ? 'opacity-100' : 'opacity-80'}`}>{item.label}</span>
+                                <span className={`font-semibold text-[0.75rem] uppercase tracking-tight ${isActive ? 'opacity-100' : 'opacity-80'}`}>{item.label}</span>
                             </button>
                         );
                     })}
                 </nav>
 
                 <div className="p-6 border-t dark:border-white/5">
-                    <button onClick={onLogout} className="w-full flex items-center gap-3 p-4 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all font-black uppercase text-[0.7rem] tracking-widest">
+                    <button onClick={onLogout} className="w-full flex items-center gap-3 p-4 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all font-bold uppercase text-[0.7rem] tracking-widest">
                         <LogOut size={16} /> Quitter
                     </button>
                 </div>
             </aside>
 
-            {/* MAIN CONTENT AREA */}
             <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative z-10">
-                {/* Header Global */}
                 {showGlobalHeader && (
                     <header className="min-h-[4rem] md:min-h-[5rem] px-6 md:px-10 flex items-center justify-between sticky top-0 z-40 shrink-0 bg-white/90 backdrop-blur-xl dark:bg-black/90 border-b dark:border-white/5 safe-area-pt">
                         <div className="flex items-center gap-3 md:hidden">
                             <div className="w-8 h-8 bg-white dark:bg-black rounded-lg flex items-center justify-center shadow-md border border-gray-100 p-1"><img src={appLogo} alt="Logo" className="w-full h-full object-contain" /></div>
-                            <span className="font-black text-sm tracking-tighter text-primary uppercase">BISO PETO</span>
+                            <span className="font-bold text-sm tracking-tighter text-primary uppercase">BISO PETO</span>
                         </div>
                         
                         <div className="hidden md:block">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Console de gestion</p>
-                            <h1 className="font-black text-lg text-gray-800 dark:text-white tracking-tight uppercase mt-1">Tableau de bord</h1>
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-[0.2em]">Console de gestion</p>
+                            <h1 className="font-bold text-lg text-gray-800 dark:text-white tracking-tight uppercase mt-1">Tableau de bord</h1>
                         </div>
                         
                         <div className="flex items-center gap-3">
                             {syncQueueSize > 0 && (
                                 <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-full border border-orange-100 dark:border-orange-800 animate-pulse">
                                     <CloudOff size={12} />
-                                    <span className="text-[8px] font-black uppercase">{syncQueueSize} offline</span>
+                                    <span className="text-[8px] font-bold uppercase">{syncQueueSize} offline</span>
                                 </div>
                             )}
                             <button onClick={onRefresh} className={`p-2 rounded-xl text-gray-500 bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 ${isRefreshing ? 'animate-spin' : ''}`}><RefreshCw size={18} /></button>
                             <button onClick={() => onChangeView(AppView.NOTIFICATIONS)} className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 relative">
                                 <Bell size={18} />
-                                {unreadNotifications > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[7px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-black">{unreadNotifications}</span>}
+                                {unreadNotifications > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[7px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-black">{unreadNotifications}</span>}
                             </button>
                         </div>
                     </header>
                 )}
 
-                {/* Main Scroll View */}
                 <main className="flex-1 overflow-y-auto overflow-x-hidden relative h-full w-full no-scrollbar transition-all duration-500 scroll-container pb-[calc(7rem+env(safe-area-inset-bottom))]">
                     {children}
                 </main>
                 
-                {/* TAB BAR (Mobile) */}
                 <nav className="md:hidden fixed bottom-6 inset-x-6 h-16 bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl border border-gray-100 dark:border-white/10 rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.15)] z-[100] flex items-center justify-evenly px-4 mb-[env(safe-area-inset-bottom)]">
                     {mobileTabItems.map((item) => {
                         const isActive = currentView === item.view;
@@ -194,21 +190,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                                 <div className={`relative z-10 p-3 rounded-2xl transition-all duration-500 ${isActive ? 'bg-primary text-white -translate-y-5 shadow-2xl scale-110 shadow-primary/40' : 'text-gray-400 hover:text-primary/50'}`}>
                                     <item.icon size={22} />
                                 </div>
-                                <span className={`absolute bottom-1.5 text-[7px] font-black uppercase tracking-widest transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>{item.label}</span>
+                                <span className={`absolute bottom-1.5 text-[7px] font-bold uppercase tracking-widest transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>{item.label}</span>
                             </button>
                         );
                     })}
                 </nav>
             </div>
 
-            {/* Toasts - Positioned higher for mobile thumb accessibility */}
             {toast && toast.visible && (
                 <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[90%] max-w-xs md:top-6 md:bottom-auto">
                     <div className={`px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-4 border backdrop-blur-2xl ${toast.type === 'success' ? 'bg-green-600/90 text-white border-green-400/20' : toast.type === 'error' ? 'bg-red-600/90 text-white border-red-400/20' : 'bg-blue-600/90 text-white border-blue-400/20'}`}>
                         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                            {toast.type === 'success' ? <Check size={16} strokeWidth={4}/> : <Info size={16} strokeWidth={4}/>}
                         </div>
-                        <span className="font-black text-[11px] leading-tight flex-1 uppercase tracking-tight">{toast.message}</span>
+                        <span className="font-bold text-[11px] leading-tight flex-1 uppercase tracking-tight">{toast.message}</span>
                         <button onClick={onCloseToast} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"><X size={14} /></button>
                     </div>
                 </div>

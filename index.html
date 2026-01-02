@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
   <head>
@@ -61,7 +62,7 @@
     <script src="https://cdn.jsdelivr.net/npm/open-location-code@1.0.4/openlocationcode.min.js"></script>
     
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;900&family=Inter:wght@400;700&family=Fira+Code:wght@400;600&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;900&family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;600&display=swap');
       
       :root {
         --sat: env(safe-area-inset-top);
@@ -76,10 +77,15 @@
         margin: 0;
         padding: 0;
         font-family: 'Poppins', sans-serif;
+        font-weight: 400; /* Regular par défaut */
         background-color: #F8FAFC;
-        /* Empêche le rebond élastique global sur iOS mais autorise le scroll interne */
         position: fixed;
         overflow: hidden;
+      }
+
+      body.antialiased {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
 
       body.dark { background-color: #050505; color: #e5e7eb; }
@@ -92,7 +98,6 @@
         flex-direction: column;
       }
 
-      /* Scroll fluide et naturel pour mobile */
       .scroll-container {
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
@@ -102,7 +107,6 @@
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-      /* Adaptabilité aux encoches */
       .safe-area-pb {
         padding-bottom: calc(1.5rem + var(--sab));
       }
