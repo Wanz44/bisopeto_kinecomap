@@ -206,8 +206,19 @@ export const ReportsAPI = {
     },
     delete: async (id: string) => {
         if (!supabase) return;
-        const { error } = await supabase.from('waste_reports').delete().eq('id', id);
-        if (error) throw error;
+        // Correction de la suppression : s'assurer que Supabase exécute bien la requête
+        const { error, status } = await supabase
+            .from('waste_reports')
+            .delete()
+            .eq('id', id);
+        
+        if (error) {
+            console.error("[ReportsAPI] Delete Error:", error);
+            throw error;
+        }
+
+        // Note: status 204 signifie succès
+        return status === 204;
     }
 };
 
@@ -221,6 +232,7 @@ export const MarketplaceAPI = {
         if (!supabase) throw new Error("Offline");
         const { data, error } = await supabase.from('marketplace_items').insert([{
             id: `item-${Date.now()}`,
+            // Fix: property mapping on MarketplaceItem interface (i.seller_id to i.sellerId)
             seller_id: i.sellerId,
             seller_name: i.sellerName,
             title: i.title,
@@ -250,7 +262,6 @@ export const PaymentsAPI = {
             id: p.id,
             user_id: p.userId,
             user_name: p.userName,
-            // Fix: Changed p.amount_fc to p.amountFC to match the Payment interface properties
             amount_fc: p.amountFC,
             currency: p.currency,
             method: p.method,
@@ -299,7 +310,7 @@ export const NotificationsAPI = {
         if (!supabase) return [];
         let query = supabase.from('notifications').select('*').order('created_at', { ascending: false });
         if (!isAdmin) query = query.or(`target_user_id.eq.${userId},target_user_id.eq.ALL`);
-        const { data } = await query;
+        const { data } = query;
         return data || [];
     }
 };
@@ -327,7 +338,6 @@ export const VehicleAPI = {
     }
 };
 
-// Fix: added AdsAPI implementation for AdminAds.tsx
 export const AdsAPI = {
     getAll: async (): Promise<AdCampaign[]> => {
         if (!supabase) return [];
@@ -364,7 +374,6 @@ export const AdsAPI = {
     }
 };
 
-// Fix: added PartnersAPI implementation for AdminAds.tsx
 export const PartnersAPI = {
     getAll: async (): Promise<Partner[]> => {
         if (!supabase) return [];
@@ -381,7 +390,6 @@ export const PartnersAPI = {
             email: p.email,
             phone: p.phone,
             active_campaigns: p.activeCampaigns,
-            // Fix: property mapping error (p.total_budget to p.totalBudget)
             total_budget: p.totalBudget,
             logo: p.logo,
             status: p.status
@@ -398,7 +406,6 @@ export const PartnersAPI = {
             email: p.email,
             phone: p.phone,
             active_campaigns: p.activeCampaigns,
-            // Fix: property mapping error (p.total_budget to p.totalBudget)
             total_budget: p.totalBudget,
             logo: p.logo,
             status: p.status
@@ -459,7 +466,7 @@ export const SettingsAPI = {
             exchange_rate: s.exchangeRate,
             marketplace_commission: s.marketplaceCommission,
             logo_url: s.logoUrl,
-            force_2fa: s.force2FA,
+            force_2fa: s.force_2fa,
             session_timeout: s.sessionTimeout,
             password_policy: s.passwordPolicy
         }).eq('id', 1);

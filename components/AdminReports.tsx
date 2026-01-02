@@ -188,12 +188,16 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
         if (!window.confirm("Action Irréversible : Supprimer ce signalement du Cloud ?")) return;
         setIsDeleting(true);
         try {
-            await ReportsAPI.delete(id);
-            setReports(prev => prev.filter(r => r.id !== id));
-            if (selectedReport?.id === id) setSelectedReport(null);
-            onToast?.("Données purgées", "success");
+            const success = await ReportsAPI.delete(id);
+            if (success) {
+                setReports(prev => prev.filter(r => r.id !== id));
+                if (selectedReport?.id === id) setSelectedReport(null);
+                onToast?.("Signalement supprimé du serveur", "success");
+            } else {
+                onToast?.("La suppression a échoué sur le serveur", "error");
+            }
         } catch (e) {
-            onToast?.("Erreur suppression", "error");
+            onToast?.("Erreur suppression (Vérifiez vos droits RLS)", "error");
         } finally {
             setIsDeleting(false);
         }
@@ -203,10 +207,15 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
         if (!window.confirm(`Voulez-vous vraiment purger ces ${selectedIds.length} signalements de la base de données ?`)) return;
         setIsDeleting(true);
         try {
-            await Promise.all(selectedIds.map(id => ReportsAPI.delete(id)));
+            const results = await Promise.all(selectedIds.map(id => ReportsAPI.delete(id)));
+            const successCount = results.filter(r => r).length;
+            
             setReports(prev => prev.filter(r => !selectedIds.includes(r.id)));
-            onToast?.(`${selectedIds.length} rapports supprimés`, "success");
+            onToast?.(`${successCount} rapports supprimés du cloud`, "success");
             setSelectedIds([]);
+            
+            // Forcer un rafraîchissement léger pour synchroniser l'UI
+            setTimeout(() => loadData(0, true), 500);
         } catch (e) {
             onToast?.("Erreur lors de la suppression groupée", "error");
         } finally {

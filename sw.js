@@ -1,6 +1,6 @@
 
-const CACHE_NAME = 'kinecomap-v19';
-const DYNAMIC_CACHE = 'kinecomap-dynamic-v19';
+const CACHE_NAME = 'kinecomap-v20';
+const DYNAMIC_CACHE = 'kinecomap-dynamic-v20';
 
 // Ressources critiques à mettre en cache immédiatement
 const STATIC_ASSETS = [
@@ -42,14 +42,13 @@ self.addEventListener('activate', (event) => {
 
 // Interception des requêtes réseau
 self.addEventListener('fetch', (event) => {
-  // Stratégie : Stale-While-Revalidate pour les scripts et CSS
-  // Stratégie : Cache First pour les images
-  // Stratégie : Network First pour les API (si existantes)
-
   const url = new URL(event.request.url);
 
-  // Ignorer les requêtes non-GET
-  if (event.request.method !== 'GET') return;
+  // CRITIQUE : Ne JAMAIS mettre en cache les appels vers Supabase ou les API dynamiques
+  // Cela évite que les signalements supprimés réapparaissent à cause du cache local
+  if (url.href.includes('supabase.co') || event.request.method !== 'GET') {
+    return; // Laisser passer la requête directement vers le réseau sans intercepter
+  }
 
   // Gestion spécifique pour les tuiles de la carte (OpenStreetMap / Carto)
   if (url.href.includes('tile.openstreetmap.org') || url.href.includes('basemaps.cartocdn.com')) {
@@ -69,18 +68,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stratégie par défaut : Cache, puis Réseau, puis Cache du réseau
+  // Stratégie Stale-While-Revalidate pour le reste des assets statiques
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        return caches.open(DYNAMIC_CACHE).then((cache) => {
-          // Mise en cache dynamique des nouvelles ressources
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
+        // Optionnel : ne mettre en cache que si c'est un asset statique (image, css, js)
+        const isStatic = /\.(js|css|png|jpg|jpeg|svg|woff2)$/.test(url.pathname);
+        if (isStatic) {
+          return caches.open(DYNAMIC_CACHE).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        }
+        return networkResponse;
       }).catch(() => {
-        // En cas d'échec réseau, on ne fait rien de plus si on a déjà une réponse en cache
-        // Si pas de cache et pas de réseau, on pourrait retourner une page hors ligne générique ici
+        // Fallback si réseau KO
+        return cachedResponse;
       });
 
       return cachedResponse || fetchPromise;
