@@ -1,0 +1,8 @@
+{
+  "name": "bisopeto_kinecomap",
+  "description": "A comprehensive waste management and eco-education platform for Kinshasa, featuring real-time collection tracking, interactive maps, and an AI-powered academy.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}
