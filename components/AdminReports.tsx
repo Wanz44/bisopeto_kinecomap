@@ -386,7 +386,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start">
                                             <h4 className="font-black text-gray-900 dark:text-white uppercase text-[11px] truncate leading-none mb-1">{report.wasteType}</h4>
-                                            {/* TIMER BADGE IMPROVED */}
+                                            {/* TIMER BADGE INTEGRATED */}
                                             <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1.5 shrink-0 border ${sla.badgeClass}`} title="Temps écoulé depuis signalement">
                                                 <Timer size={10} className={sla.iconColor}/> {sla.text}
                                             </span>
@@ -460,7 +460,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                 <div>
                                     <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Traitement SIG</h3>
                                     <div className="mt-1.5 flex items-center gap-2">
-                                        {/* DETAIL BADGE TIMER */}
                                         <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1.5 border ${getSLADelay(selectedReport.date).badgeClass}`}>
                                             <Timer size={12}/> SLA STATUS: {getSLADelay(selectedReport.date).text.toUpperCase()}
                                         </div>
@@ -484,7 +483,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                         {viewMode === 'before' ? <AlertCircle size={14}/> : <CheckCircle2 size={14}/>}
                                         {viewMode === 'before' ? 'Vue Initiale' : 'Traitement Effectué'}
                                     </div>
-                                    {/* ZOOM BUTTON */}
                                     <button 
                                         onClick={() => setIsZoomed(true)}
                                         className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-md text-white rounded-2xl hover:bg-white/40 transition-all shadow-lg"
@@ -545,7 +543,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                 </div>
             )}
 
-            {/* FULLSCREEN IMAGE ZOOM OVERLAY */}
             {isZoomed && zoomedImage && (
                 <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 animate-fade-in p-4 md:p-10">
                     <button 
