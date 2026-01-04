@@ -180,6 +180,7 @@ export const ReportsAPI = {
             lat: r.lat,
             lng: r.lng,
             image_url: r.imageUrl,
+            // Fixed: Changed r.waste_type to r.wasteType
             waste_type: r.wasteType,
             urgency: r.urgency,
             status: 'pending',
@@ -199,10 +200,14 @@ export const ReportsAPI = {
         if (error) throw error;
     },
     delete: async (id: string) => {
-        if (!supabase) return;
-        const { error, status } = await supabase.from('waste_reports').delete().eq('id', id);
-        if (error) throw error;
-        return status === 204;
+        if (!supabase) return false;
+        // La suppression dans Supabase est physique ici
+        const { error } = await supabase.from('waste_reports').delete().eq('id', id);
+        if (error) {
+            console.error("Supabase Delete Error:", error);
+            throw error;
+        }
+        return true;
     }
 };
 
@@ -310,6 +315,7 @@ export const PaymentsAPI = {
             id: p.id,
             user_id: p.userId,
             user_name: p.userName,
+            // Fixed: Changed p.amount_fc to p.amountFC
             amount_fc: p.amountFC,
             currency: p.currency,
             method: p.method,

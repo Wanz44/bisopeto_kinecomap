@@ -112,10 +112,12 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
 
     useEffect(() => {
         if (supabase) {
-            const channel = supabase.channel('realtime_sig_reports_admin_v7')
+            const channel = supabase.channel('realtime_sig_reports_admin_v8')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, (payload) => {
                     if (payload.eventType === 'DELETE') {
+                        // Suppression instantanée si détectée sur le cloud
                         setReports(prev => prev.filter(r => r.id !== payload.old.id));
+                        if (selectedReport?.id === payload.old.id) setSelectedReport(null);
                         return;
                     }
                     const mapped = mapReport(payload.new);
@@ -132,13 +134,12 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                 .subscribe();
             return () => { supabase.removeChannel(channel); };
         }
-    }, [onToast]);
+    }, [selectedReport, onToast]);
 
     useEffect(() => {
         loadData(page);
     }, [page]);
 
-    // --- Dynamic KPIs ---
     const stats = useMemo(() => {
         const total = reports.length;
         const resolved = reports.filter(r => r.status === 'resolved').length;
@@ -190,34 +191,38 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
         try {
             const success = await ReportsAPI.delete(id);
             if (success) {
+                // On met à jour l'état local immédiatement pour fluidité
                 setReports(prev => prev.filter(r => r.id !== id));
                 if (selectedReport?.id === id) setSelectedReport(null);
-                onToast?.("Signalement supprimé du serveur", "success");
-            } else {
-                onToast?.("La suppression a échoué sur le serveur", "error");
+                onToast?.("Signalement supprimé avec succès", "success");
             }
-        } catch (e) {
-            onToast?.("Erreur suppression (Vérifiez vos droits RLS)", "error");
+        } catch (e: any) {
+            console.error(e);
+            onToast?.("Erreur Cloud : suppression refusée", "error");
         } finally {
             setIsDeleting(false);
         }
     };
 
     const handleBatchDelete = async () => {
-        if (!window.confirm(`Voulez-vous vraiment purger ces ${selectedIds.length} signalements de la base de données ?`)) return;
+        if (!window.confirm(`Confirmer la suppression de ${selectedIds.length} signalements ?`)) return;
         setIsDeleting(true);
         try {
-            const results = await Promise.all(selectedIds.map(id => ReportsAPI.delete(id)));
-            const successCount = results.filter(r => r).length;
+            // On lance toutes les suppressions en parallèle
+            const results = await Promise.allSettled(selectedIds.map(id => ReportsAPI.delete(id)));
+            const successCount = results.filter(r => r.status === 'fulfilled' && (r as any).value).length;
             
-            setReports(prev => prev.filter(r => !selectedIds.includes(r.id)));
-            onToast?.(`${successCount} rapports supprimés du cloud`, "success");
+            // On purge les IDs réussis de la liste locale
+            const successfulIds = selectedIds.filter((_, i) => results[i].status === 'fulfilled' && (results[i] as any).value);
+            setReports(prev => prev.filter(r => !successfulIds.includes(r.id)));
+            
+            onToast?.(`${successCount} rapports purgés du système`, "success");
             setSelectedIds([]);
             
-            // Forcer un rafraîchissement léger pour synchroniser l'UI
-            setTimeout(() => loadData(0, true), 500);
+            // Re-sync léger
+            setTimeout(() => loadData(0, true), 300);
         } catch (e) {
-            onToast?.("Erreur lors de la suppression groupée", "error");
+            onToast?.("Erreur lors de l'opération groupée", "error");
         } finally {
             setIsDeleting(false);
         }
@@ -249,7 +254,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 transition-colors duration-300 relative overflow-hidden">
             
-            {/* --- HEADER & TOOLBAR --- */}
             <div className="bg-white dark:bg-gray-900 p-6 shadow-sm border-b dark:border-gray-800 sticky top-0 z-40 shrink-0">
                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-6">
                     <div className="flex items-center gap-4">
@@ -262,7 +266,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                         </div>
                     </div>
 
-                    {/* KPI Toolbar */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1 xl:max-w-2xl">
                         {[
                             { label: 'Total Signalements', val: stats.total, icon: FileText, color: 'text-blue-600' },
@@ -289,7 +292,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                     </div>
                 </div>
 
-                {/* Batch Actions Bar */}
                 {selectedIds.length > 0 && (
                     <div className="flex items-center justify-between p-4 bg-[#2962FF] text-white rounded-2xl mb-4 animate-fade-in-up shadow-xl">
                         <div className="flex items-center gap-4">
@@ -298,7 +300,9 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                         </div>
                         <div className="flex gap-2">
                             <button onClick={() => setShowAssignModal(true)} className="px-5 py-2.5 bg-white text-[#2962FF] rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all"><Truck size={14}/> Déploiement groupé</button>
-                            <button onClick={handleBatchDelete} className="p-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors shadow-lg"><Trash2 size={18}/></button>
+                            <button onClick={handleBatchDelete} disabled={isDeleting} className="p-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors shadow-lg disabled:opacity-50">
+                                {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18}/>}
+                            </button>
                         </div>
                     </div>
                 )}
@@ -334,10 +338,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                 )}
             </div>
 
-            {/* --- MAIN INTERFACE --- */}
             <div className="flex-1 flex overflow-hidden">
-                
-                {/* 1. Sidebar List with SLA Tracking */}
                 <div className="w-full md:w-[450px] bg-white dark:bg-gray-950 border-r dark:border-gray-800 flex flex-col overflow-hidden">
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar pb-32">
                         {reports.length === 0 && !isLoading ? (
@@ -355,7 +356,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                     onClick={() => { setSelectedReport(report); setViewMode('before'); }}
                                     className={`p-5 rounded-[2.5rem] border-2 transition-all cursor-pointer relative group flex items-center gap-4 ${selectedReport?.id === report.id ? 'bg-blue-50 dark:bg-blue-900/10 border-[#2962FF] shadow-lg' : 'bg-white dark:bg-gray-900 border-gray-50 dark:border-gray-800'}`}
                                 >
-                                    {/* Selection Checkbox */}
                                     <div 
                                         onClick={(e) => { 
                                             e.stopPropagation(); 
@@ -384,7 +384,9 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                                  {STATUSES.find(s=>s.key===report.status)?.label || report.status}
                                              </span>
                                              <div className="flex gap-1 items-center">
-                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
+                                                <button disabled={isDeleting} onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {isDeleting && selectedReport?.id === report.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                                                </button>
                                                 <ChevronRight size={14} className="text-gray-300 group-hover:text-[#2962FF] transition-colors" />
                                              </div>
                                         </div>
@@ -396,12 +398,10 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                     </div>
                 </div>
 
-                {/* 2. Interactive Map with Density Mode */}
                 <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 z-0">
                     <MapContainer center={[-4.325, 15.322]} zoom={12} style={{height: '100%', width: '100%'}} zoomControl={false}>
                         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                         
-                        {/* Map Mode: Standard Markers */}
                         {mapDisplay === 'markers' && reports.map(r => (
                             <Marker 
                                 key={r.id} 
@@ -411,7 +411,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                             />
                         ))}
 
-                        {/* Map Mode: Density Analysis (Heatmap simulation) */}
                         {mapDisplay === 'heatmap' && reports.map(r => (
                             <Circle 
                                 key={`h-${r.id}`}
@@ -426,7 +425,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                         ))}
                     </MapContainer>
 
-                    {/* Floating Map Controls */}
                     <div className="absolute top-6 right-6 z-[500] flex flex-col gap-3">
                         <div className="bg-white dark:bg-gray-900 p-1.5 rounded-2xl shadow-2xl border dark:border-gray-800 flex flex-col gap-1">
                             <button onClick={() => setMapDisplay('markers')} className={`p-3 rounded-xl transition-all ${mapDisplay === 'markers' ? 'bg-[#2962FF] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`} title="Mode Marqueurs"><MapIcon size={20}/></button>
@@ -436,7 +434,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                 </div>
             </div>
 
-            {/* --- REPORT DETAIL DRAWER --- */}
             {selectedReport && (
                 <div className="fixed inset-0 z-[100] flex justify-end">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedReport(null)}></div>
@@ -458,7 +455,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar pb-32">
-                            {/* Evidence Viewer */}
                             <div className="space-y-4">
                                 <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
                                     <button onClick={() => setViewMode('before')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'before' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-400'}`}>Signalement</button>
@@ -526,7 +522,6 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                 </div>
             )}
 
-            {/* --- ASSIGNMENT MODAL --- */}
             {showAssignModal && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAssignModal(false)}></div>
