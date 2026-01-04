@@ -180,7 +180,6 @@ export const ReportsAPI = {
             lat: r.lat,
             lng: r.lng,
             image_url: r.imageUrl,
-            // Fixed: Changed r.waste_type to r.wasteType
             waste_type: r.wasteType,
             urgency: r.urgency,
             status: 'pending',
@@ -201,7 +200,6 @@ export const ReportsAPI = {
     },
     delete: async (id: string) => {
         if (!supabase) return false;
-        // La suppression dans Supabase est physique ici
         const { error } = await supabase.from('waste_reports').delete().eq('id', id);
         if (error) {
             console.error("Supabase Delete Error:", error);
@@ -315,7 +313,6 @@ export const PaymentsAPI = {
             id: p.id,
             user_id: p.userId,
             user_name: p.userName,
-            // Fixed: Changed p.amount_fc to p.amountFC
             amount_fc: p.amountFC,
             currency: p.currency,
             method: p.method,
@@ -348,7 +345,7 @@ export const AuditAPI = {
 };
 
 export const NotificationsAPI = {
-    add: async (n: Partial<NotificationItem>) => {
+    add: async (n: Partial<NotificationItem & { commune?: string; neighborhood?: string }>) => {
         if (!supabase) return;
         const { data } = await supabase.from('notifications').insert([{
             id: `notif-${Date.now()}`,
@@ -356,6 +353,8 @@ export const NotificationsAPI = {
             message: n.message,
             type: n.type || 'info',
             target_user_id: n.targetUserId,
+            commune: n.commune || 'ALL',
+            neighborhood: n.neighborhood || '',
             read: false
         }]).select().single();
         return data;
@@ -363,7 +362,7 @@ export const NotificationsAPI = {
     getAll: async (userId: string, isAdmin: boolean): Promise<NotificationItem[]> => {
         if (!supabase) return [];
         let query = supabase.from('notifications').select('*').order('created_at', { ascending: false });
-        if (!isAdmin) query = query.or(`target_user_id.eq.${userId},target_user_id.eq.ALL`);
+        if (!isAdmin) query = query.or(`target_user_id.eq.${userId},target_user_id.eq.ALL,target_user_id.eq.citizen,target_user_id.eq.collector,target_user_id.eq.business`);
         const { data } = await query;
         return data || [];
     }

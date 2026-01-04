@@ -4,7 +4,7 @@ import {
     ArrowLeft, Bell, CheckCircle, Info, AlertTriangle, Clock, Send, Users, 
     MapPin, X, Trash2, Calendar, Target, ShieldAlert, MessageSquare, 
     Filter, Smartphone, Monitor, LayoutTemplate, Sparkles, Plus, 
-    ChevronRight, Search, Hash, Timer, Globe, Check, Layers, AlertCircle
+    ChevronRight, Search, Hash, Timer, Globe, Check, Layers, AlertCircle, History
 } from 'lucide-react';
 import { NotificationItem, UserType } from '../types';
 
@@ -44,7 +44,7 @@ interface NotificationsProps {
     notifications: NotificationItem[];
     onMarkAllRead: () => void;
     isAdmin?: boolean;
-    onSendNotification?: (notif: Partial<NotificationItem>) => void;
+    onSendNotification?: (notif: Partial<NotificationItem & { commune?: string; neighborhood?: string }>) => void;
     onDeleteNotification?: (id: string) => void;
 }
 
@@ -78,12 +78,10 @@ export const Notifications: React.FC<NotificationsProps> = ({
             onSendNotification({
                 title: newNotif.title,
                 message: newNotif.message,
-                id: `msg-${Date.now()}`,
-                time: 'À l\'instant',
-                date: new Date().toISOString(),
-                read: false,
+                type: newNotif.type,
                 targetUserId: newNotif.targetRole,
-                type: newNotif.type
+                commune: newNotif.targetCommune,
+                neighborhood: newNotif.targetNeighborhood
             });
             setViewMode('history');
             // Reset
@@ -110,7 +108,7 @@ export const Notifications: React.FC<NotificationsProps> = ({
 
                     {isAdmin ? (
                         <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl border dark:border-gray-700">
-                            <button onClick={() => setViewMode('compose')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'compose' ? 'bg-white dark:bg-gray-700 text-[#2962FF] shadow-lg' : 'text-gray-400'}`}>
+                            <button onClick={() => setViewMode('compose')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'compose' ? 'bg-white dark:bg-gray-700 text-[#2962FF] shadow-lg' : 'text-gray-500'}`}>
                                 <Plus size={14}/> Nouveau
                             </button>
                             <button onClick={() => setViewMode('history')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'history' ? 'bg-white dark:bg-gray-700 text-[#2962FF] shadow-lg' : 'text-gray-400'}`}>
@@ -328,7 +326,7 @@ export const Notifications: React.FC<NotificationsProps> = ({
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start mb-2">
                                             <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none text-sm truncate">{notif.title}</h4>
-                                            <span className="text-[10px] font-black text-gray-400 uppercase whitespace-nowrap ml-4">{notif.time}</span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase whitespace-nowrap ml-4">{notif.time || 'Envoyé'}</span>
                                         </div>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 font-bold leading-relaxed line-clamp-2">{notif.message}</p>
                                         
@@ -367,7 +365,7 @@ export const Notifications: React.FC<NotificationsProps> = ({
                                     <div className="flex justify-between items-start mb-3">
                                         <div>
                                             <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tighter text-lg">{notif.title}</h4>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">{notif.time}</p>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">{notif.time || 'Récent'}</p>
                                         </div>
                                         {!notif.read && <div className="px-3 py-1 bg-blue-500 text-white rounded-full text-[8px] font-black uppercase">Nouveau</div>}
                                     </div>

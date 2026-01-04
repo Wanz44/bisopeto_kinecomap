@@ -123,14 +123,18 @@ function App() {
                     schema: 'public', 
                     table: 'notifications'
                 }, (payload) => {
-                    const newNotif = payload.new as NotificationItem;
+                    const newNotif = payload.new as any;
                     const isAdmin = user.type === UserType.ADMIN;
                     
-                    const isTargeted = newNotif.targetUserId === user.id || 
-                                     newNotif.targetUserId === 'ALL' || 
-                                     (isAdmin && newNotif.targetUserId === 'ADMIN');
+                    // Filtrage granulaire Enterprise
+                    const isTargetedRole = newNotif.target_user_id === user.type || newNotif.target_user_id === 'ALL';
+                    const isTargetedUser = newNotif.target_user_id === user.id;
+                    const isTargetedAdmin = isAdmin && newNotif.target_user_id === 'ADMIN';
+                    
+                    const matchesCommune = !newNotif.commune || newNotif.commune === 'ALL' || newNotif.commune === user.commune;
+                    const matchesNeighborhood = !newNotif.neighborhood || user.neighborhood?.toLowerCase().includes(newNotif.neighborhood.toLowerCase());
 
-                    if (isTargeted) {
+                    if ((isTargetedRole || isTargetedUser || isTargetedAdmin) && matchesCommune && matchesNeighborhood) {
                         setNotifications(prev => [newNotif, ...prev]);
                         showToast(`🔔 ${newNotif.title}`, newNotif.type);
                         NotificationService.sendPush(newNotif.title, newNotif.message, appLogo);
@@ -143,7 +147,7 @@ function App() {
                 supabase.removeChannel(notifChannel);
             };
         }
-    }, [user?.id, user?.status, user?.type, showToast, appLogo]);
+    }, [user?.id, user?.status, user?.type, user?.commune, user?.neighborhood, showToast, appLogo]);
 
     const handleSync = useCallback(async () => {
         if (navigator.onLine && OfflineManager.getQueueSize() > 0) {
@@ -205,8 +209,8 @@ function App() {
         localStorage.removeItem('kinecomap_user');
     };
 
-    const handleNotify = async (targetId: string, title: string, message: string, type: any) => {
-        await NotificationsAPI.add({ targetUserId: targetId, title, message, type });
+    const handleNotify = async (notif: Partial<NotificationItem & { commune?: string; neighborhood?: string }>) => {
+        await NotificationsAPI.add(notif);
     };
 
     const handleRefresh = async () => {
@@ -254,23 +258,23 @@ function App() {
                     />
                 );
             }
-            if (view === AppView.ONBOARDING) return <Onboarding initialShowLogin={onboardingStartWithLogin} onBackToLanding={() => setHistory([AppView.LANDING])} onComplete={(data) => { setUser(data as User); localStorage.setItem('kinecomap_user', JSON.stringify(data)); setHistory([AppView.DASHBOARD]); }} appLogo={appLogo} onToast={showToast} onNotifyAdmin={(t, m) => handleNotify('ADMIN', t, m, 'alert')} />;
+            if (view === AppView.ONBOARDING) return <Onboarding initialShowLogin={onboardingStartWithLogin} onBackToLanding={() => setHistory([AppView.LANDING])} onComplete={(data) => { setUser(data as User); localStorage.setItem('kinecomap_user', JSON.stringify(data)); setHistory([AppView.DASHBOARD]); }} appLogo={appLogo} onToast={showToast} onNotifyAdmin={(t, m) => handleNotify({ targetUserId: 'ADMIN', title: t, message: m, type: 'alert' })} />;
             return null;
         }
 
         switch (view) {
             case AppView.DASHBOARD: return <Dashboard user={user} onChangeView={navigateTo} onToast={showToast} onRefresh={refreshUserData} />;
-            case AppView.REPORTING: return <Reporting user={user} onBack={goBack} onToast={showToast} onNotifyAdmin={(t, m) => handleNotify('ADMIN', t, m, 'alert')} />;
+            case AppView.REPORTING: return <Reporting user={user} onBack={goBack} onToast={showToast} onNotifyAdmin={(t, m) => handleNotify({ targetUserId: 'ADMIN', title: t, message: m, type: 'alert' })} />;
             case AppView.MAP: return <MapView user={user} onBack={goBack} />;
             case AppView.ACADEMY: return <Academy onBack={goBack} />;
             case AppView.MARKETPLACE: return <Marketplace user={user} onBack={goBack} systemSettings={systemSettings} onToast={showToast} />;
             case AppView.PROFILE: return <Profile user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} onManageSubscription={() => navigateTo(AppView.SUBSCRIPTION)} onSettings={() => navigateTo(AppView.SETTINGS)} onUpdateProfile={p => UserAPI.update({...p, id: user.id!})} onToast={showToast} onChangeView={navigateTo} />;
             case AppView.SETTINGS: return <Settings user={user} theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} onBack={goBack} onLogout={handleLogout} currentLanguage={language} onLanguageChange={setLanguage} onChangeView={navigateTo} onToast={showToast} appLogo={appLogo} onUpdateLogo={setAppLogo} systemSettings={systemSettings} />;
-            case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => {}} isAdmin={user.type === UserType.ADMIN} onSendNotification={(n) => handleNotify(n.targetUserId || 'ALL', n.title || '', n.message || '', n.type)} />;
-            case AppView.COLLECTOR_JOBS: return <CollectorJobs user={user} onBack={goBack} onNotify={handleNotify} onToast={showToast} />;
-            case AppView.ADMIN_USERS: return <AdminUsers onBack={goBack} currentUser={user} onNotify={handleNotify} onToast={showToast} />;
+            case AppView.NOTIFICATIONS: return <Notifications onBack={goBack} notifications={notifications} onMarkAllRead={() => {}} isAdmin={user.type === UserType.ADMIN} onSendNotification={handleNotify} />;
+            case AppView.COLLECTOR_JOBS: return <CollectorJobs user={user} onBack={goBack} onNotify={(tid, t, m, type) => handleNotify({ targetUserId: tid, title: t, message: m, type })} onToast={showToast} />;
+            case AppView.ADMIN_USERS: return <AdminUsers onBack={goBack} currentUser={user} onNotify={(tid, t, m, type) => handleNotify({ targetUserId: tid, title: t, message: m, type })} onToast={showToast} />;
             case AppView.ADMIN_VEHICLES: return <AdminVehicles onBack={goBack} onToast={showToast} />;
-            case AppView.ADMIN_REPORTS: return <AdminReports onBack={goBack} onToast={showToast} onNotify={handleNotify} currentUser={user} />;
+            case AppView.ADMIN_REPORTS: return <AdminReports onBack={goBack} onToast={showToast} onNotify={(tid, t, m, type) => handleNotify({ targetUserId: tid, title: t, message: m, type })} currentUser={user} />;
             case AppView.ADMIN_SUBSCRIPTIONS: return <AdminSubscriptions onBack={goBack} plans={[]} exchangeRate={systemSettings.exchangeRate} onUpdatePlan={() => {}} onUpdateExchangeRate={() => {}} currentLogo={appLogo} onUpdateLogo={setAppLogo} systemSettings={systemSettings} onUpdateSystemSettings={s => SettingsAPI.update(s)} onToast={showToast} />;
             case AppView.ADMIN_ADS: return <AdminAds onBack={goBack} onToast={showToast} />;
             case AppView.ADMIN_MARKETPLACE: return <AdminMarketplace onBack={goBack} onToast={showToast} />;
