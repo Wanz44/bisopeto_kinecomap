@@ -6,7 +6,7 @@ import {
     RefreshCw, Zap, History, Loader2, Sparkles, ArrowUpRight, 
     DollarSign, Database, Wifi, CreditCard, ShoppingBag, Bell, Lock, CheckCircle2,
     Camera, UserPlus, ChevronRight, UserCheck, Globe,
-    Search, Check, Megaphone, ExternalLink, Play, Wallet
+    Search, Check, Megaphone, ExternalLink, Play, Wallet, BookOpen, Heart
 } from 'lucide-react';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -82,7 +82,6 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
         const pendingUsers = allUsers.filter(u => u.status === 'pending').length;
         const onlineUsers = allUsers.filter(u => u.status === 'active').length;
         
-        // Calcul du solde de caisse reel
         const inFlow = cashEntries.filter(e => e.type === 'in').reduce((sum, e) => sum + Number(e.amount), 0);
         const outFlow = cashEntries.filter(e => e.type === 'out').reduce((sum, e) => sum + Number(e.amount), 0);
         
@@ -352,11 +351,35 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
 export const Dashboard: React.FC<DashboardProps> = (props) => {
     if (props.user.type !== UserType.ADMIN && props.user.status === 'pending') {
         return (
-            <div className="flex flex-col items-center justify-center h-full p-10 text-center bg-[#F8FAFC] dark:bg-[#050505]">
-                <div className="w-28 h-28 bg-orange-100 dark:bg-orange-900/20 rounded-[3rem] flex items-center justify-center text-orange-600 mb-10 border border-orange-200 animate-float"><AlertTriangle size={56} /></div>
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white uppercase tracking-tighter mb-4 leading-tight">Dossier en attente</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium max-w-xs leading-relaxed mb-12">Mbote {props.user.firstName}! Votre compte est en cours d'analyse par l'administration Biso Peto pour garantir la sécurité du réseau.</p>
-                <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full max-w-xs overflow-hidden"><div className="h-full bg-orange-500 w-[60%] animate-pulse"></div></div>
+            <div className="flex flex-col h-full bg-[#F8FAFC] dark:bg-[#050505]">
+                {/* Header d'attente */}
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center scroll-container no-scrollbar">
+                    <div className="w-28 h-28 bg-orange-100 dark:bg-orange-900/20 rounded-[3rem] flex items-center justify-center text-orange-600 mb-10 border border-orange-200 animate-float shadow-xl"><Clock size={56} className="animate-pulse" /></div>
+                    <h2 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4 leading-tight">Dossier en Analyse</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-bold max-w-xs leading-relaxed mb-8">Mbote {props.user.firstName}! L'administration Biso Peto vérifie vos informations pour sécuriser le réseau.</p>
+                    
+                    <div className="w-full max-w-xs h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-12">
+                        <div className="h-full bg-orange-500 w-[70%] animate-pulse rounded-full"></div>
+                    </div>
+
+                    {/* Conseils en attendant */}
+                    <div className="w-full max-w-md space-y-4">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Le saviez-vous ?</p>
+                        {[
+                            { icon: BookOpen, title: "Tri sélectif", desc: "Séparez vos bouteilles plastiques pour gagner plus de points." },
+                            { icon: Heart, title: "Impact Local", desc: "Un quartier propre réduit les risques de malaria." },
+                            { icon: Zap, title: "Eco-Points", desc: "Bientôt, vous pourrez payer votre crédit SNEL via l'app." }
+                        ].map((tip, i) => (
+                            <div key={i} className="flex gap-4 p-5 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-white/5 text-left items-start shadow-sm">
+                                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-600 shrink-0"><tip.icon size={20}/></div>
+                                <div>
+                                    <h4 className="text-xs font-black dark:text-white uppercase tracking-tight">{tip.title}</h4>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium leading-relaxed mt-1">{tip.desc}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }

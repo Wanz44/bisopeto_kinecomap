@@ -48,7 +48,7 @@ const reportIcon = (status: string, urgency: string, isSelected: boolean) => {
 interface AdminReportsProps {
     onBack: () => void;
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
-    onNotify: (targetId: string, title: string, message: string, type: string) => void;
+    onNotify: (targetId: string, title: string, message: string, type: 'info' | 'success' | 'warning' | 'alert') => void;
     currentUser: AppUser;
 }
 
@@ -113,7 +113,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
 
     useEffect(() => {
         if (supabase) {
-            const channel = supabase.channel('realtime_sig_reports_admin_v8')
+            const channel = supabase.channel('realtime_sig_reports_admin_v9')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, (payload) => {
                     if (payload.eventType === 'DELETE') {
                         setReports(prev => prev.filter(r => r.id !== payload.old.id));
@@ -177,7 +177,8 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
             
             setShowAssignModal(false);
             setSelectedIds([]);
-            loadData(0, true);
+            // Force reload after assignment
+            await loadData(0, true);
         } catch (e) {
             onToast?.("Échec de l'affectation cloud", "error");
         } finally {
@@ -191,9 +192,12 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
         try {
             const success = await ReportsAPI.delete(id);
             if (success) {
+                // Optimistic UI update
                 setReports(prev => prev.filter(r => r.id !== id));
                 if (selectedReport?.id === id) setSelectedReport(null);
-                onToast?.("Signalement supprimé avec succès", "success");
+                onToast?.("Signalement purgé de la BDD", "success");
+                // Confirm with real database state
+                await loadData(0, true);
             }
         } catch (e: any) {
             console.error(e);
@@ -207,13 +211,14 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
         if (!window.confirm(`Confirmer la suppression de ${selectedIds.length} signalements ?`)) return;
         setIsDeleting(true);
         try {
-            const results = await Promise.allSettled(selectedIds.map(id => ReportsAPI.delete(id)));
-            const successCount = results.filter(r => r.status === 'fulfilled' && (r as any).value).length;
-            const successfulIds = selectedIds.filter((_, i) => results[i].status === 'fulfilled' && (results[i] as any).value);
-            setReports(prev => prev.filter(r => !successfulIds.includes(r.id)));
-            onToast?.(`${successCount} rapports purgés du système`, "success");
-            setSelectedIds([]);
-            setTimeout(() => loadData(0, true), 300);
+            const success = await ReportsAPI.deleteMultiple(selectedIds);
+            if (success) {
+                setReports(prev => prev.filter(r => !selectedIds.includes(r.id)));
+                onToast?.(`${selectedIds.length} rapports purgés du système`, "success");
+                setSelectedIds([]);
+                // Sync complete list from server
+                await loadData(0, true);
+            }
         } catch (e) {
             onToast?.("Erreur lors de l'opération groupée", "error");
         } finally {

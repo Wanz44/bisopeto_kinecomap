@@ -1,6 +1,6 @@
 
-const CACHE_NAME = 'kinecomap-v20';
-const DYNAMIC_CACHE = 'kinecomap-dynamic-v20';
+const CACHE_NAME = 'kinecomap-v21';
+const DYNAMIC_CACHE = 'kinecomap-dynamic-v21';
 
 // Ressources critiques à mettre en cache immédiatement
 const STATIC_ASSETS = [
@@ -31,6 +31,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME && key !== DYNAMIC_CACHE) {
+            console.log('[Service Worker] Removing old cache:', key);
             return caches.delete(key);
           }
         })

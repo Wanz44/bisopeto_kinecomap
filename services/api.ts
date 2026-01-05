@@ -1,3 +1,4 @@
+
 import { User, MarketplaceItem, Vehicle, AdCampaign, Partner, UserType, SystemSettings, WasteReport, GlobalImpact, DatabaseHealth, NotificationItem, Payment, AuditLog, UserPermission, CashBookEntry } from '../types';
 import { supabase } from './supabaseClient';
 
@@ -260,6 +261,15 @@ export const ReportsAPI = {
             throw error;
         }
         return true;
+    },
+    deleteMultiple: async (ids: string[]) => {
+        if (!supabase) return false;
+        const { error } = await supabase.from('waste_reports').delete().in('id', ids);
+        if (error) {
+            console.error("Supabase Batch Delete Error:", error);
+            throw error;
+        }
+        return true;
     }
 };
 
@@ -334,7 +344,6 @@ export const AdsAPI = {
             end_date: ad.endDate,
             image: ad.image,
             target_commune: ad.targetCommune || 'all',
-            // Fix: Access targetUserType property instead of target_user_type on AdCampaign object
             target_user_type: ad.targetUserType || 'all',
             link: ad.link
         }]).select().single();
@@ -364,7 +373,6 @@ export const PartnersAPI = {
 export const PaymentsAPI = {
     record: async (p: Payment): Promise<Payment> => {
         if (!supabase) throw new Error("Offline");
-        // Fix: Changed p.amount_fc to p.amountFC as defined in Payment type
         const { data, error } = await supabase.from('payments').insert([{
             id: p.id,
             user_id: p.userId,

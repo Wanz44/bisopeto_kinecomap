@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     ChevronRight, ArrowLeft, LogIn, User as UserIcon, Lock, 
     Eye, EyeOff, AlertCircle, Loader2, Mail, 
-    CheckCircle2, Truck, Briefcase, Sparkles, MapPin, GraduationCap, ArrowRight, Send
+    CheckCircle2, Truck, Briefcase, Sparkles, MapPin, GraduationCap, ArrowRight, Send, Globe
 } from 'lucide-react';
 import { UserType, User } from '../types';
 import { UserAPI } from '../services/api';
@@ -23,7 +23,7 @@ const KINSHASA_COMMUNES = [
     "Kinshasa", "Kintambo", "Lingwala", "Lemba", "Limete", "Makala", 
     "Maluku", "Masina", "Matete", "Mont Ngafula", "Mbinza", "Ngaba", 
     "Ngaliema", "N’djili", "Nsele", "Selembao", "Kimbanseke", "Kisenso"
-];
+].sort();
 
 const ONBOARDING_SLIDES = [
     {
@@ -117,23 +117,38 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
     };
 
     const nextStep = () => {
-        if (regStep === 1 && (!formData.firstName || !formData.lastName || !formData.phone)) {
-            setError("Veuillez remplir votre identité."); return;
+        setError(null);
+        if (regStep === 1) {
+            if (!formData.firstName || !formData.lastName || !formData.phone) {
+                setError("Veuillez remplir votre identité complète."); 
+                return;
+            }
+            if (formData.phone.length < 9) {
+                setError("Le numéro de téléphone est invalide.");
+                return;
+            }
         }
-        if (regStep === 2 && (!formData.email || !registerPassword)) {
-            setError("Email ou mot de passe manquant."); return;
+        if (regStep === 2) {
+            if (!formData.email || !registerPassword) {
+                setError("Email ou mot de passe manquant."); 
+                return;
+            }
+            if (registerPassword.length < 6) {
+                setError("Le mot de passe doit faire au moins 6 caractères.");
+                return;
+            }
         }
         setRegStep(prev => prev + 1);
-        setError(null);
     };
 
     const handleRegisterSubmit = async () => {
         if (!formData.commune) { setError("Veuillez sélectionner votre commune."); return; }
         if (!formData.neighborhood || formData.neighborhood.trim() === '') { setError("Veuillez renseigner votre quartier."); return; }
         if (!formData.address) { setError("L'adresse précise est requise."); return; }
-        if (!agreedToTerms) { setError("Vous devez accepter les conditions."); return; }
+        if (!agreedToTerms) { setError("Vous devez accepter les conditions d'utilisation."); return; }
         
         setIsLoading(true);
+        setError(null);
         try {
             const registeredUser = await UserAPI.register({ 
                 ...formData, 
@@ -148,9 +163,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
             }
             
             setRegistrationFinished(true);
-            if (onToast) onToast(`Demande envoyée`, "success");
+            if (onToast) onToast(`Demande de création envoyée`, "success");
         } catch (err: any) {
-            setError(err.message || "Erreur lors de l'inscription.");
+            setError(err.message || "Erreur lors de l'inscription. L'email est peut-être déjà utilisé.");
         } finally {
             setIsLoading(false);
         }
@@ -190,7 +205,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                         <CheckCircle2 className="w-12 h-12 animate-bounce" />
                     </div>
                     <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-6 uppercase">Demande Reçue !</h2>
-                    <p className="text-base text-gray-500 dark:text-gray-400 font-medium mb-12">Mbote {formData.firstName}! Préparez-vous à impacter votre quartier dès validation.</p>
+                    <p className="text-base text-gray-500 dark:text-gray-400 font-medium mb-12">Mbote {formData.firstName}! Votre dossier est maintenant entre les mains de l'équipe Biso Peto pour validation.</p>
                     <button onClick={() => onComplete(formData as User)} className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3">
                         Accéder à l'espace d'attente <ChevronRight className="w-5 h-5"/>
                     </button>
@@ -245,17 +260,29 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                             {regStep === 1 && (
                                 <div className="space-y-5 animate-fade-in">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <input placeholder="Prénom" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
-                                        <input placeholder="Nom" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
+                                        <input placeholder="Prénom" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none shadow-inner" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+                                        <input placeholder="Nom" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none shadow-inner" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
                                     </div>
-                                    <input type="tel" placeholder="Téléphone" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                                    <div className="relative">
+                                        <span className="absolute left-5 top-5 font-bold text-gray-400">+243</span>
+                                        <input type="tel" placeholder="Téléphone (ex: 812345678)" className="w-full p-5 pl-16 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none shadow-inner" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                                    </div>
                                 </div>
                             )}
 
                             {regStep === 2 && (
                                 <div className="space-y-5 animate-fade-in">
-                                    <input type="email" placeholder="Email" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-                                    <input type="password" placeholder="Mot de passe" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} />
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Informations de connexion</label>
+                                        <input type="email" placeholder="Adresse e-mail" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none shadow-inner" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Mot de passe (Min 6 car.)</label>
+                                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl flex items-center border-2 border-transparent focus-within:border-primary-light transition-all pr-3 shadow-inner">
+                                            <input type={showPassword ? "text" : "password"} placeholder="Choisir un mot de passe" className="bg-transparent w-full p-5 text-sm dark:text-white font-bold outline-none" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} />
+                                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-400 p-2">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
@@ -269,16 +296,25 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                                             <Briefcase size={24} /> Entreprise
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <select className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-black text-sm uppercase appearance-none" value={formData.commune} onChange={e => setFormData({...formData, commune: e.target.value})}>
-                                            {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                        <input placeholder="Quartier" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-black text-sm uppercase" value={formData.neighborhood} onChange={e => setFormData({...formData, neighborhood: e.target.value})} />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Commune</label>
+                                            <div className="relative">
+                                                <Globe size={14} className="absolute left-4 top-4 text-gray-400" />
+                                                <select className="w-full p-4 pl-10 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-black text-xs uppercase appearance-none dark:text-white shadow-inner" value={formData.commune} onChange={e => setFormData({...formData, commune: e.target.value})}>
+                                                    {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Quartier</label>
+                                            <input placeholder="ex: Quartier GB" className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-none outline-none font-black text-xs uppercase dark:text-white shadow-inner" value={formData.neighborhood} onChange={e => setFormData({...formData, neighborhood: e.target.value})} />
+                                        </div>
                                     </div>
-                                    <textarea rows={2} placeholder="Adresse précise..." className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none resize-none" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <input type="checkbox" className="w-5 h-5 accent-primary" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} />
-                                        <span className="text-xs text-gray-500 font-bold">J'accepte les conditions d'utilisation.</span>
+                                    <textarea rows={2} placeholder="Adresse précise (N°, Rue, Référence...)" className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent focus:border-primary-light text-sm font-bold dark:text-white outline-none resize-none shadow-inner" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                        <input type="checkbox" className="w-5 h-5 accent-primary rounded-lg" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} />
+                                        <span className="text-[11px] text-gray-500 font-bold group-hover:text-primary transition-colors">J'accepte les conditions d'utilisation et la politique de confidentialité.</span>
                                     </label>
                                 </div>
                             )}
@@ -289,26 +325,26 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
                 <div className="shrink-0 space-y-5 pt-5 border-t border-gray-100 dark:border-gray-800">
                     <div className="flex gap-4">
                         {regStep > 1 && !showLogin && (
-                            <button onClick={() => setRegStep(prev => prev - 1)} className="p-5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-2xl">
+                            <button onClick={() => setRegStep(prev => prev - 1)} className="p-5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-2xl active:scale-95 transition-all">
                                 <ArrowLeft className="w-6 h-6" />
                             </button>
                         )}
                         <button 
                             onClick={showLogin ? handleLoginSubmit : (regStep === 3 ? handleRegisterSubmit : nextStep)} 
                             disabled={isLoading} 
-                            className="flex-1 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-sm bg-primary shadow-lg flex items-center justify-center gap-3"
+                            className="flex-1 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-sm bg-primary shadow-xl shadow-green-500/20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-50"
                         >
-                            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (showLogin ? 'Se connecter' : (regStep === 3 ? 'S\'inscrire' : 'Suivant'))}
+                            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (showLogin ? 'Se connecter' : (regStep === 3 ? 'Finaliser l\'inscription' : 'Continuer'))}
                             {!isLoading && <ChevronRight className="w-5 h-5" />}
                         </button>
                     </div>
 
                     <div className="flex flex-col items-center gap-5">
-                        <button onClick={() => { setShowLogin(!showLogin); setError(null); }} className="text-sm font-black text-secondary hover:underline">
-                            {showLogin ? "Nouveau ? Créer un compte" : "Déjà membre ? Se connecter"}
+                        <button onClick={() => { setShowLogin(!showLogin); setError(null); setRegStep(1); }} className="text-sm font-black text-secondary hover:underline">
+                            {showLogin ? "Nouveau ici ? Créer un compte" : "Déjà membre ? Se connecter"}
                         </button>
-                        <button onClick={onBackToLanding} className="text-xs font-black text-gray-400 flex items-center gap-2 uppercase tracking-widest">
-                            <ArrowLeft className="w-4 h-4" /> Accueil
+                        <button onClick={onBackToLanding} className="text-xs font-black text-gray-400 flex items-center gap-2 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                            <ArrowLeft className="w-4 h-4" /> Retour au site
                         </button>
                     </div>
                 </div>
