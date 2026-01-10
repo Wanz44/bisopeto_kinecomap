@@ -1,16 +1,18 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
     ArrowLeft, Bell, Globe, Lock, Moon, Sun, Shield, 
     ChevronRight, LogOut, Smartphone, Mail, Save, X, 
     Fingerprint, Palette, Terminal, Sparkles, ShieldAlert, RotateCcw, 
-    Settings as SettingsIcon, Upload, ImageIcon, Link as LinkIcon, RefreshCcw, Info,
+    Settings as SettingsIcon, Upload, ImageIcon, Link as LinkIcon, RefreshCw, Info,
     Trash2, AlertCircle, Database, Zap, ShieldCheck, Activity, Search, Wrench, Cloud, CloudOff, Loader2,
-    Monitor, Check
+    Monitor, Check, Map as MapIcon, Camera, Bot, Wifi, HardDrive,
+    // Fix: Added missing icon imports
+    MapPin, CheckCircle, Clock
 } from 'lucide-react';
 import { Theme, User, Language, UserType, AppView, DatabaseHealth, SystemSettings } from '../types';
 import { NotificationService } from '../services/notificationService';
 import { SettingsAPI, StorageAPI } from '../services/api';
+import { OfflineManager } from '../services/offlineManager';
 
 interface SettingsProps {
     user: User;
@@ -47,28 +49,77 @@ export const Settings: React.FC<SettingsProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const [healthReport, setHealthReport] = useState<DatabaseHealth | null>(null);
     
+    // Diagnostic State
+    const [diagnosticStep, setDiagnosticStep] = useState<number>(0);
+    const [diagnosticResults, setDiagnosticResults] = useState<{
+        cloud: 'ok' | 'fail' | 'pending',
+        ia: 'ok' | 'fail' | 'pending',
+        geo: 'ok' | 'fail' | 'pending',
+        camera: 'ok' | 'fail' | 'pending',
+        offline: 'ok' | 'fail' | 'pending'
+    }>({ cloud: 'pending', ia: 'pending', geo: 'pending', camera: 'pending', offline: 'pending' });
+
     const [tempLogo, setTempLogo] = useState(appLogo);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoInputType, setLogoInputType] = useState<'upload' | 'url'>('upload');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleCheckDatabase = async () => {
+    const runFullDiagnostic = async () => {
         setIsChecking(true);
+        setDiagnosticStep(1);
+        setDiagnosticResults({ cloud: 'pending', ia: 'pending', geo: 'pending', camera: 'pending', offline: 'pending' });
+
+        // 1. Cloud Check
         try {
             const report = await SettingsAPI.checkDatabaseIntegrity();
             setHealthReport(report);
-            if (onToast) onToast("Audit de la base de données terminé", "success");
-        } catch (e) {
-            if (onToast) onToast("Échec du diagnostic", "error");
-        } finally {
-            setIsChecking(false);
+            setDiagnosticResults(prev => ({ ...prev, cloud: 'ok' }));
+        } catch {
+            setDiagnosticResults(prev => ({ ...prev, cloud: 'fail' }));
         }
+        
+        setDiagnosticStep(2);
+        // 2. IA Check
+        const hasApiKey = !!process.env.API_KEY;
+        setDiagnosticResults(prev => ({ ...prev, ia: hasApiKey ? 'ok' : 'fail' }));
+
+        setDiagnosticStep(3);
+        // 3. Geo Check
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                () => setDiagnosticResults(prev => ({ ...prev, geo: 'ok' })),
+                () => setDiagnosticResults(prev => ({ ...prev, geo: 'fail' }))
+            );
+        } else {
+            setDiagnosticResults(prev => ({ ...prev, geo: 'fail' }));
+        }
+
+        setDiagnosticStep(4);
+        // 4. Camera Check
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop());
+            setDiagnosticResults(prev => ({ ...prev, camera: 'ok' }));
+        } catch {
+            setDiagnosticResults(prev => ({ ...prev, camera: 'fail' }));
+        }
+
+        setDiagnosticStep(5);
+        // 5. Offline Check
+        const swActive = !!navigator.serviceWorker.controller;
+        setDiagnosticResults(prev => ({ ...prev, offline: swActive ? 'ok' : 'fail' }));
+
+        setTimeout(() => {
+            setIsChecking(false);
+            setDiagnosticStep(6);
+            if (onToast) onToast("Diagnostic système terminé", "info");
+        }, 1000);
     };
 
     const handleRepairDatabase = async () => {
         if (window.confirm("Lancer la réparation automatique ? Cela corrigera les structures sans effacer vos données.")) {
             await SettingsAPI.repairDatabase();
-            await handleCheckDatabase();
+            await runFullDiagnostic();
             if (onToast) onToast("Base de données réparée", "success");
         }
     };
@@ -246,9 +297,10 @@ export const Settings: React.FC<SettingsProps> = ({
                             <div className="mt-8 flex justify-center">
                                 <button 
                                     onClick={() => { setTempLogo(DEFAULT_LOGO); setLogoFile(null); }}
+                                    // Fix: Changed RefreshCcw to RefreshCw
                                     className="flex items-center gap-2 text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors"
                                 >
-                                    <RefreshCcw size={14} /> Restaurer le logo par défaut
+                                    <RefreshCw size={14} /> Restaurer le logo par défaut
                                 </button>
                             </div>
                         </div>
@@ -272,50 +324,83 @@ export const Settings: React.FC<SettingsProps> = ({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 pb-24 no-scrollbar">
-                    <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 space-y-6 shadow-sm">
+                    <div className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-800 space-y-8 shadow-sm">
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-black dark:text-white uppercase tracking-tight flex items-center gap-2">
-                                <Database size={20} className="text-primary" /> Audit du Cloud
+                                <Activity size={20} className="text-primary" /> Diagnostic Complet
                             </h3>
                             <button 
-                                onClick={handleCheckDatabase}
+                                onClick={runFullDiagnostic}
                                 disabled={isChecking}
-                                className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-gray-200"
+                                className="bg-gray-900 dark:bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all shadow-xl shadow-blue-500/20"
                             >
-                                {isChecking ? <RefreshCcw size={14} className="animate-spin" /> : <Activity size={14} />}
+                                {isChecking ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                                 Lancer Diagnostic
                             </button>
                         </div>
 
-                        {healthReport && (
-                            <div className="space-y-4 animate-fade-in">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className={`p-4 rounded-2xl border flex items-center justify-between ${healthReport.status === 'healthy' ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
-                                        <div className="flex items-center gap-3">
-                                            <ShieldCheck size={24} />
-                                            <div>
-                                                <p className="text-sm font-black uppercase">Santé</p>
-                                                <p className="text-[10px] font-bold opacity-70">{healthReport.status.toUpperCase()}</p>
-                                            </div>
+                        {/* Diagnostic Steps Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {[
+                                { id: 'cloud', label: 'Cloud Supabase', icon: Cloud, status: diagnosticResults.cloud },
+                                { id: 'ia', label: 'Expertise IA (Gemini)', icon: Bot, status: diagnosticResults.ia },
+                                // Fix: Added missing MapPin icon usage
+                                { id: 'geo', label: 'Géolocalisation SIG', icon: MapPin, status: diagnosticResults.geo },
+                                { id: 'camera', label: 'Capteur Optique', icon: Camera, status: diagnosticResults.camera },
+                                { id: 'offline', label: 'Service Worker', icon: HardDrive, status: diagnosticResults.offline },
+                            ].map((step, i) => (
+                                <div key={step.id} className={`p-5 rounded-3xl border flex items-center justify-between transition-all ${
+                                    step.status === 'ok' ? 'bg-green-50 border-green-100 text-green-700' : 
+                                    step.status === 'fail' ? 'bg-red-50 border-red-100 text-red-700' : 
+                                    'bg-gray-50 border-gray-100 text-gray-400'
+                                }`}>
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                            step.status === 'ok' ? 'bg-green-100' : 
+                                            step.status === 'fail' ? 'bg-red-100' : 
+                                            'bg-white dark:bg-gray-800'
+                                        }`}>
+                                            <step.icon size={20} />
                                         </div>
-                                        <span className="text-xl font-black">{healthReport.totalSizeKB} KB</span>
+                                        <span className="font-black text-xs uppercase tracking-tight">{step.label}</span>
                                     </div>
-                                    <div className={`p-4 rounded-2xl border flex items-center justify-between ${healthReport.supabaseConnected ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-orange-50 border-orange-100 text-orange-700'}`}>
-                                        <div className="flex items-center gap-3">
-                                            {healthReport.supabaseConnected ? <Cloud size={24} /> : <CloudOff size={24} />}
-                                            <div>
-                                                <p className="text-sm font-black uppercase">Sync</p>
-                                                <p className="text-[10px] font-bold opacity-70">{healthReport.supabaseConnected ? 'ACTIF' : 'HORS-LIGNE'}</p>
-                                            </div>
+                                    <div className="shrink-0">
+                                        {/* Fix: Added missing CheckCircle icon usage */}
+                                        {step.status === 'ok' ? <CheckCircle size={18} /> : 
+                                         step.status === 'fail' ? <AlertCircle size={18} /> : 
+                                         isChecking && diagnosticStep === (i+1) ? <Loader2 size={18} className="animate-spin" /> :
+                                         /* Fix: Added missing Clock icon usage */
+                                         <Clock size={18} className="opacity-30" />}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {healthReport && (
+                            <div className="space-y-4 pt-4 border-t dark:border-gray-800 animate-fade-in">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Rapport d'audit Cloud</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="p-5 bg-gray-50 dark:bg-gray-800 rounded-3xl border dark:border-gray-700">
+                                        <p className="text-[8px] font-black text-gray-400 uppercase mb-2">Taille du flux</p>
+                                        <p className="text-xl font-black dark:text-white">{healthReport.totalSizeKB} KB</p>
+                                    </div>
+                                    <div className="p-5 bg-gray-50 dark:bg-gray-800 rounded-3xl border dark:border-gray-700">
+                                        <p className="text-[8px] font-black text-gray-400 uppercase mb-2">Connectivité Live</p>
+                                        <div className="flex items-center gap-2 text-green-500">
+                                            <Wifi size={18} className="animate-pulse" />
+                                            <span className="font-black text-xs">ACTIF</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-2">
                                     {healthReport.tables.map(table => (
-                                        <div key={table.name} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border dark:border-gray-700 flex justify-between items-center">
-                                            <p className="text-[10px] font-black text-gray-400 uppercase">{table.name}</p>
-                                            <span className="text-sm font-black dark:text-white">{table.count}</span>
+                                        <div key={table.name} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border dark:border-gray-700 flex justify-between items-center group hover:border-blue-500 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <Database size={14} className="text-gray-400 group-hover:text-blue-500" />
+                                                <p className="text-[10px] font-black text-gray-400 uppercase group-hover:text-blue-500">{table.name}</p>
+                                            </div>
+                                            <span className="text-sm font-black dark:text-white">{table.count} entrées</span>
                                         </div>
                                     ))}
                                 </div>
@@ -328,13 +413,13 @@ export const Settings: React.FC<SettingsProps> = ({
                             <AlertCircle size={20} />
                             <h3 className="text-lg font-black uppercase tracking-tight">Zone de Danger</h3>
                         </div>
-                        <p className="text-xs text-red-500 font-bold uppercase opacity-70">Les actions suivantes sont irréversibles et impactent le Cloud Supabase.</p>
+                        <p className="text-xs text-red-500 font-bold uppercase opacity-70">Les actions suivantes sont irréversibles et impactent le Cloud Supabase de production.</p>
                         <button 
                             onClick={handleFactoryReset}
                             disabled={isResetting}
                             className="w-full py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-xl shadow-red-500/20 flex items-center justify-center gap-2"
                         >
-                            {isResetting ? <RefreshCcw size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                            {isResetting ? <RefreshCw size={18} className="animate-spin" /> : <Trash2 size={18} />}
                             Réinitialisation Complète
                         </button>
                     </div>

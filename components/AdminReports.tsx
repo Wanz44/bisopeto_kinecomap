@@ -10,7 +10,8 @@ import {
     Maximize2, ChevronRight, MessageCircle, Check, Calendar, User, UserPlus,
     RotateCcw, Target, FileSpreadsheet, Eraser, CalendarDays, SlidersHorizontal,
     UserCircle, Activity, BarChart3, Image as ImageIcon, RefreshCw, SortAsc, SortDesc,
-    Timer, Flame, DownloadCloud, Layers, Radio, ZoomIn
+    // Added Bot icon to fix 'Cannot find name Bot' error
+    Timer, Flame, DownloadCloud, Layers, Radio, ZoomIn, Bot
 } from 'lucide-react';
 import { WasteReport, User as AppUser, UserType } from '../types';
 import { ReportsAPI, UserAPI, mapReport } from '../services/api';
@@ -271,10 +272,10 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
     return (
         <div className="flex flex-col h-full bg-[#F5F7FA] dark:bg-gray-950 transition-colors duration-300 relative overflow-hidden">
             
-            <div className="bg-white dark:bg-gray-900 p-6 shadow-sm border-b dark:border-gray-800 sticky top-0 z-40 shrink-0">
+            <div className="bg-white dark:bg-gray-900 px-6 py-5 shadow-sm border-b dark:border-gray-800 sticky top-0 z-50 shrink-0">
                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-6">
                     <div className="flex items-center gap-4">
-                        <button onClick={onBack} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all"><ArrowLeft size={20} /></button>
+                        <button onClick={onBack} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all shadow-sm"><ArrowLeft size={20} /></button>
                         <div>
                             <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">Centre SIG</h2>
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
@@ -295,7 +296,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                     <kpi.icon size={16} className={kpi.pulse ? 'animate-bounce' : ''} />
                                 </div>
                                 <div>
-                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-1">{kpi.label}</p>
+                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-1.5">{kpi.label}</p>
                                     <p className="text-sm font-black dark:text-white leading-none">{kpi.val}</p>
                                 </div>
                             </div>
@@ -303,21 +304,21 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                     </div>
 
                     <div className="flex gap-2">
-                        <button onClick={exportToCSV} className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl hover:scale-105 transition-all" title="Exporter CSV"><DownloadCloud size={20}/></button>
-                        <button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl transition-all ${showFilters ? 'bg-[#2962FF] text-white shadow-lg shadow-blue-500/20' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}><SlidersHorizontal size={20}/></button>
-                        <button onClick={() => loadData(0, true)} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-2xl hover:text-blue-500 transition-colors"><RefreshCw size={20} className={isLoading ? 'animate-spin' : ''}/></button>
+                        <button onClick={exportToCSV} className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl hover:scale-105 transition-all shadow-sm" title="Exporter CSV"><DownloadCloud size={20}/></button>
+                        <button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl transition-all shadow-sm ${showFilters ? 'bg-[#2962FF] text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}><SlidersHorizontal size={20}/></button>
+                        <button onClick={() => loadData(0, true)} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-2xl hover:text-blue-500 transition-colors shadow-sm"><RefreshCw size={20} className={isLoading ? 'animate-spin' : ''}/></button>
                     </div>
                 </div>
 
                 {selectedIds.length > 0 && (
-                    <div className="flex items-center justify-between p-4 bg-[#2962FF] text-white rounded-2xl mb-4 animate-fade-in-up shadow-xl">
-                        <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between p-4 bg-[#2962FF] text-white rounded-[1.8rem] mb-4 animate-fade-in-up shadow-2xl">
+                        <div className="flex items-center gap-4 ml-2">
                             <span className="text-xs font-black uppercase tracking-widest">{selectedIds.length} éléments sélectionnés</span>
                             <button onClick={() => setSelectedIds([])} className="text-white/60 hover:text-white"><X size={16}/></button>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={() => setShowAssignModal(true)} className="px-5 py-2.5 bg-white text-[#2962FF] rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all"><Truck size={14}/> Déploiement groupé</button>
-                            <button onClick={handleBatchDelete} disabled={isDeleting} className="p-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors shadow-lg disabled:opacity-50">
+                            <button onClick={() => setShowAssignModal(true)} className="px-6 py-3 bg-white text-[#2962FF] rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all"><Truck size={14}/> Déploiement groupé</button>
+                            <button onClick={handleBatchDelete} disabled={isDeleting} className="p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors shadow-lg disabled:opacity-50">
                                 {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18}/>}
                             </button>
                         </div>
@@ -325,42 +326,43 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                 )}
 
                 {showFilters && (
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2rem] border dark:border-gray-800 mt-2 animate-fade-in shadow-inner grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                         <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Zone Kinshasa</label>
-                            <select value={filters.commune} onChange={e => setFilters({...filters, commune: e.target.value})} className="w-full p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-black text-[10px] uppercase dark:text-white">
+                    <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2.5rem] border dark:border-gray-800 mt-2 animate-fade-in shadow-inner grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Zone Kinshasa</label>
+                            <select value={filters.commune} onChange={e => setFilters({...filters, commune: e.target.value})} className="w-full p-3.5 bg-white dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-[11px] uppercase dark:text-white appearance-none shadow-sm">
                                 <option value="all">Tout Kinshasa</option>
                                 {KINSHASA_COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
-                         <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">État Mission</label>
-                            <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="w-full p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-black text-[10px] uppercase dark:text-white">
+                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">État Mission</label>
+                            <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="w-full p-3.5 bg-white dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-[11px] uppercase dark:text-white appearance-none shadow-sm">
                                 <option value="all">Tous les statuts</option>
                                 {STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                             </select>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Flux de déchets</label>
-                            <select value={filters.wasteType} onChange={e => setFilters({...filters, wasteType: e.target.value})} className="w-full p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-black text-[10px] uppercase dark:text-white">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Flux de déchets</label>
+                            <select value={filters.wasteType} onChange={e => setFilters({...filters, wasteType: e.target.value})} className="w-full p-3.5 bg-white dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-[11px] uppercase dark:text-white appearance-none shadow-sm">
                                 <option value="all">Toutes catégories</option>
                                 {WASTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
                         <div className="flex items-end gap-2">
-                             <button onClick={handleResetFilters} className="flex-1 py-3 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-black text-[10px] uppercase tracking-widest">Reset</button>
-                             <button onClick={handleApplyFilters} className="flex-[2] py-3 bg-gray-900 dark:bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Appliquer</button>
+                             <button onClick={handleResetFilters} className="flex-1 py-4 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95">Reset</button>
+                             <button onClick={handleApplyFilters} className="flex-[2] py-4 bg-gray-900 dark:bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all">Appliquer</button>
                         </div>
                     </div>
                 )}
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
-                <div className="w-full md:w-[450px] bg-white dark:bg-gray-950 border-r dark:border-gray-800 flex flex-col overflow-hidden">
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar pb-32">
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                {/* List View with Responsive Width */}
+                <div className="w-full lg:w-[450px] bg-white dark:bg-gray-950 border-r dark:border-gray-800 flex flex-col overflow-hidden shrink-0">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
                         {reports.length === 0 && !isLoading ? (
-                            <div className="py-20 text-center opacity-30">
-                                <ImageIcon size={48} className="mx-auto mb-4" />
+                            <div className="py-32 text-center opacity-30">
+                                <ImageIcon size={64} className="mx-auto mb-6" />
                                 <p className="text-xs font-black uppercase tracking-widest">Aucun flux de données</p>
                             </div>
                         ) : reports.map((report, idx) => {
@@ -371,52 +373,52 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                     key={report.id}
                                     ref={idx === reports.length - 1 ? lastElementRef : null}
                                     onClick={() => { setSelectedReport(report); setViewMode('before'); }}
-                                    className={`p-5 rounded-[2.5rem] border-2 transition-all cursor-pointer relative group flex items-center gap-4 ${selectedReport?.id === report.id ? 'bg-blue-50 dark:bg-blue-900/10 border-[#2962FF] shadow-lg' : 'bg-white dark:bg-gray-900 border-gray-50 dark:border-gray-800'}`}
+                                    className={`p-5 rounded-[2.5rem] border-2 transition-all cursor-pointer relative group flex items-center gap-5 ${selectedReport?.id === report.id ? 'bg-blue-50 dark:bg-blue-900/10 border-[#2962FF] shadow-lg' : 'bg-white dark:bg-gray-900 border-gray-50 dark:border-gray-800'}`}
                                 >
                                     <div 
                                         onClick={(e) => { 
                                             e.stopPropagation(); 
                                             isSelected ? setSelectedIds(selectedIds.filter(id => id !== report.id)) : setSelectedIds([...selectedIds, report.id]); 
                                         }} 
-                                        className={`w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${isSelected ? 'bg-[#2962FF] border-[#2962FF] text-white shadow-inner' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400'}`}
+                                        className={`w-7 h-7 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${isSelected ? 'bg-[#2962FF] border-[#2962FF] text-white shadow-inner' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400 shadow-sm'}`}
                                     >
-                                        {isSelected && <Check size={12} strokeWidth={4}/>}
+                                        {isSelected && <Check size={14} strokeWidth={5}/>}
                                     </div>
                                     
                                     <div className="relative shrink-0">
-                                        <img src={report.imageUrl} className="w-16 h-16 rounded-[1.5rem] object-cover border dark:border-gray-700" alt="Déchet" />
-                                        <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${report.urgency === 'high' ? 'bg-red-500 animate-pulse' : 'bg-orange-500'}`}></div>
+                                        <img src={report.imageUrl} className="w-16 h-16 rounded-[1.5rem] object-cover border dark:border-gray-700 shadow-md" alt="Déchet" />
+                                        <div className={`absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full border-[3px] border-white dark:border-gray-900 ${report.urgency === 'high' ? 'bg-red-500 animate-pulse' : 'bg-orange-500'}`}></div>
                                     </div>
                                     
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start">
-                                            <h4 className="font-black text-gray-900 dark:text-white uppercase text-[11px] truncate leading-none mb-1">{report.wasteType}</h4>
-                                            {/* TIMER BADGE INTEGRATED */}
-                                            <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1.5 shrink-0 border ${sla.badgeClass}`} title="Temps écoulé depuis signalement">
+                                    <div className="flex-1 min-w-0 py-1">
+                                        <div className="flex justify-between items-start mb-1.5">
+                                            <h4 className="font-black text-gray-900 dark:text-white uppercase text-[12px] truncate leading-none">{report.wasteType}</h4>
+                                            <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1.5 shrink-0 border ${sla.badgeClass}`} title="Temps écoulé">
                                                 <Timer size={10} className={sla.iconColor}/> {sla.text}
                                             </span>
                                         </div>
-                                        <p className="text-[9px] text-gray-400 font-bold uppercase truncate">{report.commune} • {new Date(report.date).toLocaleDateString()}</p>
-                                        <div className="flex items-center justify-between mt-2">
-                                             <span className={`px-2 py-0.5 rounded text-[7px] font-black uppercase text-white ${STATUSES.find(s=>s.key===report.status)?.color || 'bg-gray-500'}`}>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase truncate mb-2">{report.commune} • {new Date(report.date).toLocaleDateString()}</p>
+                                        <div className="flex items-center justify-between">
+                                             <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase text-white shadow-sm ${STATUSES.find(s=>s.key===report.status)?.color || 'bg-gray-500'}`}>
                                                  {STATUSES.find(s=>s.key===report.status)?.label || report.status}
                                              </span>
-                                             <div className="flex gap-1 items-center">
-                                                <button disabled={isDeleting} onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {isDeleting && selectedReport?.id === report.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                                             <div className="flex gap-1.5 items-center">
+                                                <button disabled={isDeleting} onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {isDeleting && selectedReport?.id === report.id ? <Loader2 size={16} className="animate-spin"/> : <Trash2 size={16}/>}
                                                 </button>
-                                                <ChevronRight size={14} className="text-gray-300 group-hover:text-[#2962FF] transition-colors" />
+                                                <ChevronRight size={18} className="text-gray-300 group-hover:text-[#2962FF] transition-all transform group-hover:translate-x-1" />
                                              </div>
                                         </div>
                                     </div>
                                 </div>
                             );
                         })}
-                        {isLoading && <div className="flex justify-center py-4"><Loader2 className="animate-spin text-[#2962FF]" /></div>}
+                        {isLoading && <div className="flex justify-center py-6"><Loader2 className="animate-spin text-[#2962FF]" size={32} /></div>}
                     </div>
                 </div>
 
-                <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 z-0">
+                {/* Map Interface - Expands to fill available space */}
+                <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 z-0 h-[40vh] lg:h-auto border-t lg:border-t-0 dark:border-gray-800">
                     <MapContainer center={[-4.325, 15.322]} zoom={12} style={{height: '100%', width: '100%'}} zoomControl={false}>
                         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                         
@@ -436,7 +438,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                                 radius={450}
                                 pathOptions={{ 
                                     fillColor: r.urgency === 'high' ? '#FF5252' : '#FFB300', 
-                                    fillOpacity: 0.2, 
+                                    fillOpacity: 0.25, 
                                     color: 'transparent' 
                                 }}
                             />
@@ -444,103 +446,105 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                     </MapContainer>
 
                     <div className="absolute top-6 right-6 z-[500] flex flex-col gap-3">
-                        <div className="bg-white dark:bg-gray-900 p-1.5 rounded-2xl shadow-2xl border dark:border-gray-800 flex flex-col gap-1">
-                            <button onClick={() => setMapDisplay('markers')} className={`p-3 rounded-xl transition-all ${mapDisplay === 'markers' ? 'bg-[#2962FF] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`} title="Mode Marqueurs"><MapIcon size={20}/></button>
-                            <button onClick={() => setMapDisplay('heatmap')} className={`p-3 rounded-xl transition-all ${mapDisplay === 'heatmap' ? 'bg-orange-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`} title="Analyse de Densité (Heatmap)"><Flame size={20}/></button>
+                        <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md p-1.5 rounded-2xl shadow-2xl border dark:border-gray-800 flex flex-col gap-1.5">
+                            <button onClick={() => setMapDisplay('markers')} className={`p-3.5 rounded-xl transition-all shadow-sm ${mapDisplay === 'markers' ? 'bg-[#2962FF] text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`} title="Mode Marqueurs"><MapIcon size={22}/></button>
+                            <button onClick={() => setMapDisplay('heatmap')} className={`p-3.5 rounded-xl transition-all shadow-sm ${mapDisplay === 'heatmap' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`} title="Analyse de Densité"><Flame size={22}/></button>
                         </div>
                     </div>
                 </div>
             </div>
 
+            {/* FULL DETAIL PANEL SLIDE-OUT */}
             {selectedReport && (
-                <div className="fixed inset-0 z-[100] flex justify-end">
+                <div className="fixed inset-0 z-[1000] flex justify-end">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedReport(null)}></div>
-                    <div className="w-full max-w-xl bg-white dark:bg-gray-950 h-full relative z-10 shadow-2xl animate-fade-in-left flex flex-col border-l dark:border-gray-800 overflow-hidden">
+                    <div className="w-full max-w-xl bg-white dark:bg-gray-950 h-full relative z-10 shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-fade-in-left flex flex-col border-l dark:border-gray-800 overflow-hidden">
                         
                         <div className="p-8 border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center shrink-0">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg ${selectedReport.urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>
-                                    <AlertTriangle size={24}/>
+                            <div className="flex items-center gap-5">
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-xl ${selectedReport.urgency === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>
+                                    <AlertTriangle size={28}/>
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Traitement SIG</h3>
-                                    <div className="mt-1.5 flex items-center gap-2">
-                                        <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1.5 border ${getSLADelay(selectedReport.date).badgeClass}`}>
-                                            <Timer size={12}/> SLA STATUS: {getSLADelay(selectedReport.date).text.toUpperCase()}
+                                    <div className="mt-2.5 flex items-center gap-2">
+                                        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase flex items-center gap-2 border shadow-sm ${getSLADelay(selectedReport.date).badgeClass}`}>
+                                            <Timer size={14}/> SLA STATUS: {getSLADelay(selectedReport.date).text.toUpperCase()}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedReport(null)} className="p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl transition-all"><X size={24}/></button>
+                            <button onClick={() => setSelectedReport(null)} className="p-3.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl transition-all bg-white dark:bg-gray-900 shadow-sm"><X size={26}/></button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar pb-32">
-                            <div className="space-y-4">
-                                <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
-                                    <button onClick={() => setViewMode('before')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'before' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-400'}`}>Signalement</button>
+                        <div className="flex-1 overflow-y-auto p-8 space-y-10 no-scrollbar pb-32">
+                            <div className="space-y-5">
+                                <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit shadow-inner">
+                                    <button onClick={() => setViewMode('before')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'before' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-400'}`}>Signalement</button>
                                     {selectedReport.proofUrl && (
-                                        <button onClick={() => setViewMode('after')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'after' ? 'bg-[#00C853] text-white shadow-sm' : 'text-gray-400'}`}>Preuve Collecte</button>
+                                        <button onClick={() => setViewMode('after')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'after' ? 'bg-[#00C853] text-white shadow-sm' : 'text-gray-400'}`}>Preuve Collecte</button>
                                     )}
                                 </div>
-                                <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl h-80 border-4 border-white dark:border-gray-800 bg-gray-100 group">
-                                    <img src={viewMode === 'before' ? selectedReport.imageUrl : selectedReport.proofUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="Preuve Terrain" />
-                                    <div className={`absolute bottom-4 right-4 px-4 py-2 rounded-xl text-white font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 ${viewMode === 'before' ? 'bg-orange-500' : 'bg-[#00C853]'}`}>
+                                <div className="relative rounded-[3rem] overflow-hidden shadow-2xl h-80 border-[10px] border-white dark:border-gray-800 bg-gray-100 group">
+                                    <img src={viewMode === 'before' ? selectedReport.imageUrl : selectedReport.proofUrl} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt="Preuve Terrain" />
+                                    <div className={`absolute bottom-6 right-6 px-5 py-2.5 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-2 backdrop-blur-md ${viewMode === 'before' ? 'bg-orange-500/80' : 'bg-[#00C853]/80'}`}>
                                         {viewMode === 'before' ? <AlertCircle size={14}/> : <CheckCircle2 size={14}/>}
                                         {viewMode === 'before' ? 'Vue Initiale' : 'Traitement Effectué'}
                                     </div>
                                     <button 
                                         onClick={() => setIsZoomed(true)}
-                                        className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-md text-white rounded-2xl hover:bg-white/40 transition-all shadow-lg"
+                                        className="absolute top-6 right-6 p-4 bg-white/20 backdrop-blur-xl text-white rounded-2xl hover:bg-white/40 transition-all shadow-xl"
                                     >
-                                        <Maximize2 size={20} />
+                                        <Maximize2 size={24} />
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-5 bg-gray-50 dark:bg-gray-900 rounded-3xl border dark:border-gray-800">
-                                    <span className="text-[9px] font-black text-gray-400 uppercase block mb-1">Localité SIG</span>
-                                    <span className="font-black dark:text-white uppercase text-xs flex items-center gap-1.5 truncate"><MapPin size={12} className="text-red-500"/> {selectedReport.commune}</span>
+                            <div className="grid grid-cols-2 gap-5">
+                                <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] border dark:border-gray-800 shadow-inner group">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase block mb-2 tracking-widest">Localité SIG</span>
+                                    <span className="font-black dark:text-white uppercase text-sm flex items-center gap-2 truncate group-hover:text-blue-500 transition-colors"><MapPin size={14} className="text-red-500"/> {selectedReport.commune}</span>
                                 </div>
-                                <div className="p-5 bg-gray-50 dark:bg-gray-900 rounded-3xl border dark:border-gray-800">
-                                    <span className="text-[9px] font-black text-gray-400 uppercase block mb-1">Catégorie</span>
-                                    <span className="font-black dark:text-white uppercase text-xs">{selectedReport.wasteType}</span>
+                                <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] border dark:border-gray-800 shadow-inner">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase block mb-2 tracking-widest">Catégorie</span>
+                                    <span className="font-black dark:text-white uppercase text-sm group-hover:text-blue-500 transition-colors">{selectedReport.wasteType}</span>
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30">
-                                <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Info size={14}/> Analyse du Signalement</h4>
-                                <p className="text-xs text-blue-900 dark:text-blue-200 font-bold italic leading-relaxed">"{selectedReport.comment || 'Analyse automatique Gemini Vision en attente.'}"</p>
+                            <div className="p-8 bg-blue-50 dark:bg-blue-900/10 rounded-[3rem] border border-blue-100 dark:border-blue-900/30 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 -rotate-12 group-hover:rotate-0 transition-transform"><Bot size={150}/></div>
+                                <h4 className="text-[11px] font-black text-blue-500 uppercase tracking-widest mb-4 flex items-center gap-3 relative z-10"><Info size={16}/> Rapport Intelligent AI</h4>
+                                <p className="text-[13px] text-blue-900 dark:text-blue-200 font-bold italic leading-relaxed relative z-10">"{selectedReport.comment || 'Analyse automatique Gemini Vision en attente.'}"</p>
                             </div>
                         </div>
 
-                        <div className="p-8 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-950 flex flex-wrap gap-4 shrink-0 shadow-2xl items-center">
+                        <div className="p-8 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex flex-wrap gap-4 shrink-0 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] items-center">
                             {selectedReport.status === 'pending' && (
                                 <button 
                                     onClick={() => setShowAssignModal(true)} 
-                                    className="flex-1 py-5 bg-[#2962FF] text-white rounded-[1.8rem] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+                                    className="flex-1 py-6 bg-[#2962FF] text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-[0_15px_40px_rgba(41,98,255,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 text-xs"
                                 >
-                                    <Truck size={20}/> Déployer Collecteur
+                                    <Truck size={22}/> Déployer Collecteur
                                 </button>
                             )}
                             {selectedReport.status === 'assigned' && (
-                                <div className="flex-1 p-5 bg-blue-100 dark:bg-blue-900/20 text-blue-600 rounded-3xl border border-blue-200 font-black text-xs text-center uppercase tracking-widest flex items-center justify-center gap-2">
-                                    <Clock size={18} className="animate-spin"/> Mission en cours
+                                <div className="flex-1 p-6 bg-blue-100 dark:bg-blue-900/20 text-blue-600 rounded-[2.2rem] border border-blue-200 font-black text-xs text-center uppercase tracking-widest flex items-center justify-center gap-3">
+                                    <Clock size={20} className="animate-spin"/> Mission en cours
                                 </div>
                             )}
                             {selectedReport.status === 'resolved' && (
-                                <div className="flex-1 p-5 bg-green-500 text-white rounded-3xl font-black text-xs text-center uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg">
-                                    <CheckCircle2 size={20}/> Mission Terminée
+                                <div className="flex-1 p-6 bg-green-500 text-white rounded-[2.2rem] font-black text-xs text-center uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl">
+                                    <CheckCircle2 size={24}/> Mission Terminée
                                 </div>
                             )}
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-3">
                                 <button 
                                     disabled={isDeleting} 
                                     onClick={() => handleDeleteReport(selectedReport.id)} 
-                                    className="p-5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-[1.8rem] hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 dark:border-red-900/30 active:scale-95"
+                                    className="p-6 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-[2rem] hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 dark:border-red-900/30 active:scale-95"
                                 >
-                                    {isDeleting ? <Loader2 className="animate-spin" size={24}/> : <Trash2 size={24}/>}
+                                    {isDeleting ? <Loader2 className="animate-spin" size={28}/> : <Trash2 size={28}/>}
                                 </button>
                             </div>
                         </div>
@@ -552,17 +556,17 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
                 <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 animate-fade-in p-4 md:p-10">
                     <button 
                         onClick={() => setIsZoomed(false)}
-                        className="absolute top-6 right-6 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-xl z-20"
+                        className="absolute top-8 right-8 p-5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-2xl z-20 shadow-2xl active:scale-90"
                     >
-                        <X size={32} />
+                        <X size={36} />
                     </button>
                     <div className="w-full h-full flex items-center justify-center relative">
                         <img 
                             src={zoomedImage} 
-                            className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl animate-scale-up" 
+                            className="max-w-full max-h-full object-contain rounded-3xl shadow-[0_0_100px_rgba(255,255,255,0.1)] animate-scale-up border border-white/5" 
                             alt="Vue détaillée" 
                         />
-                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white font-black uppercase text-[10px] tracking-[0.3em]">
+                        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 px-10 py-5 bg-black/50 backdrop-blur-xl rounded-full border border-white/10 text-white font-black uppercase text-[11px] tracking-[0.4em] shadow-2xl whitespace-nowrap">
                             Biso Peto SIG • Haute Résolution
                         </div>
                     </div>
@@ -570,33 +574,33 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
             )}
 
             {showAssignModal && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAssignModal(false)}></div>
-                    <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-md p-8 relative z-10 shadow-2xl border dark:border-gray-800 animate-scale-up">
-                        <div className="flex justify-between items-center mb-8">
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowAssignModal(false)}></div>
+                    <div className="bg-white dark:bg-gray-950 rounded-[4rem] w-full max-w-lg p-10 relative z-10 shadow-[0_40px_100px_rgba(0,0,0,0.5)] border dark:border-gray-800 animate-scale-up flex flex-col max-h-[85vh]">
+                        <div className="flex justify-between items-center mb-10 shrink-0">
                             <div>
-                                <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Affectation</h3>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Déploiement opérationnel</p>
+                                <h3 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Affectation</h3>
+                                <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mt-2">Sélection du collecteur disponible</p>
                             </div>
-                            <button onClick={() => setShowAssignModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"><X/></button>
+                            <button onClick={() => setShowAssignModal(false)} className="p-3 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-2xl transition-all shadow-inner"><X size={24}/></button>
                         </div>
-                        <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar mb-8">
+                        <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-1">
                             {collectors.length === 0 ? (
-                                <p className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">Aucun agent disponible</p> 
+                                <div className="py-24 text-center text-gray-400 font-black uppercase text-xs tracking-widest opacity-30">Aucun agent disponible</div> 
                             ) : collectors.map(coll => (
                                 <div 
                                     key={coll.id} 
                                     onClick={() => handleAssign(coll.id!)} 
-                                    className="p-5 bg-gray-50 dark:bg-gray-900 rounded-3xl border dark:border-gray-800 flex items-center justify-between cursor-pointer hover:border-blue-500 hover:shadow-md transition-all group"
+                                    className="p-6 bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] border-2 border-transparent hover:border-blue-500 hover:bg-white dark:hover:bg-gray-800 transition-all group cursor-pointer flex items-center justify-between"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center font-black shadow-inner">{coll.firstName[0]}</div>
+                                    <div className="flex items-center gap-5">
+                                        <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner group-hover:scale-105 transition-transform">{coll.firstName[0]}</div>
                                         <div>
-                                            <p className="font-black text-gray-900 dark:text-white uppercase text-xs">{coll.firstName} {coll.lastName}</p>
-                                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{coll.commune}</p>
+                                            <p className="font-black text-gray-900 dark:text-white uppercase text-sm leading-none mb-1.5">{coll.firstName} {coll.lastName}</p>
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-2"><MapPin size={10} className="text-blue-500"/> {coll.commune}</p>
                                         </div>
                                     </div>
-                                    <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                                    <ChevronRight size={22} className="text-gray-300 group-hover:text-blue-500 transition-all transform group-hover:translate-x-1" />
                                 </div>
                             ))}
                         </div>

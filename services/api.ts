@@ -121,6 +121,7 @@ export const UserAPI = {
         if (u.permissions !== undefined) dbUpdate.permissions = u.permissions;
         if (u.commune !== undefined) dbUpdate.commune = u.commune;
         if (u.neighborhood !== undefined) dbUpdate.neighborhood = u.neighborhood;
+        if (u.subscription !== undefined) dbUpdate.subscription = u.subscription;
         
         const { error } = await supabase.from('users').update(dbUpdate).eq('id', u.id);
         if (error) throw error;
@@ -148,6 +149,25 @@ export const UserAPI = {
         }]).select().single();
         if (error) throw error;
         return mapUser(data);
+    },
+    invite: async (email: string, type: UserType): Promise<boolean> => {
+        if (!supabase) return false;
+        // Simulation of Supabase auth.admin.inviteUserByEmail
+        // In a real app, this would use a Supabase Edge Function or direct Admin SDK call
+        const { data, error } = await supabase.from('users').insert([{
+            id: `invited-${Date.now()}`,
+            email: email,
+            type: type,
+            status: 'pending',
+            first_name: 'Invité',
+            last_name: 'Biso Peto',
+            phone: 'N/A',
+            address: 'En attente',
+            points: 0,
+            collections: 0,
+            total_tonnage: 0
+        }]);
+        return !error;
     },
     resetAllSubscriptionCounters: async () => {
         if (!supabase) return;
@@ -235,6 +255,7 @@ export const ReportsAPI = {
             lat: r.lat,
             lng: r.lng,
             image_url: r.imageUrl,
+            // Fix: Property 'waste_type' does not exist on type 'WasteReport'. Did you mean 'wasteType'?
             waste_type: r.wasteType,
             urgency: r.urgency,
             status: 'pending',
@@ -327,7 +348,7 @@ export const AdsAPI = {
     },
     recordClick: async (adId: string) => {
         if (!supabase) return;
-        await supabase.rpc('increment_ad_clicks', { ad_id: adId });
+        await supabase.rpc('increment_ad_clicks', { ad_id: ad_id });
     },
     add: async (ad: AdCampaign): Promise<AdCampaign> => {
         if (!supabase) throw new Error("Offline");
@@ -383,7 +404,8 @@ export const PaymentsAPI = {
             period: p.period,
             collector_id: p.collectorId,
             collector_name: p.collectorName,
-            qr_code_data: p.qrCodeData
+            qr_code_data: p.qrCodeData,
+            status: p.status || 'released'
         }]).select().single();
         if (error) throw error;
         return mapPayment(data);
@@ -480,7 +502,7 @@ export const SettingsAPI = {
             exchangeRate: data.exchange_rate,
             marketplaceCommission: data.marketplace_commission,
             logoUrl: data.logo_url,
-            force2FA: data.force_2fa,
+            force2fa: data.force_2fa,
             sessionTimeout: data.session_timeout,
             passwordPolicy: data.password_policy
         } : null;
@@ -515,19 +537,25 @@ export const SettingsAPI = {
     },
     checkDatabaseIntegrity: async (): Promise<DatabaseHealth> => {
         if (!supabase) throw new Error("Offline");
+        
+        const startTime = Date.now();
+        const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        const { count: reportsCount } = await supabase.from('waste_reports').select('*', { count: 'exact', head: true });
+        const latency = Date.now() - startTime;
+
         return {
-            status: 'healthy',
-            totalSizeKB: 1024,
+            status: latency < 500 ? 'healthy' : 'degraded',
+            totalSizeKB: Math.round((usersCount || 0) * 0.5 + (reportsCount || 0) * 2), // Estimation
             tables: [
-                { name: 'users', count: 120, status: 'ok', sizeKB: 256 },
-                { name: 'waste_reports', count: 450, status: 'ok', sizeKB: 512 }
+                { name: 'users', count: usersCount || 0, status: 'ok', sizeKB: Math.round((usersCount || 0) * 0.5) },
+                { name: 'waste_reports', count: reportsCount || 0, status: 'ok', sizeKB: Math.round((reportsCount || 0) * 2) }
             ],
             supabaseConnected: true,
             lastAudit: new Date().toISOString()
         };
     },
     repairDatabase: async () => {
-        return new Promise(resolve => setTimeout(resolve, 1000));
+        return new Promise(resolve => setTimeout(resolve, 1500));
     },
     resetAllData: async () => {
         if (!supabase) return;

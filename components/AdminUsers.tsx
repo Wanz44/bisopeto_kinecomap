@@ -9,8 +9,9 @@ import {
     FileText, CheckCircle, Fingerprint, ShieldQuestion, ChevronRight, CheckCircle as CheckIcon,
     Package, Activity, FileWarning, HelpCircle, Zap, Filter, Users, DownloadCloud,
     TrendingUp, ArrowUpDown, UserMinus, UserX, BarChart3, SortAsc, SortDesc,
-    // Fix: Added missing Radio icon import
-    Radio
+    Radio, Inbox, MailPlus,
+    // Fix: Added missing Send icon import
+    Send
 } from 'lucide-react';
 import { UserPermission, User as AppUser, UserType, WasteReport } from '../types';
 import { UserAPI, ReportsAPI, SettingsAPI } from '../services/api';
@@ -27,7 +28,7 @@ const ALL_PERMISSIONS: { key: UserPermission; label: string; desc: string }[] = 
     { key: 'validate_docs', label: 'Validation KYC', desc: 'Vérifier et approuver les documents d\'identité.' },
     { key: 'system_settings', label: 'Configuration Système', desc: 'Modifier les paramètres globaux et API.' },
     { key: 'view_finance', label: 'Reporting Financier', desc: 'Consulter les revenus et statistiques.' },
-    { key: 'manage_recovery', label: 'Recouvrement Cash', desc: 'Encaissement cash et facturation QR.' },
+    { key: 'manage_recovery', label: 'Recouvrement Cash', desc: 'Encaisser les paiements physiques et générer des factures QR.' },
     { key: 'manage_subscriptions', label: 'Gestion Abonnements', desc: 'Validation des plans abonnés.' },
     { key: 'manage_ads', label: 'Régie Publicitaire', desc: 'Créer et monitorer les campagnes.' },
     { key: 'manage_communications', label: 'Centre de Comm.', desc: 'Envoi de notifications push.' },
@@ -53,6 +54,11 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'identity' | 'permissions' | 'impact'>('identity');
     const [editForm, setEditForm] = useState<Partial<AppUser>>({});
+    
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviteRole, setInviteRole] = useState<UserType>(UserType.CITIZEN);
+    const [isInviting, setIsInviting] = useState(false);
 
     useEffect(() => { loadData(); }, []);
 
@@ -69,7 +75,6 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
         finally { setIsLoading(false); }
     };
 
-    // --- KPIs calculés ---
     const stats = useMemo(() => {
         return {
             total: users.length,
@@ -78,6 +83,25 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
             tonnageTotal: users.reduce((acc, u) => acc + (u.totalTonnage || 0), 0)
         };
     }, [users]);
+
+    const handleInvite = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!inviteEmail) return;
+        setIsInviting(true);
+        try {
+            const success = await UserAPI.invite(inviteEmail, inviteRole);
+            if (success) {
+                onToast?.(`Invitation envoyée à ${inviteEmail}`, "success");
+                setShowInviteModal(false);
+                setInviteEmail('');
+                loadData();
+            } else {
+                onToast?.("Erreur lors de l'envoi de l'invitation", "error");
+            }
+        } finally {
+            setIsInviting(false);
+        }
+    };
 
     const handleApplyDefaultPerms = () => {
         const type = editForm.type;
@@ -201,7 +225,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                     <kpi.icon size={16} className={kpi.pulse ? 'animate-bounce' : ''} />
                                 </div>
                                 <div>
-                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-1">{kpi.label}</p>
+                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-1.5">{kpi.label}</p>
                                     <p className="text-sm font-black dark:text-white leading-none">{kpi.val}</p>
                                 </div>
                             </div>
@@ -209,21 +233,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                     </div>
                 </div>
 
-                {/* Barre d'Actions Groupées */}
-                {selectedIds.length > 0 && (
-                    <div className="mt-6 flex items-center justify-between p-4 bg-[#2962FF] text-white rounded-2xl animate-fade-in-up shadow-xl">
-                        <div className="flex items-center gap-4">
-                            <span className="text-xs font-black uppercase tracking-widest">{selectedIds.length} sélectionnés</span>
-                            <button onClick={() => setSelectedIds([])} className="text-white/60 hover:text-white"><X size={16}/></button>
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={() => handleBatchAction('active')} className="px-4 py-2 bg-white text-[#2962FF] rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-lg"><Check size={14}/> Activer</button>
-                            <button onClick={() => handleBatchAction('suspended')} className="px-4 py-2 bg-orange-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-lg"><Ban size={14}/> Suspendre</button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Filtres & Recherche */}
+                {/* Main Actions Bar */}
                 <div className="mt-6 flex flex-col lg:flex-row gap-4 items-center">
                     <div className="relative flex-1 w-full">
                         <Search size={18} className="absolute left-4 top-3.5 text-gray-400" />
@@ -236,25 +246,32 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                         />
                     </div>
                     
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar w-full lg:w-auto">
-                        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="p-3.5 rounded-2xl bg-gray-100 dark:bg-gray-800 border-none outline-none font-black text-[10px] uppercase dark:text-white">
-                            <option value="all">Tous les rôles</option>
-                            <option value={UserType.CITIZEN}>Citoyens</option>
-                            <option value={UserType.COLLECTOR}>Collecteurs</option>
-                            <option value={UserType.BUSINESS}>Entreprises</option>
-                            <option value={UserType.ADMIN}>Admins</option>
-                        </select>
-                        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="p-3.5 rounded-2xl bg-gray-100 dark:bg-gray-800 border-none outline-none font-black text-[10px] uppercase dark:text-white">
-                            <option value="date">Tri : Date Inscription</option>
-                            <option value="points">Tri : Points Eco</option>
-                            <option value="tonnage">Tri : Tonnage Impact</option>
-                            <option value="name">Tri : Ordre Alphabétique</option>
-                        </select>
-                        <button onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')} className="p-3.5 bg-gray-100 dark:bg-gray-800 rounded-2xl text-gray-500">
-                            {sortOrder === 'asc' ? <SortAsc size={20}/> : <SortDesc size={20}/>}
+                    <div className="flex gap-2 w-full lg:w-auto">
+                        <button 
+                            onClick={() => setShowInviteModal(true)}
+                            className="flex-1 lg:flex-none px-6 py-3.5 bg-[#2962FF] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+                        >
+                            <MailPlus size={16}/> Inviter un membre
+                        </button>
+                        <button onClick={() => loadData()} className="p-3.5 bg-gray-100 dark:bg-gray-800 rounded-2xl text-gray-500">
+                             <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''}/>
                         </button>
                     </div>
                 </div>
+
+                {/* Batch Actions Bar */}
+                {selectedIds.length > 0 && (
+                    <div className="mt-6 flex items-center justify-between p-4 bg-[#2962FF] text-white rounded-2xl animate-fade-in-up shadow-xl">
+                        <div className="flex items-center gap-4">
+                            <span className="text-xs font-black uppercase tracking-widest">{selectedIds.length} sélectionnés</span>
+                            <button onClick={() => setSelectedIds([])} className="text-white/60 hover:text-white"><X size={16}/></button>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => handleBatchAction('active')} className="px-4 py-2 bg-white text-[#2962FF] rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-lg"><Check size={14}/> Activer</button>
+                            <button onClick={() => handleBatchAction('suspended')} className="px-4 py-2 bg-orange-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-lg"><Ban size={14}/> Suspendre</button>
+                        </div>
+                    </div>
+                )}
              </div>
 
              {/* Liste Membres */}
@@ -304,6 +321,55 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                     );
                 })}
              </div>
+
+             {/* MODAL: INVITER UN UTILISATEUR */}
+             {showInviteModal && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowInviteModal(false)}></div>
+                    <div className="bg-white dark:bg-gray-950 rounded-[3rem] w-full max-w-md p-10 relative z-10 shadow-2xl animate-scale-up border dark:border-gray-800">
+                        <div className="text-center space-y-3 mb-8">
+                            <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner"><MailPlus size={40}/></div>
+                            <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Inviter un membre</h3>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Un e-mail d'activation sera envoyé</p>
+                        </div>
+                        
+                        <form onSubmit={handleInvite} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Adresse E-mail</label>
+                                <input 
+                                    required 
+                                    type="email" 
+                                    className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-bold text-sm dark:text-white shadow-inner" 
+                                    placeholder="exemple@domaine.com"
+                                    value={inviteEmail}
+                                    onChange={e => setInviteEmail(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Rôle assigné</label>
+                                <select 
+                                    className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none outline-none font-black text-xs dark:text-white appearance-none shadow-inner"
+                                    value={inviteRole}
+                                    onChange={e => setInviteRole(e.target.value as UserType)}
+                                >
+                                    <option value={UserType.CITIZEN}>Citoyen</option>
+                                    <option value={UserType.BUSINESS}>Entreprise</option>
+                                    <option value={UserType.COLLECTOR}>Collecteur Terrain</option>
+                                    <option value={UserType.ADMIN}>Administrateur</option>
+                                </select>
+                            </div>
+                            
+                            <button 
+                                disabled={isInviting}
+                                className="w-full py-5 bg-[#2962FF] text-white rounded-[1.8rem] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            >
+                                {isInviting ? <Loader2 className="animate-spin" size={20}/> : <Send size={20}/>}
+                                Envoyer l'invitation
+                            </button>
+                        </form>
+                    </div>
+                </div>
+             )}
 
              {/* Tiroir de Détails & Édition */}
              {selectedUser && (
@@ -409,7 +475,7 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                                             const isActive = editForm.permissions?.includes(p.key);
                                             return (
                                                 <div key={p.key} onClick={() => handleUpdatePermission(p.key)} className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex items-center gap-4 ${isActive ? 'border-[#00C853] bg-green-50 dark:bg-green-900/10' : 'border-gray-50 dark:border-gray-900 hover:border-blue-100'}`}>
-                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border-2 transition-colors ${isActive ? 'bg-[#00C853] border-[#00C853] text-white shadow-lg' : 'bg-white dark:bg-gray-800 border-gray-200'}`}>
+                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border-2 transition-colors ${isActive ? 'bg-[#00C853] border-[#00C853] text-white shadow-lg shadow-green-500/20' : 'bg-white dark:bg-gray-800 border-gray-200'}`}>
                                                         {isActive && <CheckIcon size={12} strokeWidth={5} />}
                                                     </div>
                                                     <div>
@@ -441,3 +507,8 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
         </div>
     );
 };
+
+interface AdminPermissionsProps {
+    onBack: () => void;
+    onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+}

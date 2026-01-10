@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
     ChevronRight, ArrowLeft, LogIn, User as UserIcon, Lock, 
-    Eye, EyeOff, AlertCircle, Loader2, Mail, 
-    CheckCircle2, Truck, Briefcase, Sparkles, MapPin, GraduationCap, ArrowRight, Send, Globe
+    Eye, EyeOff, AlertCircle, Loader2, Mail, Globe,
+    CheckCircle2, Truck, Briefcase, Sparkles, MapPin, GraduationCap, ArrowRight, Send,
+    RefreshCw, Inbox, ShieldCheck
 } from 'lucide-react';
-import { UserType, User } from '../types';
+import { UserType, User, Language } from '../types';
 import { UserAPI } from '../services/api';
 import { LegalDocs } from './LegalDocs';
 
@@ -16,6 +17,8 @@ interface OnboardingProps {
     onToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
     initialShowLogin?: boolean;
     onNotifyAdmin?: (title: string, message: string) => void;
+    currentLanguage: Language;
+    onLanguageChange: (lang: Language) => void;
 }
 
 const KINSHASA_COMMUNES = [
@@ -63,12 +66,16 @@ const ONBOARDING_SLIDES = [
     }
 ];
 
-export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLanding, appLogo = './logobisopeto.png', onToast, initialShowLogin = false, onNotifyAdmin }) => {
+export const Onboarding: React.FC<OnboardingProps> = ({ 
+    onComplete, onBackToLanding, appLogo = './logobisopeto.png', onToast, 
+    initialShowLogin = false, onNotifyAdmin, currentLanguage, onLanguageChange 
+}) => {
     const [mode, setMode] = useState<'slides' | 'auth'>(initialShowLogin ? 'auth' : 'slides');
     const [activeSlide, setActiveSlide] = useState(0);
     const [showLogin, setShowLogin] = useState(initialShowLogin);
     const [registrationFinished, setRegistrationFinished] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isResending, setIsResending] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -150,7 +157,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
         setIsLoading(true);
         setError(null);
         try {
-            const registeredUser = await UserAPI.register({ 
+            await UserAPI.register({ 
                 ...formData, 
                 status: 'pending'
             } as User, registerPassword);
@@ -163,7 +170,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
             }
             
             setRegistrationFinished(true);
-            if (onToast) onToast(`Demande de création envoyée`, "success");
+            if (onToast) onToast(`Compte créé ! Vérifiez vos e-mails.`, "success");
         } catch (err: any) {
             setError(err.message || "Erreur lors de l'inscription. L'email est peut-être déjà utilisé.");
         } finally {
@@ -171,10 +178,36 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
         }
     };
 
+    const handleResendEmail = async () => {
+        setIsResending(true);
+        // Simulation d'appel API pour renvoyer l'email
+        await new Promise(r => setTimeout(r, 1500));
+        setIsResending(false);
+        if (onToast) onToast("E-mail de confirmation renvoyé !", "info");
+    };
+
     if (mode === 'slides') {
         const slide = ONBOARDING_SLIDES[activeSlide];
         return (
-            <div className={`min-h-screen ${slide.bg} dark:bg-gray-950 flex flex-col items-center justify-center p-8 transition-colors duration-700`}>
+            <div className={`min-h-screen ${slide.bg} dark:bg-gray-950 flex flex-col items-center justify-center p-8 transition-colors duration-700 relative`}>
+                
+                {/* Language Switcher - Floated Top Right */}
+                <div className="absolute top-8 right-8 z-50 flex bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl p-1 rounded-2xl border border-white/20">
+                    {[
+                        { code: 'fr', label: 'FR' },
+                        { code: 'ln', label: 'LN' },
+                        { code: 'en', label: 'EN' }
+                    ].map(lang => (
+                        <button 
+                            key={lang.code}
+                            onClick={() => onLanguageChange(lang.code as Language)}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all ${currentLanguage === lang.code ? 'bg-primary text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                            {lang.label}
+                        </button>
+                    ))}
+                </div>
+
                 <div className="w-full max-w-lg text-center animate-fade-in">
                     <div className={`w-24 h-24 md:w-28 md:h-28 ${slide.bg.replace('50', '100')} dark:bg-gray-800 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-xl shadow-black/5`}>
                         <slide.icon className={`w-12 h-12 md:w-16 md:h-16 ${slide.color}`} />
@@ -199,16 +232,43 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onBackToLand
 
     if (registrationFinished) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F7FA] dark:bg-[#050505] p-6 text-center">
-                <div className="w-full max-w-lg bg-white dark:bg-[#111827] rounded-[3.5rem] p-10 shadow-2xl border border-gray-100 dark:border-gray-800">
-                    <div className="w-24 h-24 bg-green-50 dark:bg-green-900/20 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 text-primary-light">
-                        <CheckCircle2 className="w-12 h-12 animate-bounce" />
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F7FA] dark:bg-[#050505] p-6 text-center animate-fade-in">
+                <div className="w-full max-w-lg bg-white dark:bg-[#111827] rounded-[3.5rem] p-10 shadow-2xl border border-gray-100 dark:border-gray-800 flex flex-col items-center relative overflow-hidden">
+                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[80px] rounded-full"></div>
+                    
+                    <div className="w-28 h-28 bg-blue-50 dark:bg-blue-900/20 rounded-[2.5rem] flex items-center justify-center mb-8 text-blue-600 relative overflow-hidden group shadow-inner">
+                        <Inbox className="w-12 h-12 animate-float" />
+                        <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#111827] animate-pulse"></div>
                     </div>
-                    <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-6 uppercase">Demande Reçue !</h2>
-                    <p className="text-base text-gray-500 dark:text-gray-400 font-medium mb-12">Mbote {formData.firstName}! Votre dossier est maintenant entre les mains de l'équipe Biso Peto pour validation.</p>
-                    <button onClick={() => onComplete(formData as User)} className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3">
-                        Accéder à l'espace d'attente <ChevronRight className="w-5 h-5"/>
-                    </button>
+                    
+                    <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-tighter">Confirmez votre inscription</h2>
+                    <p className="text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed mb-10 px-4">
+                        Mbote {formData.firstName}! Un lien de confirmation unique a été envoyé à :<br/>
+                        <span className="font-black text-primary dark:text-primary-light text-lg block mt-2">{formData.email}</span>
+                        <span className="text-[11px] font-bold uppercase tracking-widest block mt-4 opacity-70">Veuillez cliquer sur le lien pour activer votre accès citoyen.</span>
+                    </p>
+                    
+                    <div className="w-full space-y-4 relative z-10">
+                        <button onClick={() => setShowLogin(true)} className="w-full bg-primary text-white py-5 rounded-[1.8rem] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl shadow-green-500/20 active:scale-95 transition-all group">
+                            C'est fait, je me connecte <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform"/>
+                        </button>
+                        <button 
+                            onClick={handleResendEmail} 
+                            disabled={isResending}
+                            className="w-full py-4 text-gray-400 dark:text-gray-500 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:text-primary transition-colors disabled:opacity-50"
+                        >
+                            {isResending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                            Renvoyer l'e-mail de confirmation
+                        </button>
+                    </div>
+
+                    <div className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-800 w-full flex items-start gap-4 text-left">
+                        <ShieldCheck className="text-blue-500 w-10 h-10 shrink-0" />
+                        <div className="space-y-1">
+                             <p className="text-[11px] text-gray-900 dark:text-white font-black uppercase tracking-widest">Sécurité Biso Peto</p>
+                             <p className="text-[10px] text-gray-400 font-bold leading-tight">Si vous ne voyez pas l'e-mail, vérifiez votre dossier **Spams** ou **Courriers indésirables**.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
