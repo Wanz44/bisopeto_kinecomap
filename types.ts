@@ -63,6 +63,7 @@ export interface User {
     co2Saved?: number;
     recyclingRate?: number;
     avatarUrl?: string;
+    country?: string;
     emailConsent?: boolean; // Consentement communication
 }
 
@@ -121,6 +122,7 @@ export interface EcoVoucher {
 }
 
 export enum AppView {
+    SPLASH = 'SPLASH',
     LANDING = 'LANDING',
     LANDING_ABOUT = 'LANDING_ABOUT',
     LANDING_ECOSYSTEM = 'LANDING_ECOSYSTEM',

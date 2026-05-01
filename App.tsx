@@ -25,10 +25,12 @@ import { CollectorJobs } from './components/CollectorJobs';
 import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
 import { User, AppView, Theme, Language, NotificationItem, SystemSettings, UserType, GlobalImpact, SubscriptionPlan } from './types';
-import { SettingsAPI, NotificationsAPI, UserAPI, mapUser } from './services/api';
+import { SettingsAPI, NotificationsAPI, UserAPI } from './services/api';
 import { OfflineManager } from './services/offlineManager';
 import { NotificationService } from './services/notificationService';
-import { supabase, isSupabaseConfigured } from './services/supabaseClient';
+import { auth, db } from './services/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { LogOut } from 'lucide-react';
 
 const DEFAULT_LOGO = 'https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/logo-1766239701120-logo_bisopeto.png';
@@ -104,24 +106,47 @@ function App() {
     }, [user?.id, user?.status]);
 
     useEffect(() => {
-        if (user?.id && isSupabaseConfigured() && supabase) {
-            const activationChannel = supabase.channel(`user_activation_${user.id}`)
-                .on('postgres_changes', { 
-                    event: 'UPDATE', 
-                    schema: 'public', 
-                    table: 'users',
-                    filter: `id=eq.${user.id}`
-                }, (payload) => {
-                    const mapped = mapUser(payload.new);
+        const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                // If user just logged in via Firebase Auth but local state is empty
+                if (!user) {
+                    const fetchedUser = await UserAPI.getById(firebaseUser.uid);
+                    if (fetchedUser) {
+                        setUser(fetchedUser);
+                        localStorage.setItem('kinecomap_user', JSON.stringify(fetchedUser));
+                    }
+                }
+            } else {
+                // No firebase user, but maybe we have a local one (legacy or partially signed out)
+                // We should probably sync and sign out if no firebase user
+                if (user) {
+                    handleLogout();
+                }
+            }
+        });
+
+        return () => unsubscribeAuth();
+    }, [user]);
+
+    useEffect(() => {
+        if (user?.id) {
+            const userRef = doc(db, 'users', user.id);
+            const unsubscribeUser = onSnapshot(userRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const updatedData = docSnap.data();
+                    const mapped = { ...updatedData, id: docSnap.id } as User;
                     setUser(mapped);
                     localStorage.setItem('kinecomap_user', JSON.stringify(mapped));
                     if (mapped.status === 'active' && user.status === 'pending') {
                         showToast("Compte débloqué ! Mbote !", "success");
                         setHistory([AppView.DASHBOARD]);
                     }
-                })
-                .subscribe();
-            return () => { supabase.removeChannel(activationChannel); };
+                }
+            }, (error) => {
+                console.error("User Snapshot Error:", error);
+            });
+
+            return () => unsubscribeUser();
         }
     }, [user?.id, user?.status, showToast]);
 
@@ -159,7 +184,12 @@ function App() {
     const navigateTo = (newView: AppView) => { if (newView !== view) setHistory([...history, newView]); };
     const goBack = () => { if (history.length > 1) setHistory(prev => prev.slice(0, -1)); };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+        } catch (e) {
+            console.error("Sign out error", e);
+        }
         setUser(null);
         setHistory([AppView.LANDING]);
         localStorage.removeItem('kinecomap_user');

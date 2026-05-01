@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { WasteReport, User as AppUser, UserType } from '../types';
 import { ReportsAPI, UserAPI, mapReport } from '../services/api';
-import { supabase } from '../services/supabaseClient';
+import { db } from '../services/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 const KINSHASA_COMMUNES = [
     "Barumbu", "Bumbu", "Bandalungwa", "Gombe", "Kalamu", "Kasa-Vubu", 
@@ -113,28 +114,15 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
     };
 
     useEffect(() => {
-        if (supabase) {
-            const channel = supabase.channel('realtime_sig_reports_admin_v9')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, (payload) => {
-                    if (payload.eventType === 'DELETE') {
-                        setReports(prev => prev.filter(r => r.id !== payload.old.id));
-                        if (selectedReport?.id === payload.old.id) setSelectedReport(null);
-                        return;
-                    }
-                    const mapped = mapReport(payload.new);
-                    setReports(prev => {
-                        const idx = prev.findIndex(r => r.id === mapped.id);
-                        if (idx > -1) {
-                            const newArr = [...prev];
-                            newArr[idx] = mapped;
-                            return newArr;
-                        }
-                        return [mapped, ...prev];
-                    });
-                })
-                .subscribe();
-            return () => { supabase.removeChannel(channel); };
-        }
+        const q = query(collection(db, 'waste_reports'), orderBy('date', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const updatedReports = snapshot.docs.map(doc => mapReport(doc.data(), doc.id));
+            setReports(updatedReports);
+        }, (error) => {
+            console.error("AdminReports Snapshot Error:", error);
+        });
+
+        return () => unsubscribe();
     }, [selectedReport, onToast]);
 
     useEffect(() => {

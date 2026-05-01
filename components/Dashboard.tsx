@@ -13,8 +13,9 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { User, AppView, UserType, WasteReport, UserPermission, Payment, AdCampaign, CashBookEntry } from '../types';
-import { UserAPI, ReportsAPI, PaymentsAPI, AdsAPI, CashBookAPI } from '../services/api';
-import { supabase, testSupabaseConnection } from '../services/supabaseClient';
+import { UserAPI, ReportsAPI, PaymentsAPI, AdsAPI, CashBookAPI, mapReport } from '../services/api';
+import { db } from '../services/firebase';
+import { collection, query, onSnapshot, where, orderBy } from 'firebase/firestore';
 
 interface DashboardProps {
     user: User;
@@ -36,25 +37,33 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        initDashboard();
+        
+        const qUsers = query(collection(db, 'users'));
+        const unsubscribeUsers = onSnapshot(qUsers, () => refreshData());
 
-        const channel = supabase?.channel('dashboard_realtime_sync')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, () => refreshData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => refreshData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_book' }, () => refreshData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => refreshData())
-            .subscribe();
+        const qReports = query(collection(db, 'waste_reports'));
+        const unsubscribeReports = onSnapshot(qReports, () => refreshData());
+
+        const qPayments = query(collection(db, 'payments'));
+        const unsubscribePayments = onSnapshot(qPayments, () => refreshData());
+
+        const qCash = query(collection(db, 'cash_book'));
+        const unsubscribeCash = onSnapshot(qCash, () => refreshData());
+
+        initDashboard();
 
         return () => {
             clearInterval(timer);
-            if (channel) supabase?.removeChannel(channel);
+            unsubscribeUsers();
+            unsubscribeReports();
+            unsubscribePayments();
+            unsubscribeCash();
         };
     }, []);
 
     const initDashboard = async () => {
         setIsLoading(true);
-        const isLive = await testSupabaseConnection();
-        setIsCloudSynced(isLive);
+        setIsCloudSynced(true);
         await refreshData();
         setIsLoading(false);
     };
@@ -213,8 +222,7 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
     useEffect(() => {
         const loadMyData = async () => {
             setIsLoading(true);
-            const live = await testSupabaseConnection();
-            setIsCloudSynced(live);
+            setIsCloudSynced(true);
             try {
                 if (user.id) {
                     const [reportsData, adsData] = await Promise.all([
@@ -232,19 +240,15 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
                 setIsLoading(false); 
             }
         };
+
+        const qReports = query(collection(db, 'waste_reports'), where('reporterId', '==', user.id));
+        const unsubscribeReports = onSnapshot(qReports, () => loadMyData());
+
         loadMyData();
 
-        if (user.id && supabase) {
-            const channel = supabase.channel(`citizen_reports_${user.id}`)
-                .on('postgres_changes', { 
-                    event: '*', 
-                    schema: 'public', 
-                    table: 'waste_reports',
-                    filter: `reporter_id=eq.${user.id}`
-                }, () => loadMyData())
-                .subscribe();
-            return () => { supabase.removeChannel(channel); };
-        }
+        return () => {
+            unsubscribeReports();
+        };
     }, [user.id, user.commune, user.type]);
 
     const handleAdClick = (ad: AdCampaign) => {

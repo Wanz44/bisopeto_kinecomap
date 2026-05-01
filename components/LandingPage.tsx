@@ -234,6 +234,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
                  {[
                    { title: "Collecte & Tri", icon: Truck, desc: "Collecte sélective, points de tri de quartier et accompagnement à la gestion des flux de déchets ménagers." },
                    { title: "Recyclage", icon: Recycle, desc: "Transformation des plastiques et déchets ménagers secs en ressources réutilisables dans l'économie locale." },
+                   { title: "Service de Nettoyage", icon: Sparkles, desc: "Nettoyage professionnel de sites, assainissement après événements et entretien spécialisé d'espaces urbains." },
                    { title: "Solutions Pro", icon: Building2, desc: "Gestion externalisée des déchets d’entreprise et accompagnement à la conformité environnementale (RSE)." },
                    { title: "Éducation", icon: GraduationCap, desc: "Programmes de sensibilisation communautaire et actions éducatives dans les écoles de la ville-province." },
                    { title: "Digitalisation", icon: Globe, desc: "Propulsion de Kin Eco-Map, première carte intelligente de gestion environnementale structurant l’écosystème." }

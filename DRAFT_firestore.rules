@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ---------------------------------------------------------
+    // HELPER FUNCTIONS
+    // ---------------------------------------------------------
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isEmailVerified() { return request.auth.token.email_verified == true; }
+
+    // ---------------------------------------------------------
+    // VALIDATION HELPERS
+    // ---------------------------------------------------------
+    function isValidUser(data) {
+      return data.firstName is string && data.firstName.size() <= 100 &&
+             data.lastName is string && data.lastName.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.type in ['citizen', 'business', 'collector', 'admin'] &&
+             data.status in ['pending', 'active', 'suspended'] &&
+             data.points is number &&
+             data.collections is number;
+    }
+
+    function isValidReport(data) {
+      return data.reporterId is string && data.reporterId.size() <= 128 &&
+             data.lat is number && data.lng is number &&
+             data.wasteType is string && data.wasteType.size() <= 100 &&
+             data.status in ['pending', 'assigned', 'resolved', 'rejected', 'disputed'];
+    }
+
+    // ---------------------------------------------------------
+    // DEFAULT DENY
+    // ---------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------
+    // COLLECTIONS
+    // ---------------------------------------------------------
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().type != 'admin';
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(incoming()) && (
+        (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'phone', 'address', 'neighborhood', 'commune', 'avatarUrl', 'country', 'emailConsent'])) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /waste_reports/{reportId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidReport(incoming()) && incoming().reporterId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && existing().reporterId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['imageUrl', 'comment', 'commune', 'lat', 'lng', 'wasteType']));
+      allow delete: if isAdmin();
+    }
+
+    match /cash_book/{entryId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /marketplace_items/{itemId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().sellerId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && (existing().sellerId == request.auth.uid || incoming().buyerId == request.auth.uid));
+      allow delete: if isAdmin() || (isSignedIn() && existing().sellerId == request.auth.uid);
+    }
+
+    match /ad_campaigns/{adId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /partners/{partnerId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && (resource.data.targetUserId == request.auth.uid || resource.data.targetUserId == 'ALL');
+      allow write: if isAdmin();
+    }
+
+    match /vehicles/{vehicleId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /system_settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only manageable via console
+    }
+  }
+}

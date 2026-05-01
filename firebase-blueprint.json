@@ -1,0 +1,255 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "type": { "type": "string", "enum": ["citizen", "business", "collector", "admin"] },
+        "status": { "type": "string", "enum": ["pending", "active", "suspended"] },
+        "address": { "type": "string" },
+        "neighborhood": { "type": "string" },
+        "points": { "type": "number" },
+        "collections": { "type": "number" },
+        "badges": { "type": "number" },
+        "subscription": { "type": "string", "enum": ["standard", "plus", "premium", "special"] },
+        "commune": { "type": "string" },
+        "totalTonnage": { "type": "number" },
+        "co2Saved": { "type": "number" },
+        "recyclingRate": { "type": "number" },
+        "avatarUrl": { "type": "string" },
+        "country": { "type": "string" },
+        "emailConsent": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["firstName", "lastName", "phone", "type", "status"]
+    },
+    "WasteReport": {
+      "title": "WasteReport",
+      "description": "Waste signalment report",
+      "type": "object",
+      "properties": {
+        "reporterId": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "proofUrl": { "type": "string" },
+        "wasteType": { "type": "string" },
+        "urgency": { "type": "string", "enum": ["low", "medium", "high"] },
+        "status": { "type": "string", "enum": ["pending", "assigned", "resolved", "rejected", "disputed"] },
+        "assignedTo": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "comment": { "type": "string" },
+        "commune": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reporterId", "lat", "lng", "wasteType", "status"]
+    },
+    "CashBookEntry": {
+      "title": "CashBookEntry",
+      "description": "Financial entry in cash book",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "ref": { "type": "string" },
+        "label": { "type": "string" },
+        "type": { "type": "string", "enum": ["in", "out"] },
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" }
+      },
+      "required": ["date", "label", "type", "amount"]
+    },
+    "MarketplaceItem": {
+      "title": "MarketplaceItem",
+      "description": "Item for sale in marketplace",
+      "type": "object",
+      "properties": {
+        "sellerId": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string", "enum": ["electronics", "metal", "plastic", "other"] },
+        "description": { "type": "string" },
+        "weight": { "type": "number" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["available", "pending_delivery", "sold", "disputed"] },
+        "buyerId": { "type": "string" }
+      }
+    },
+    "AdCampaign": {
+      "title": "AdCampaign",
+      "description": "Advertising campaign",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "partner": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "paused", "ended"] },
+        "views": { "type": "number" },
+        "clicks": { "type": "number" },
+        "budget": { "type": "number" },
+        "spent": { "type": "number" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "image": { "type": "string" },
+        "targetCommune": { "type": "string" },
+        "targetUserType": { "type": "string" },
+        "link": { "type": "string" }
+      }
+    },
+    "Partner": {
+      "title": "Partner",
+      "description": "Eco-partner",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "industry": { "type": "string" },
+        "contactName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "activeCampaigns": { "type": "number" },
+        "totalBudget": { "type": "number" },
+        "logo": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      }
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Tax payment or subscription",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "amountFC": { "type": "number" },
+        "currency": { "type": "string", "enum": ["FC", "USD"] },
+        "method": { "type": "string", "enum": ["cash", "mobile_money", "card"] },
+        "period": { "type": "string" },
+        "collectorId": { "type": "string" },
+        "collectorName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "qrCodeData": { "type": "string" },
+        "status": { "type": "string", "enum": ["escrow", "released", "refunded"] }
+      }
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "In-app notification",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "alert"] },
+        "read": { "type": "boolean" },
+        "targetUserId": { "type": "string" },
+        "commune": { "type": "string" },
+        "neighborhood": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Collection vehicle",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["moto", "tricycle", "pickup", "camion", "chariot"] },
+        "plateNumber": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "maintenance", "stopped"] },
+        "batteryLevel": { "type": "number" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "driverId": { "type": "string" },
+        "signalStrength": { "type": "number" },
+        "gpsId": { "type": "string" },
+        "lastUpdate": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "Global app settings",
+      "type": "object",
+      "properties": {
+        "maintenanceMode": { "type": "boolean" },
+        "supportEmail": { "type": "string" },
+        "appVersion": { "type": "string" },
+        "force2FA": { "type": "boolean" },
+        "sessionTimeout": { "type": "number" },
+        "passwordPolicy": { "type": "string" },
+        "marketplaceCommission": { "type": "number" },
+        "exchangeRate": { "type": "number" },
+        "logoUrl": { "type": "string" }
+      }
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "System audit logs",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "entity": { "type": "string" },
+        "entityId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["userId", "action", "entity", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/waste_reports/{reportId}": {
+      "schema": "WasteReport",
+      "description": "Waste signalments"
+    },
+    "/cash_book/{entryId}": {
+      "schema": "CashBookEntry",
+      "description": "Cash book entries"
+    },
+    "/marketplace_items/{itemId}": {
+      "schema": "MarketplaceItem",
+      "description": "Items in marketplace"
+    },
+    "/ad_campaigns/{adId}": {
+      "schema": "AdCampaign",
+      "description": "Ad campaigns"
+    },
+    "/partners/{partnerId}": {
+      "schema": "Partner",
+      "description": "Partners"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Payments"
+    },
+    "/notifications/{notifId}": {
+      "schema": "NotificationItem",
+      "description": "Notifications"
+    },
+    "/vehicles/{vehicleId}": {
+      "schema": "Vehicle",
+      "description": "Vehicles"
+    },
+    "/system_settings/{id}": {
+      "schema": "SystemSettings",
+      "description": "Global settings"
+    },
+    "/admins/{userId}": {
+      "schema": "object",
+      "description": "Admin user list for secure role checks"
+    },
+    "/audit_logs/{id}": {
+      "schema": "AuditLog",
+      "description": "System usage logs"
+    }
+  }
+}

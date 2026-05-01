@@ -190,7 +190,8 @@ export const MapView: React.FC<MapViewProps> = ({ user, onBack }) => {
                             { label: 'Centres de Tri', icon: Recycle, query: 'centres de tri plastique kinshasa' },
                             { label: 'Déchetteries', icon: Trash2, query: 'points de collecte ordures kinshasa' },
                             { label: 'Points Eau', icon: Droplets, query: 'stations forage ou eau potable kinshasa' },
-                            { label: 'Services', icon: LayoutGrid, query: 'bureaux environnement' }
+                            { label: 'Nettoyage', icon: Sparkles, query: 'services de nettoyage professionnel kinshasa' },
+                            { label: 'Bureaux', icon: LayoutGrid, query: 'bureaux environnement kinshasa' }
                         ].map((chip, i) => (
                             <button 
                                 key={i}
