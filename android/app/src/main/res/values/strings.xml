@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Biso Peto</string>
+    <string name="title_activity_main">Biso Peto</string>
+    <string name="package_name">com.bisopeto.app</string>
+    <string name="custom_url_scheme">com.bisopeto.app</string>
+</resources>

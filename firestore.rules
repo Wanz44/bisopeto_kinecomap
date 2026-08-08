@@ -5,7 +5,12 @@ service cloud.firestore {
     // HELPER FUNCTIONS
     // ---------------------------------------------------------
     function isSignedIn() { return request.auth != null; }
-    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function isAdmin() { 
+      return isSignedIn() && (
+        request.auth.token.email == 'adonailutonadio70@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      ); 
+    }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
@@ -87,7 +92,15 @@ service cloud.firestore {
     }
 
     match /notifications/{notifId} {
-      allow read: if isSignedIn() && (resource.data.targetUserId == request.auth.uid || resource.data.targetUserId == 'ALL' || resource.data.targetUserId == 'citizen' || resource.data.targetUserId == 'collector' || resource.data.targetUserId == 'business' || isAdmin());
+      allow get: if isSignedIn() && (
+        resource.data.targetUserId == request.auth.uid || 
+        resource.data.targetUserId in ['ALL', 'citizen', 'collector', 'business'] || 
+        isAdmin()
+      );
+      allow list: if isAdmin() || (
+        isSignedIn() && 
+        resource.data.targetUserId in [request.auth.uid, 'ALL', 'citizen', 'collector', 'business']
+      );
       allow write: if isAdmin();
     }
 
@@ -109,6 +122,11 @@ service cloud.firestore {
     match /audit_logs/{id} {
         allow create: if isSignedIn();
         allow read: if isAdmin();
+    }
+
+    match /contact_messages/{id} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
     }
   }
 }

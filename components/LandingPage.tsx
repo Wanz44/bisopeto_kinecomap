@@ -13,6 +13,8 @@ import {
   CheckCircle2, Eye, User, Activity
 } from 'lucide-react';
 import { GlobalImpact, AppView } from '../types';
+import { db } from '../services/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface LandingPageProps {
   onStart: () => void;
@@ -36,16 +38,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formState.name || !formState.email || !formState.message) return;
     setIsSending(true);
-    setTimeout(() => {
-      setIsSending(false);
-      setIsSent(true);
-      setFormState({ name: '', email: '', message: '' });
-      setTimeout(() => setIsSent(false), 5000);
-    }, 2000);
+
+    const targetEmail = 'contact@bisopeto.com';
+    const subject = encodeURIComponent(`[BISO PETO] Message de contact de ${formState.name}`);
+    const body = encodeURIComponent(
+      `Nom / Entreprise: ${formState.name}\nEmail: ${formState.email}\n\nMessage:\n${formState.message}`
+    );
+    const mailtoUrl = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
+
+    try {
+      await addDoc(collection(db, 'contact_messages'), {
+        name: formState.name,
+        email: formState.email,
+        message: formState.message,
+        recipientEmail: targetEmail,
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.warn('Erreur lors de la sauvegarde du message dans la base de données:', err);
+    }
+
+    window.location.href = mailtoUrl;
+
+    setIsSending(false);
+    setIsSent(true);
+    setFormState({ name: '', email: '', message: '' });
+    setTimeout(() => setIsSent(false), 8000);
   };
 
   const isMainLanding = currentView === AppView.LANDING;
@@ -413,7 +435,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appL
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-6 animate-scale-up">
                         <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white shadow-2xl"><Check className="w-10 h-10" strokeWidth={4}/></div>
                         <h3 className="text-3xl font-bold text-white uppercase tracking-tight leading-none">Message Reçu</h3>
-                        <p className="text-gray-400 font-medium max-w-xs mx-auto">Un consultant environnemental reviendra vers vous sous 24h.</p>
+                        <p className="text-gray-400 font-medium max-w-xs mx-auto text-sm">Votre message a été transmis à <span className="text-primary font-bold">contact@bisopeto.com</span>. Un consultant environnemental vous recontactera sous 24h.</p>
                         <button onClick={() => setIsSent(false)} className="text-primary text-xs font-semibold uppercase tracking-widest underline underline-offset-4">Envoyer un autre message</button>
                     </div>
                   ) : (

@@ -267,12 +267,13 @@ export const UserAPI = {
             
             if (!userSnap.exists()) {
                 const nameParts = user.displayName?.split(' ') || ['', ''];
+                const isAdminEmail = user.email === 'adonailutonadio70@gmail.com';
                 const userData = {
                     firstName: nameParts[0],
                     lastName: nameParts.slice(1).join(' ') || 'Utilisateur',
                     email: user.email,
                     phone: user.phoneNumber || '',
-                    type: UserType.CITIZEN,
+                    type: isAdminEmail ? UserType.ADMIN : UserType.CITIZEN,
                     status: 'active',
                     address: '',
                     points: 0,
@@ -287,7 +288,14 @@ export const UserAPI = {
                 return mapUser(userData, user.uid);
             }
             
-            return mapUser(userSnap.data(), user.uid);
+            // For existing users, check if they should be promoted to admin based on email
+            const existingData = userSnap.data() as any;
+            if (user.email === 'adonailutonadio70@gmail.com' && existingData.type !== UserType.ADMIN) {
+                await updateDoc(userRef, { type: UserType.ADMIN });
+                existingData.type = UserType.ADMIN;
+            }
+            
+            return mapUser(existingData, user.uid);
         } catch (error) {
             console.error("Google Login Error:", error);
             throw error;
@@ -645,20 +653,22 @@ export const NotificationsAPI = {
     },
     getAll: async (userId: string, isAdmin: boolean): Promise<NotificationItem[]> => {
         try {
-            const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
-            const snapshot = await getDocs(q);
-            let notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationItem));
-            
-            if (!isAdmin) {
-                notifs = notifs.filter(n => 
-                    n.targetUserId === userId || 
-                    n.targetUserId === 'ALL' || 
-                    n.targetUserId === 'citizen' || 
-                    n.targetUserId === 'collector' || 
-                    n.targetUserId === 'business'
+            let q;
+            if (isAdmin) {
+                // Admins see everything
+                q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+            } else {
+                // Users only see notifications targeted at them or general audiences
+                // In Firestore, using 'in' with a list of values is the most cross-query compatible way
+                const targetAudiences = [userId, 'ALL', 'citizen', 'collector', 'business'];
+                q = query(
+                    collection(db, 'notifications'), 
+                    where('targetUserId', 'in', targetAudiences),
+                    orderBy('createdAt', 'desc')
                 );
             }
-            return notifs;
+            const snapshot = await getDocs(q);
+            return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) } as NotificationItem));
         } catch (error) {
             handleFirestoreError(error, OperationType.LIST, 'notifications');
             return [];
