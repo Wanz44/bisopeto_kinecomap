@@ -1,44 +1,72 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { createClient } from '@supabase/supabase-js';
+// Récupération sécurisée des variables injectées par Vite / Vercel
+const rawUrl = process.env.SUPABASE_URL;
+const rawKey = process.env.SUPABASE_KEY;
 
-// Récupération des variables injectées par Vite
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const sanitizeEnv = (val?: string): string => {
+    if (!val || typeof val !== 'string' || val === 'undefined' || val === 'null') return '';
+    return val.trim();
+};
+
+const supabaseUrl = sanitizeEnv(rawUrl);
+const supabaseKey = sanitizeEnv(rawKey);
+
+/**
+ * Valide si une chaîne est une URL HTTP/HTTPS valide.
+ */
+const isValidHttpUrl = (urlString: string): boolean => {
+    if (!urlString || typeof urlString !== 'string') return false;
+    try {
+        const parsed = new URL(urlString);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
+};
 
 /**
  * Vérifie si Supabase est correctement configuré.
  */
-export const isSupabaseConfigured = () => {
-    return !!supabaseUrl && !!supabaseKey && supabaseKey.length > 10;
+export const isSupabaseConfigured = (): boolean => {
+    return isValidHttpUrl(supabaseUrl) && !!supabaseKey && supabaseKey.length > 10;
 };
 
 /**
- * Instance du client Supabase.
- * Note: Le client est null si la config est manquante pour éviter les crashs au démarrage.
+ * Instance du client Supabase sécurisée.
+ * Ne lance jamais d'erreur au chargement initial si l'URL ou la clé est absente/invalide.
  */
-export const supabase = isSupabaseConfigured() 
-    ? createClient(supabaseUrl!, supabaseKey!) 
-    : null;
+export const supabase: SupabaseClient | null = (() => {
+    try {
+        if (isSupabaseConfigured()) {
+            return createClient(supabaseUrl, supabaseKey, {
+                auth: {
+                    persistSession: false,
+                    autoRefreshToken: false,
+                },
+            });
+        }
+    } catch (err) {
+        console.warn("[BISO PETO CLOUD] Supabase non initialisé (mode dégradé ou absent) :", err);
+    }
+    return null;
+})();
 
 /**
  * Test de santé de la connexion vers Supabase.
  */
 export const testSupabaseConnection = async (): Promise<boolean> => {
     if (!supabase) {
-        console.error("[BISO PETO CLOUD] Erreur : Client non initialisé. Vérifiez les secrets SUPABASE_URL/KEY.");
         return false;
     }
     try {
-        // On tente de lire une ligne de la table users pour valider la clé
         const { error } = await supabase.from('users').select('id').limit(1);
         if (error) {
-            console.warn("[BISO PETO CLOUD] Échec de la vérification :", error.message);
+            console.warn("[BISO PETO CLOUD] Vérification Supabase :", error.message);
             return false;
         }
-        console.log("[BISO PETO CLOUD] Connexion établie avec succès. Temps réel actif.");
         return true;
-    } catch (e) {
-        console.error("[BISO PETO CLOUD] Erreur critique de connexion.");
+    } catch {
         return false;
     }
 };

@@ -108,25 +108,17 @@ function App() {
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                // If user just logged in via Firebase Auth but local state is empty
-                if (!user) {
-                    const fetchedUser = await UserAPI.getById(firebaseUser.uid);
-                    if (fetchedUser) {
-                        setUser(fetchedUser);
-                        localStorage.setItem('kinecomap_user', JSON.stringify(fetchedUser));
-                    }
-                }
-            } else {
-                // No firebase user, but maybe we have a local one (legacy or partially signed out)
-                // We should probably sync and sign out if no firebase user
-                if (user) {
-                    handleLogout();
+                // If user just logged in via Firebase Auth and local session needs to be synced
+                const fetchedUser = await UserAPI.getById(firebaseUser.uid);
+                if (fetchedUser) {
+                    setUser(fetchedUser);
+                    localStorage.setItem('kinecomap_user', JSON.stringify(fetchedUser));
                 }
             }
         });
 
         return () => unsubscribeAuth();
-    }, [user]);
+    }, []);
 
     useEffect(() => {
         if (user?.id) {

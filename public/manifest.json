@@ -1,0 +1,21 @@
+{
+  "short_name": "Biso Peto",
+  "name": "BISO PETO GROUP - Services Environnementaux & Kin Eco-Map",
+  "icons": [
+    {
+      "src": "/logobisopeto.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logobisopeto.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#050505",
+  "theme_color": "#2E7D32",
+  "display": "standalone",
+  "orientation": "portrait"
+}

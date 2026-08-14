@@ -1,30 +1,26 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase App instance safely (singleton)
+export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export const db = initializeFirestore(
-  app,
-  {
-    experimentalAutoDetectLongPolling: true,
-    ignoreUndefinedProperties: true,
-  },
-  firebaseConfig.firestoreDatabaseId || undefined
-);
+// Initialize Firestore with robust connection settings for web preview / offline fallback
+export const db = (() => {
+  try {
+    return initializeFirestore(
+      app,
+      {
+        experimentalAutoDetectLongPolling: true,
+        ignoreUndefinedProperties: true,
+      },
+      firebaseConfig.firestoreDatabaseId || undefined
+    );
+  } catch {
+    // If already initialized, retrieve existing Firestore instance
+    return getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
+  }
+})();
 
 export const auth = getAuth(app);
-
-// Validate Connection to Firestore
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn("Firebase client operating in offline mode:", error.message);
-    }
-  }
-}
-testConnection();
-
