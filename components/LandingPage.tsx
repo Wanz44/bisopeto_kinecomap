@@ -1,20 +1,15 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  ChevronRight, Home, Building2, Truck, GraduationCap, 
-  Leaf, Mail, Phone, MapPin, 
-  Send, Rocket, Menu, X, Globe,
-  Sparkles, Loader2, Info, ShieldCheck,
-  Zap, Award, Users, MousePointer2,
-  Recycle, Check, Play, Camera, Shield,
-  Target, BarChart3, Heart, Layout, 
-  Smartphone, Bell, QrCode, ClipboardCheck,
-  /* Added missing icon imports */
-  CheckCircle2, Eye, User, Activity
+  ChevronRight, ChevronDown, Building2, Truck, GraduationCap, 
+  Leaf, Mail, Phone, MapPin, Send, Rocket, Menu, X, Globe,
+  Sparkles, Loader2, ShieldCheck, Zap, Award, Users,
+  Recycle, Check, Play, Camera, Shield, Target, BarChart3,
+  Heart, Layout, Smartphone, Bell, CheckCircle2, Eye, User,
+  Activity, Sparkle, Layers, Compass, Lightbulb, ArrowRight,
+  Briefcase, CheckCircle, FileText, Clock, ExternalLink
 } from 'lucide-react';
 import { GlobalImpact, AppView } from '../types';
-import { db } from '../services/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { saveContactMessage, openCompanyEmailComposer, COMPANY_EMAIL } from '../services/emailService';
 
 interface LandingPageProps {
   onStart: () => void;
@@ -25,493 +20,1447 @@ interface LandingPageProps {
   currentView: AppView;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLogin, appLogo, impactData, onChangeView, currentView }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ 
+  onStart, 
+  onLogin, 
+  appLogo, 
+  impactData, 
+  onChangeView, 
+  currentView 
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPrestationsHovered, setIsPrestationsHovered] = useState(false);
+  const [isMobilePrestationsOpen, setIsMobilePrestationsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [formState, setFormState] = useState({ name: '', email: '', message: '' });
+  const [activeTab, setActiveTab] = useState<'dechets' | 'etudes' | 'sante' | 'nettoyage'>('dechets');
+  
+  // Formulaire de contact
+  const [formState, setFormState] = useState({ 
+    name: '', 
+    email: '', 
+    phone: '',
+    service: 'Gestion des déchets', 
+    message: '' 
+  });
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const scrollToSection = (sectionId: string) => {
+    setIsMenuOpen(false);
+    setIsPrestationsHovered(false);
+    setIsMobilePrestationsOpen(false);
+    
+    // Si on n'est pas sur la vue principale, on repasse sur la landing
+    if (currentView !== AppView.LANDING) {
+      onChangeView(AppView.LANDING);
+    }
+    
+    setTimeout(() => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
+  const handleServiceSelect = (serviceKey: 'dechets' | 'etudes' | 'sante' | 'nettoyage', serviceLabel: string) => {
+    setActiveTab(serviceKey);
+    setFormState(prev => ({ ...prev, service: serviceLabel }));
+    scrollToSection(`prestation-${serviceKey}`);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formState.name || !formState.email || !formState.message) return;
     setIsSending(true);
 
-    const targetEmail = 'contact@bisopeto.com';
-    const subject = encodeURIComponent(`[BISO PETO] Message de contact de ${formState.name}`);
-    const body = encodeURIComponent(
-      `Nom / Entreprise: ${formState.name}\nEmail: ${formState.email}\n\nMessage:\n${formState.message}`
-    );
-    const mailtoUrl = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
+    const fullMessage = `[Service sollicité: ${formState.service}]\nTéléphone: ${formState.phone || 'Non renseigné'}\n\nMessage:\n${formState.message}`;
 
     try {
-      await addDoc(collection(db, 'contact_messages'), {
-        name: formState.name,
-        email: formState.email,
-        message: formState.message,
-        recipientEmail: targetEmail,
-        createdAt: serverTimestamp(),
-      });
+      // Enregistre le message dans Firestore sous /contact_messages
+      await saveContactMessage(
+        formState.name, 
+        formState.email, 
+        fullMessage
+      );
     } catch (err) {
-      console.warn('Erreur lors de la sauvegarde du message dans la base de données:', err);
+      console.warn('Erreur lors de la sauvegarde du message dans Firestore:', err);
     }
 
-    window.location.href = mailtoUrl;
+    // Ouvre le compositeur d'e-mail prérempli pour contact@bisopeto.com
+    openCompanyEmailComposer(formState.name, formState.email, fullMessage);
 
     setIsSending(false);
     setIsSent(true);
-    setFormState({ name: '', email: '', message: '' });
+    setFormState({ name: '', email: '', phone: '', service: 'Gestion des déchets', message: '' });
     setTimeout(() => setIsSent(false), 8000);
   };
 
-  const isMainLanding = currentView === AppView.LANDING;
-
-  const navItems = [
-    { view: AppView.LANDING_ABOUT, label: 'À Propos' },
-    { view: AppView.LANDING_ECOSYSTEM, label: 'L\'Écosystème' },
-    { view: AppView.LANDING_PROCESS, label: 'Fonctionnement' },
-    { view: AppView.LANDING_IMPACT, label: 'Impact' },
-    { view: AppView.LANDING_CONTACT, label: 'Contact' }
+  const prestationsDropdown = [
+    { id: 'dechets', label: 'Gestion des déchets', desc: 'Collecter. Trier. Valoriser.', icon: Recycle },
+    { id: 'etudes', label: 'Études & Conseil environnemental', desc: 'Comprendre l\'impact pour mieux agir.', icon: FileText },
+    { id: 'sante', label: 'Santé environnementale', desc: 'Sensibiliser. Prévenir. Mobiliser.', icon: Heart },
+    { id: 'nettoyage', label: 'Nettoyage professionnel', desc: 'Des espaces propres pour des organisations performantes.', icon: Sparkles }
   ];
 
-  const handleNavClick = (view: AppView) => {
-    onChangeView(view);
-    setIsMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const targetAudiences = [
+    { label: 'Entreprises', icon: Building2 },
+    { label: 'Banques', icon: ShieldCheck },
+    { label: 'Hôtels', icon: Briefcase },
+    { label: 'Industries', icon: Layers },
+    { label: 'ONG', icon: Globe },
+    { label: 'Institutions publiques', icon: Award },
+    { label: 'Résidences', icon: Users },
+    { label: 'Commerces', icon: Activity }
+  ];
 
   return (
-    <div className="w-full h-full overflow-y-auto bg-[#F8FAFC] dark:bg-[#050505] text-gray-800 dark:text-gray-200 no-scrollbar selection:bg-primary selection:text-white font-sans">
+    <div className="w-full min-h-screen bg-[#FBFDFB] text-gray-800 font-sans selection:bg-emerald-600 selection:text-white relative">
       
-      {/* NAVIGATION HEADER */}
-      <header className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 flex justify-center px-4 pt-4 md:pt-6 ${isScrolled ? 'pointer-events-none' : ''}`}>
-        <nav className={`w-full max-w-7xl transition-all duration-500 pointer-events-auto flex items-center justify-between px-6 py-4 rounded-[2.5rem] ${
+      {/* ═══════════════════════════════════════════════
+          1. EN-TÊTE / NAVIGATION (Header fixe au scroll)
+          ═══════════════════════════════════════════════ */}
+      <header 
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled 
-          ? 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white/20 dark:border-white/5 py-3' 
-          : 'bg-transparent'
-        }`}>
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavClick(AppView.LANDING)}>
-            <div className="w-11 h-11 bg-white dark:bg-black rounded-2xl flex items-center justify-center p-2 shadow-xl group-hover:rotate-[10deg] group-hover:scale-110 transition-all duration-500 border border-gray-100 dark:border-white/10">
-              <img src={appLogo} alt="Logo" className="w-full h-full object-contain" />
+            ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 py-3.5' 
+            : 'bg-white/80 backdrop-blur-sm py-5 border-b border-transparent'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          
+          {/* Logo gauche */}
+          <a 
+            href="#accueil" 
+            onClick={(e) => { e.preventDefault(); scrollToSection('accueil'); }} 
+            className="flex items-center gap-3.5 group cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center p-1.5 shadow-sm group-hover:scale-105 transition-transform">
+              <img src={appLogo} alt="BISO PETO GROUP" className="w-full h-full object-contain" />
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-xl tracking-tighter text-primary dark:text-white leading-none">BISO PETO</span>
-              </div>
-              <span className="text-[0.6rem] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Kin Eco-Map</span>
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-emerald-900 leading-tight flex items-center gap-1.5">
+                BISO PETO <span className="text-emerald-600">GROUP</span>
+              </span>
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                Services Environnementaux
+              </span>
             </div>
+          </a>
+
+          {/* Menu Desktop */}
+          <nav className="hidden lg:flex items-center gap-7">
+            <button 
+              onClick={() => scrollToSection('accueil')} 
+              className="text-sm font-semibold text-gray-700 hover:text-emerald-700 transition-colors uppercase tracking-wide"
+            >
+              Accueil
+            </button>
+
+            {/* Menu Déroulant Prestations */}
+            <div 
+              className="relative group py-2"
+              onMouseEnter={() => setIsPrestationsHovered(true)}
+              onMouseLeave={() => setIsPrestationsHovered(false)}
+            >
+              <button 
+                onClick={() => scrollToSection('prestations')}
+                className="flex items-center gap-1 text-sm font-semibold text-gray-700 group-hover:text-emerald-700 transition-colors uppercase tracking-wide"
+              >
+                Prestations
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isPrestationsHovered ? 'rotate-180 text-emerald-600' : 'text-gray-400'}`} />
+              </button>
+
+              {/* Dropdown Box */}
+              {isPrestationsHovered && (
+                <div 
+                  className="absolute top-full left-1/2 -translate-x-1/2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 p-2.5 space-y-1 animate-fade-in z-50"
+                  onMouseEnter={() => setIsPrestationsHovered(true)}
+                  onMouseLeave={() => setIsPrestationsHovered(false)}
+                >
+                  {prestationsDropdown.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleServiceSelect(item.id as any, item.label)}
+                      className="w-full text-left p-3 rounded-xl hover:bg-emerald-50/80 transition-colors flex items-start gap-3 group/item"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100/60 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 group-hover/item:bg-emerald-600 group-hover/item:text-white transition-colors">
+                        <item.icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-900 group-hover/item:text-emerald-800 transition-colors">
+                          {item.label}
+                        </p>
+                        <p className="text-[11px] text-gray-500 line-clamp-1">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button 
+              onClick={() => scrollToSection('innovation')} 
+              className="text-sm font-semibold text-gray-700 hover:text-emerald-700 transition-colors uppercase tracking-wide"
+            >
+              Innovation
+            </button>
+
+            <button 
+              onClick={() => scrollToSection('apropos')} 
+              className="text-sm font-semibold text-gray-700 hover:text-emerald-700 transition-colors uppercase tracking-wide"
+            >
+              À Propos
+            </button>
+
+            <button 
+              onClick={() => scrollToSection('contact')} 
+              className="text-sm font-semibold text-gray-700 hover:text-emerald-700 transition-colors uppercase tracking-wide"
+            >
+              Contact
+            </button>
+          </nav>
+
+          {/* Boutons d'action droite */}
+          <div className="hidden sm:flex items-center gap-3">
+            <button 
+              onClick={onLogin}
+              className="text-xs font-bold uppercase tracking-wider text-gray-700 hover:text-emerald-700 px-4 py-2.5 rounded-xl hover:bg-gray-100 transition-all"
+            >
+              Espace Client
+            </button>
+            <button 
+              onClick={onStart}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md active:scale-95 transition-all flex items-center gap-2"
+            >
+              <span>Accéder à l'App</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
 
-          <div className="hidden lg:flex items-center gap-8">
-            {navItems.map((item) => (
+          {/* Hamburger Mobile */}
+          <button 
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="lg:hidden p-2.5 rounded-xl bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+            aria-label="Menu"
+          >
+            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+
+        {/* Menu Mobile Drawer */}
+        {isMenuOpen && (
+          <div className="lg:hidden bg-white border-b border-gray-200 px-6 py-6 space-y-4 shadow-2xl animate-fade-in max-h-[85vh] overflow-y-auto">
+            <div className="flex flex-col space-y-3">
               <button 
-                key={item.view} 
-                onClick={() => handleNavClick(item.view)} 
-                className={`relative text-xs font-semibold uppercase tracking-[0.15em] transition-colors group ${currentView === item.view ? 'text-primary' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white'}`}
+                onClick={() => scrollToSection('accueil')} 
+                className="text-left font-bold text-gray-800 py-2 border-b border-gray-100 hover:text-emerald-700 uppercase text-xs tracking-wider"
               >
-                {item.label}
-                <span className={`absolute -bottom-1 left-0 h-0.5 bg-primary transition-all duration-300 ${currentView === item.view ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                Accueil
+              </button>
+
+              {/* Accordéon Prestations Mobile */}
+              <div>
+                <button 
+                  onClick={() => setIsMobilePrestationsOpen(!isMobilePrestationsOpen)}
+                  className="w-full flex items-center justify-between text-left font-bold text-gray-800 py-2 border-b border-gray-100 hover:text-emerald-700 uppercase text-xs tracking-wider"
+                >
+                  <span>Prestations</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${isMobilePrestationsOpen ? 'rotate-180 text-emerald-600' : ''}`} />
+                </button>
+                {isMobilePrestationsOpen && (
+                  <div className="pl-4 py-2 space-y-2.5 bg-emerald-50/50 rounded-xl my-2">
+                    {prestationsDropdown.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleServiceSelect(p.id as any, p.label)}
+                        className="w-full text-left text-xs font-semibold text-gray-700 hover:text-emerald-800 py-1.5 flex items-center gap-2"
+                      >
+                        <p.icon className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{p.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button 
+                onClick={() => scrollToSection('innovation')} 
+                className="text-left font-bold text-gray-800 py-2 border-b border-gray-100 hover:text-emerald-700 uppercase text-xs tracking-wider"
+              >
+                Innovation
+              </button>
+
+              <button 
+                onClick={() => scrollToSection('apropos')} 
+                className="text-left font-bold text-gray-800 py-2 border-b border-gray-100 hover:text-emerald-700 uppercase text-xs tracking-wider"
+              >
+                À Propos
+              </button>
+
+              <button 
+                onClick={() => scrollToSection('contact')} 
+                className="text-left font-bold text-gray-800 py-2 border-b border-gray-100 hover:text-emerald-700 uppercase text-xs tracking-wider"
+              >
+                Contact
+              </button>
+            </div>
+
+            <div className="pt-4 flex flex-col gap-3">
+              <button 
+                onClick={() => { setIsMenuOpen(false); onLogin(); }}
+                className="w-full py-3 bg-gray-100 text-gray-800 rounded-xl font-bold uppercase text-xs tracking-wider"
+              >
+                Espace Client
+              </button>
+              <button 
+                onClick={() => { setIsMenuOpen(false); onStart(); }}
+                className="w-full py-3.5 bg-emerald-700 text-white rounded-xl font-bold uppercase text-xs tracking-wider shadow-md"
+              >
+                Lancer l'Application
+              </button>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* ═══════════════════════════════════════════════
+          2. SECTION HERO (Bannière principale)
+          ═══════════════════════════════════════════════ */}
+      <section id="accueil" className="relative pt-32 pb-20 md:pt-44 md:pb-32 overflow-hidden bg-gradient-to-b from-emerald-950 via-emerald-900 to-gray-950 text-white">
+        
+        {/* Arrière-plan avec overlay professionnel */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=2000&q=80" 
+            alt="Environnement durable" 
+            className="w-full h-full object-cover opacity-25 mix-blend-overlay"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/95 via-emerald-950/85 to-gray-950/90" />
+        </div>
+
+        {/* Effets lumineux subtils */}
+        <div className="absolute -top-32 left-1/4 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-10 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="max-w-3xl space-y-6 md:space-y-8">
+            
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-semibold uppercase tracking-wider">
+              <Leaf className="w-4 h-4 text-emerald-400" />
+              <span>BISO PETO GROUP SARL • Entreprise Congolaise</span>
+            </div>
+
+            {/* Titre Principal H1 */}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-tight">
+              BISO PETO <span className="text-emerald-400">GROUP</span>
+            </h1>
+
+            {/* Sous-titre H2 */}
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-emerald-100/90 leading-snug">
+              Des solutions environnementales pour des organisations plus propres, responsables et durables
+            </h2>
+
+            {/* Paragraphe descriptif */}
+            <p className="text-base sm:text-lg text-emerald-100/75 leading-relaxed font-normal">
+              BISO PETO GROUP SARL est une entreprise congolaise spécialisée dans les services environnementaux, 
+              l'assainissement, la gestion des déchets, le nettoyage professionnel et l'accompagnement des organisations 
+              dans leurs démarches environnementales.
+            </p>
+            <p className="text-base sm:text-lg text-emerald-100/75 leading-relaxed font-normal">
+              Nous combinons expertise terrain, conseil, sensibilisation et innovation technologique pour accompagner 
+              les entreprises, institutions, organisations et communautés vers une meilleure performance environnementale.
+            </p>
+
+            {/* 2 Boutons CTA alignés */}
+            <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+              <button 
+                onClick={() => scrollToSection('prestations')}
+                className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-950/50 hover:shadow-emerald-500/20 active:scale-95 transition-all text-center flex items-center justify-center gap-2"
+              >
+                <span>DÉCOUVRIR NOS SERVICES</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              <button 
+                onClick={() => scrollToSection('contact')}
+                className="px-8 py-4 bg-transparent hover:bg-white/10 text-emerald-100 border border-emerald-400/40 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-center flex items-center justify-center gap-2"
+              >
+                <span>DEMANDER UNE ÉVALUATION</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          3. SECTION "NOTRE MISSION" (#apropos)
+          ═══════════════════════════════════════════════ */}
+      <section id="apropos" className="py-20 md:py-28 bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+            
+            {/* Colonne gauche texte */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+                <Target className="w-4 h-4" />
+                <span>Engagement & Vision</span>
+              </div>
+              
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+                Notre mission
+              </h2>
+              
+              <h3 className="text-xl sm:text-2xl font-semibold text-emerald-800">
+                Agir aujourd'hui pour un environnement durable
+              </h3>
+
+              <div className="space-y-4 text-gray-600 leading-relaxed text-base sm:text-lg">
+                <p>
+                  BISO PETO accompagne les organisations dans l'identification, la prévention et la gestion de leurs enjeux environnementaux.
+                </p>
+                <p>
+                  Nos experts interviennent aussi bien dans les opérations quotidiennes — collecte des déchets, assainissement et nettoyage — 
+                  que dans des missions de conseil, d'évaluation et d'études environnementales.
+                </p>
+                <p className="font-semibold text-gray-900 border-l-4 border-emerald-600 pl-4 py-1 italic bg-emerald-50/50 rounded-r-lg">
+                  "Notre ambition est simple : transformer les contraintes environnementales en solutions durables, 
+                  mesurables et adaptées aux réalités locales."
+                </p>
+              </div>
+
+              <div className="pt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100">
+                  <p className="text-2xl font-black text-emerald-800">100%</p>
+                  <p className="text-xs font-semibold text-gray-600 mt-1">Expertise locale RDC</p>
+                </div>
+                <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100">
+                  <p className="text-2xl font-black text-emerald-800">4 Pôles</p>
+                  <p className="text-xs font-semibold text-gray-600 mt-1">Solutions intégrées</p>
+                </div>
+                <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100 col-span-2 sm:col-span-1">
+                  <p className="text-2xl font-black text-emerald-800">0 Rejet</p>
+                  <p className="text-xs font-semibold text-gray-600 mt-1">Objectif valorisation</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Colonne droite visuel */}
+            <div className="lg:col-span-5 relative">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
+                <img 
+                  src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=1000&q=80" 
+                  alt="Équipe terrain environnementale" 
+                  className="w-full h-80 sm:h-96 lg:h-[420px] object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/80 via-transparent to-transparent flex items-end p-8">
+                  <div className="text-white">
+                    <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">Présence Terrain & Proximité</p>
+                    <p className="text-lg font-bold">Kinshasa & Provinces de la RDC</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          4. SECTION "NOS SERVICES" (4 pôles en grille 2x2)
+          ═══════════════════════════════════════════════ */}
+      <section id="services-grid" className="py-20 md:py-28 bg-[#F8FAF8] border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+            <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Nos Domaines d'Intervention</p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+              Nos Services
+            </h2>
+            <p className="text-gray-600 text-base sm:text-lg">
+              Une gamme structurée de prestations environnementales conçues pour répondre avec rigueur aux exigences des organisations modernes.
+            </p>
+          </div>
+
+          {/* Grille 2x2 Desktop, empilée mobile */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            {/* Service 01 */}
+            <div className="bg-white p-8 sm:p-10 rounded-2xl border border-gray-200/70 shadow-sm hover:shadow-md hover:border-emerald-500 transition-all flex flex-col justify-between group">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl font-black text-emerald-700/30 group-hover:text-emerald-700 transition-colors">01</span>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <Recycle className="w-6 h-6" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 group-hover:text-emerald-900 transition-colors">
+                  Gestion des déchets
+                </h3>
+                <p className="text-sm font-semibold text-emerald-700 italic">
+                  Collecter. Trier. Valoriser.
+                </p>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Nous accompagnons les entreprises, institutions et ménages dans la mise en place de solutions 
+                  adaptées de collecte, tri, évacuation et gestion responsable de leurs déchets.
+                </p>
+              </div>
+              <div className="pt-6 mt-6 border-t border-gray-100">
+                <button 
+                  onClick={() => handleServiceSelect('dechets', 'Gestion des déchets')}
+                  className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 hover:text-emerald-900 group-hover:translate-x-1 transition-all"
+                >
+                  <span>Découvrir</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Service 02 */}
+            <div className="bg-white p-8 sm:p-10 rounded-2xl border border-gray-200/70 shadow-sm hover:shadow-md hover:border-emerald-500 transition-all flex flex-col justify-between group">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl font-black text-emerald-700/30 group-hover:text-emerald-700 transition-colors">02</span>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 group-hover:text-emerald-900 transition-colors">
+                  Études & Conseil environnemental
+                </h3>
+                <p className="text-sm font-semibold text-emerald-700 italic">
+                  Comprendre l'impact pour mieux agir.
+                </p>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Avec l'appui de nos experts, BISO PETO réalise des diagnostics, études et évaluations environnementales 
+                  permettant aux organisations d'identifier leurs impacts, leurs risques et les actions d'amélioration nécessaires.
+                </p>
+              </div>
+              <div className="pt-6 mt-6 border-t border-gray-100">
+                <button 
+                  onClick={() => handleServiceSelect('etudes', 'Études & Conseil environnemental')}
+                  className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 hover:text-emerald-900 group-hover:translate-x-1 transition-all"
+                >
+                  <span>Découvrir</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Service 03 */}
+            <div className="bg-white p-8 sm:p-10 rounded-2xl border border-gray-200/70 shadow-sm hover:shadow-md hover:border-emerald-500 transition-all flex flex-col justify-between group">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl font-black text-emerald-700/30 group-hover:text-emerald-700 transition-colors">03</span>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <Heart className="w-6 h-6" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 group-hover:text-emerald-900 transition-colors">
+                  Santé environnementale
+                </h3>
+                <p className="text-sm font-semibold text-emerald-700 italic">
+                  Sensibiliser. Prévenir. Mobiliser.
+                </p>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Nous développons des actions de sensibilisation et de mobilisation autour de l'hygiène, de l'assainissement, 
+                  de la gestion des déchets et de la protection de l'environnement. BISO PETO peut notamment organiser des journées 
+                  environnementales, campagnes de sensibilisation, ateliers, formations et activités communautaires.
+                </p>
+              </div>
+              <div className="pt-6 mt-6 border-t border-gray-100">
+                <button 
+                  onClick={() => handleServiceSelect('sante', 'Santé environnementale')}
+                  className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 hover:text-emerald-900 group-hover:translate-x-1 transition-all"
+                >
+                  <span>Découvrir</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Service 04 */}
+            <div className="bg-white p-8 sm:p-10 rounded-2xl border border-gray-200/70 shadow-sm hover:shadow-md hover:border-emerald-500 transition-all flex flex-col justify-between group">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl font-black text-emerald-700/30 group-hover:text-emerald-700 transition-colors">04</span>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 group-hover:text-emerald-900 transition-colors">
+                  Nettoyage professionnel
+                </h3>
+                <p className="text-sm font-semibold text-emerald-700 italic">
+                  Des espaces propres pour des organisations performantes.
+                </p>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Nous proposons des solutions de nettoyage professionnel adaptées aux bureaux, banques, commerces, hôtels, 
+                  sites industriels et autres environnements professionnels. Nos prestations couvrent notamment l'entretien des locaux, 
+                  sols, vitres et surfaces, sanitaires, espaces communs ainsi que les opérations ponctuelles de nettoyage intensif.
+                </p>
+              </div>
+              <div className="pt-6 mt-6 border-t border-gray-100">
+                <button 
+                  onClick={() => handleServiceSelect('nettoyage', 'Nettoyage professionnel')}
+                  className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 hover:text-emerald-900 group-hover:translate-x-1 transition-all"
+                >
+                  <span>Découvrir</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          5. SECTION "POURQUOI BISO PETO ?"
+          ═══════════════════════════════════════════════ */}
+      <section className="py-20 md:py-28 bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+              Pourquoi BISO PETO ?
+            </h2>
+            <p className="text-lg sm:text-xl font-semibold text-emerald-800">
+              Votre partenaire environnemental, du diagnostic à l'action.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            {/* Carte 1 */}
+            <div className="p-8 rounded-2xl bg-[#F8FAF8] border border-gray-200/80 hover:border-emerald-500 hover:bg-emerald-50/40 transition-all flex flex-col items-start">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-6">
+                <Users className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2.5">
+                Expertise multidisciplinaire
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Un réseau d'experts et de professionnels mobilisés selon les besoins spécifiques de chaque mission.
+              </p>
+            </div>
+
+            {/* Carte 2 */}
+            <div className="p-8 rounded-2xl bg-[#F8FAF8] border border-gray-200/80 hover:border-emerald-500 hover:bg-emerald-50/40 transition-all flex flex-col items-start">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-6">
+                <Layers className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2.5">
+                Solutions intégrées
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Études, conseil, nettoyage, gestion des déchets, sensibilisation et solutions numériques réunis autour d'un même partenaire.
+              </p>
+            </div>
+
+            {/* Carte 3 */}
+            <div className="p-8 rounded-2xl bg-[#F8FAF8] border border-gray-200/80 hover:border-emerald-500 hover:bg-emerald-50/40 transition-all flex flex-col items-start">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-6">
+                <Compass className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2.5">
+                Approche terrain
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Des solutions conçues en fonction des réalités opérationnelles des entreprises et communautés.
+              </p>
+            </div>
+
+            {/* Carte 4 */}
+            <div className="p-8 rounded-2xl bg-[#F8FAF8] border border-gray-200/80 hover:border-emerald-500 hover:bg-emerald-50/40 transition-all flex flex-col items-start">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-6">
+                <Lightbulb className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2.5">
+                Innovation
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                La technologie est intégrée à nos métiers pour améliorer la traçabilité, la sensibilisation et la gestion environnementale.
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          6. SECTION "NOS SOLUTIONS S'ADRESSENT À"
+          ═══════════════════════════════════════════════ */}
+      <section className="py-16 md:py-24 bg-[#F8FAF8] border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-10">
+            Nos solutions s'adressent à
+          </h2>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 max-w-5xl mx-auto">
+            {targetAudiences.map((target, idx) => (
+              <div 
+                key={idx}
+                className="px-5 py-3 rounded-xl bg-white border border-gray-200 shadow-sm hover:border-emerald-500 hover:bg-emerald-50/50 hover:shadow transition-all flex items-center gap-2.5 text-sm font-bold text-gray-800 cursor-default"
+              >
+                <target.icon className="w-4 h-4 text-emerald-600" />
+                <span>{target.label}</span>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          8. SECTION DÉTAILLÉE "PRESTATIONS" (#prestations)
+          ═══════════════════════════════════════════════ */}
+      <section id="prestations" className="py-20 md:py-32 bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+            <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Expertise Approfondie</p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+              NOS PRESTATIONS
+            </h2>
+            <p className="text-lg sm:text-xl font-semibold text-emerald-800">
+              Des solutions environnementales adaptées à vos enjeux
+            </p>
+            <p className="text-gray-600 text-base sm:text-lg">
+              De l'analyse environnementale aux opérations terrain, BISO PETO GROUP accompagne ses clients à travers quatre pôles complémentaires.
+            </p>
+          </div>
+
+          {/* Onglets de sélection pour une navigation fluide */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-16 border-b border-gray-200 pb-4">
+            {[
+              { id: 'dechets', label: '1. Gestion des déchets', icon: Recycle },
+              { id: 'etudes', label: '2. Études & Conseil', icon: FileText },
+              { id: 'sante', label: '3. Santé environnementale', icon: Heart },
+              { id: 'nettoyage', label: '4. Nettoyage professionnel', icon: Sparkles }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? 'bg-emerald-700 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-800'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span>{tab.label}</span>
               </button>
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
-            <button onClick={onLogin} className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-gray-600 dark:text-gray-400 hover:text-primary transition-all px-4 py-2">Connexion</button>
-            <button onClick={onStart} className="group relative bg-primary hover:bg-primary-light text-white px-7 py-3 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] shadow-2xl shadow-green-500/20 active:scale-95 transition-all overflow-hidden">
-              <span className="relative z-10 flex items-center gap-2">Commencer <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>
-            </button>
-            <button className="lg:hidden p-3 bg-gray-100 dark:bg-gray-800 text-primary rounded-2xl transition-all" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-        </nav>
-      </header>
-
-      {/* MOBILE MENU OVERLAY */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-[110] bg-white dark:bg-[#050505] p-8 flex flex-col animate-fade-in">
-           <div className="flex justify-between items-center mb-12">
-              <img src={appLogo} className="w-12 h-12 object-contain" alt="Logo" />
-              <button onClick={() => setIsMenuOpen(false)} className="p-3 bg-gray-100 dark:bg-gray-800 rounded-2xl"><X/></button>
-           </div>
-           <div className="flex flex-col gap-6">
-              {navItems.map(item => (
-                <button key={item.view} onClick={() => handleNavClick(item.view)} className="text-2xl font-bold text-left uppercase tracking-tighter hover:text-primary transition-colors">{item.label}</button>
-              ))}
-              <div className="h-px bg-gray-100 dark:bg-gray-800 my-4"></div>
-              <button onClick={onLogin} className="text-xl font-bold text-left uppercase tracking-tighter text-secondary">Se Connecter</button>
-              <button onClick={onStart} className="w-full py-5 bg-primary text-white rounded-2xl font-bold uppercase tracking-widest text-sm">Nous Rejoindre</button>
-           </div>
-        </div>
-      )}
-
-      {/* HERO SECTION / PAGE HEADER */}
-      <section className={`relative transition-all duration-700 overflow-hidden ${isMainLanding ? 'pt-48 pb-24 md:pt-64 md:pb-40' : 'pt-32 pb-12'}`}>
-        <div className="absolute top-0 left-0 w-full h-full -z-10 overflow-hidden">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[60%] bg-primary/10 blur-[120px] rounded-full"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[70%] bg-secondary/10 blur-[150px] rounded-full"></div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto px-6">
-          {isMainLanding ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              <div className="animate-fade-in-up">
-                <div className="inline-flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-primary-light px-4 py-2 rounded-full mb-8 border border-green-100 dark:border-green-800">
-                  <Sparkles className="w-4 h-4 animate-pulse" />
-                  <span className="text-xs font-semibold uppercase tracking-widest">L'Intelligence Artificielle au service de Kinshasa</span>
-                </div>
-                <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white tracking-tighter leading-[1.05] mb-8 uppercase">
-                  REPENSONS <br/> <span className="text-primary italic">L'URBAIN</span>
-                </h1>
-                <p className="text-lg md:text-xl text-gray-500 dark:text-gray-400 font-medium leading-relaxed max-w-xl mb-12">
-                  Transformez chaque déchet en ressource. Biso Peto connecte les citoyens, les entreprises et les collecteurs pour un Kinshasa propre, connecté et durable.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-5">
-                  <button onClick={onStart} className="bg-primary text-white px-10 py-5 rounded-3xl font-bold text-lg uppercase tracking-widest shadow-[0_20px_50px_rgba(46,125,50,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3">
-                    Rejoindre le Réseau <MousePointer2 className="w-6 h-6" />
-                  </button>
-                  <button onClick={() => handleNavClick(AppView.LANDING_PROCESS)} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-2 border-gray-100 dark:border-gray-700 px-10 py-5 rounded-3xl font-bold text-lg uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-3 active:scale-95">
-                    Le Modèle <Play className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative animate-fade-in hidden lg:block">
-                <div className="relative z-10 w-full aspect-square rounded-[4rem] overflow-hidden shadow-2xl border-[0.75rem] border-white dark:border-gray-800 rotate-3 group cursor-pointer" onClick={onStart}>
-                  <img src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1000&q=80" alt="Kinshasa Verte" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-primary shadow-2xl scale-0 group-hover:scale-100 transition-transform duration-500">
-                        <Rocket className="w-8 h-8" />
-                    </div>
+          <div className="space-y-20">
+            
+            {/* Prestation 1 — GESTION DES DÉCHETS */}
+            {(activeTab === 'dechets' || activeTab === undefined) && (
+              <div id="prestation-dechets" className="bg-[#F8FAF8] p-8 sm:p-12 lg:p-14 rounded-3xl border border-gray-200 space-y-8 animate-fade-in">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-6">
+                  <div>
+                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Pôle 01</span>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">
+                      Gestion des déchets
+                    </h3>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-100/60 text-emerald-800 text-xs font-bold">
+                    <Recycle className="w-4 h-4" />
+                    <span>Collecte • Tri • Valorisation</span>
                   </div>
                 </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-xl font-bold text-emerald-900">
+                    Une gestion responsable, organisée et traçable de vos déchets
+                  </h4>
+                  <p className="text-gray-600 leading-relaxed">
+                    BISO PETO accompagne les entreprises, institutions, commerces, résidences et autres organisations 
+                    dans la mise en place de solutions adaptées de gestion des déchets. Notre approche vise à améliorer la 
+                    propreté des sites tout en encourageant progressivement le tri, la réduction et la valorisation des déchets.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <h5 className="text-sm font-bold uppercase tracking-wider text-gray-900 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Services possibles :</span>
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                    {[
+                      'Collecte régulière des déchets',
+                      'Collecte ponctuelle ou évacuation spéciale',
+                      'Mise en place et organisation des points de collecte',
+                      'Tri et sensibilisation au tri',
+                      'Gestion des déchets professionnels',
+                      'Accompagnement à la valorisation et au recyclage',
+                      'Suivi des opérations de collecte',
+                      'Diagnostic de la gestion des déchets d\'un site'
+                    ].map((serv, idx) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-white border border-gray-100">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm font-medium text-gray-800">{serv}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button 
+                    onClick={() => {
+                      setFormState(prev => ({ ...prev, service: 'Gestion des déchets' }));
+                      scrollToSection('contact');
+                    }}
+                    className="px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
+                  >
+                    <span>Demander une évaluation de mon site</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-center animate-fade-in py-10">
-                <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white uppercase tracking-tighter">
-                  {navItems.find(i => i.view === currentView)?.label}
-                </h1>
-                <div className="w-24 h-1.5 bg-primary mx-auto mt-6 rounded-full shadow-[0_0_20px_rgba(46,125,50,0.4)]"></div>
-            </div>
-          )}
+            )}
+
+            {/* Prestation 2 — ÉTUDES & CONSEIL ENVIRONNEMENTAL */}
+            {(activeTab === 'etudes' || activeTab === undefined) && (
+              <div id="prestation-etudes" className="bg-[#F8FAF8] p-8 sm:p-12 lg:p-14 rounded-3xl border border-gray-200 space-y-8 animate-fade-in">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-6">
+                  <div>
+                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Pôle 02</span>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">
+                      Études & Conseil environnemental
+                    </h3>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-100/60 text-emerald-800 text-xs font-bold">
+                    <FileText className="w-4 h-4" />
+                    <span>Diagnostics • Audits • Conformité</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-xl font-bold text-emerald-900">
+                    L'expertise environnementale au service de vos projets
+                  </h4>
+                  <p className="text-gray-600 leading-relaxed">
+                    BISO PETO mobilise des experts pour accompagner les entreprises, investisseurs, institutions et 
+                    organisations dans l'identification et la maîtrise des impacts environnementaux liés à leurs activités et projets. 
+                    Selon la nature des missions et les qualifications requises, nous constituons des équipes multidisciplinaires 
+                    capables d'intervenir depuis le diagnostic jusqu'à la formulation de recommandations opérationnelles.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <h5 className="text-sm font-bold uppercase tracking-wider text-gray-900 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Domaines d'intervention :</span>
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                    {[
+                      'Diagnostics environnementaux',
+                      'Études et évaluations d\'impacts environnementaux',
+                      'Audits et évaluations environnementales',
+                      'Études liées à la gestion des déchets',
+                      'Plans de gestion environnementale',
+                      'Conseil en assainissement',
+                      'Accompagnement à la conformité environnementale',
+                      'Études spécifiques selon les projets',
+                      'Élaboration de recommandations et plans d\'amélioration'
+                    ].map((dom, idx) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-white border border-gray-100">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm font-medium text-gray-800">{dom}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button 
+                    onClick={() => {
+                      setFormState(prev => ({ ...prev, service: 'Études & Conseil environnemental' }));
+                      scrollToSection('contact');
+                    }}
+                    className="px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
+                  >
+                    <span>Demander une évaluation</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Prestation 3 — SANTÉ ENVIRONNEMENTALE */}
+            {(activeTab === 'sante' || activeTab === undefined) && (
+              <div id="prestation-sante" className="bg-[#F8FAF8] p-8 sm:p-12 lg:p-14 rounded-3xl border border-gray-200 space-y-8 animate-fade-in">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-6">
+                  <div>
+                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Pôle 03</span>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">
+                      Santé environnementale
+                    </h3>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-100/60 text-emerald-800 text-xs font-bold">
+                    <Heart className="w-4 h-4" />
+                    <span>Sensibilisation • Hygiène • Mobilisation</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-xl font-bold text-emerald-900">
+                    Sensibiliser, former et mobiliser pour un changement durable
+                  </h4>
+                  <p className="text-gray-600 leading-relaxed">
+                    Nous développons des actions de sensibilisation et de mobilisation autour de l'hygiène, de l'assainissement, 
+                    de la gestion des déchets et de la protection de l'environnement. BISO PETO conçoit des programmes sur-mesure 
+                    pour le personnel d'entreprise, les communautés riveraines et les institutions.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <h5 className="text-sm font-bold uppercase tracking-wider text-gray-900 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Actions & Formats d'intervention :</span>
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                    {[
+                      'Organisation de journées environnementales en entreprise',
+                      'Campagnes de sensibilisation et de communication environnementale',
+                      'Ateliers et formations pratiques à l\'hygiène et au tri',
+                      'Activités communautaires et mobilisation citoyenne',
+                      'Conseil en hygiène publique et salubrité',
+                      'Programmes éducatifs en milieu scolaire et universitaire'
+                    ].map((act, idx) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-white border border-gray-100">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm font-medium text-gray-800">{act}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button 
+                    onClick={() => {
+                      setFormState(prev => ({ ...prev, service: 'Santé environnementale' }));
+                      scrollToSection('contact');
+                    }}
+                    className="px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
+                  >
+                    <span>Organiser une campagne</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Prestation 4 — NETTOYAGE PROFESSIONNEL */}
+            {(activeTab === 'nettoyage' || activeTab === undefined) && (
+              <div id="prestation-nettoyage" className="bg-[#F8FAF8] p-8 sm:p-12 lg:p-14 rounded-3xl border border-gray-200 space-y-8 animate-fade-in">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-6">
+                  <div>
+                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Pôle 04</span>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">
+                      Nettoyage professionnel
+                    </h3>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-100/60 text-emerald-800 text-xs font-bold">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Espaces Pro • Entretien • Spécialisé</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-xl font-bold text-emerald-900">
+                    Des environnements propres, sains et professionnels
+                  </h4>
+                  <p className="text-gray-600 leading-relaxed">
+                    BISO PETO fournit des services de nettoyage et d'entretien adaptés aux exigences des environnements 
+                    professionnels. Après évaluation du site, nous définissons la fréquence d'intervention, les ressources humaines, 
+                    les équipements et le programme de nettoyage appropriés.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <h5 className="text-sm font-bold uppercase tracking-wider text-gray-900 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Prestations incluses :</span>
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-2">
+                    {[
+                      'Nettoyage de bureaux',
+                      'Entretien des sols',
+                      'Nettoyage des vitres et surfaces vitrées',
+                      'Nettoyage des sanitaires',
+                      'Entretien des espaces communs',
+                      'Nettoyage de commerces',
+                      'Nettoyage d\'hôtels et établissements',
+                      'Nettoyage après travaux',
+                      'Nettoyage ponctuel / intensif',
+                      'Entretien régulier des sites',
+                      'Collecte et évacuation des déchets générés'
+                    ].map((clean, idx) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-white border border-gray-100">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm font-medium text-gray-800">{clean}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button 
+                    onClick={() => {
+                      setFormState(prev => ({ ...prev, service: 'Nettoyage professionnel' }));
+                      scrollToSection('contact');
+                    }}
+                    className="px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
+                  >
+                    <span>Demander un devis de nettoyage</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
+
         </div>
       </section>
 
-      {/* CONTENT PAGES */}
-      <main className="animate-fade-in pb-32">
-        
-        {/* PAGE: À PROPOS */}
-        {currentView === AppView.LANDING_ABOUT && (
-          <div className="max-w-6xl mx-auto px-6 space-y-24">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              <div className="space-y-8">
-                <div className="inline-block px-4 py-2 bg-primary/5 text-primary rounded-xl font-bold text-xs uppercase tracking-widest">Manifeste BISO PETO</div>
-                <h2 className="text-4xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">Une filiale de <span className="text-primary">BISO PETO GROUP SARL</span></h2>
-                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed text-justify">
-                  BISO PETO est une entreprise congolaise engagée dans la transformation durable, spécialisée dans la gestion, le tri et la valorisation des déchets à Kinshasa et en RDC. 
-                  Créée pour répondre à l’urgence environnementale, nous développons des solutions innovantes et opérationnelles pour structurer le secteur et réduire la pollution urbaine.
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    "Innovation digitale", "Impact mesurable", "Emplois verts", "Économie circulaire"
-                  ].map(val => (
-                    <div key={val} className="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/5">
-                      <CheckCircle2 className="text-primary w-5 h-5 shrink-0" />
-                      <span className="text-xs font-bold uppercase tracking-tight">{val}</span>
+      {/* ═══════════════════════════════════════════════
+          SECTION INNOVATION (Kin Eco-Map Digital Platform)
+          ═══════════════════════════════════════════════ */}
+      <section id="innovation" className="py-20 md:py-28 bg-[#F8FAF8] border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            <div className="lg:col-span-6 space-y-6">
+              <div className="inline-flex items-center gap-2 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+                <Globe className="w-4 h-4" />
+                <span>Pôle Technologique</span>
+              </div>
+
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+                L'Innovation au cœur de l'Assainissement
+              </h2>
+
+              <p className="text-gray-600 leading-relaxed text-base sm:text-lg">
+                BISO PETO développe et intègre des outils digitaux avancés, notamment la plateforme cartographique 
+                <strong> Kin Eco-Map</strong>, pour révolutionner la gestion des déchets, assurer une traçabilité 
+                transparente et faciliter la communication entre usagers et équipes terrain.
+              </p>
+
+              <div className="space-y-3.5 pt-2">
+                {[
+                  { title: 'Cartographie SIG en temps réel', desc: 'Suivi géolocalisé des tournées de collecte et des points d\'apport.' },
+                  { title: 'Signalement numérique intelligent', desc: 'Remontée instantanée des dépôts sauvages avec géolocalisation et photo.' },
+                  { title: 'Portail de gestion pour Entreprises', desc: 'Rapports d\'impact environnemental, traçabilité et facturation simplifiée.' }
+                ].map((feat, idx) => (
+                  <div key={idx} className="flex items-start gap-3.5 p-4 rounded-2xl bg-white border border-gray-200/80">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                      <Check className="w-4 h-4" />
                     </div>
-                  ))}
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{feat.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{feat.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 flex flex-wrap gap-4">
+                <button 
+                  onClick={onStart}
+                  className="px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
+                >
+                  <span>Explorer l'Application Kin Eco-Map</span>
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="lg:col-span-6">
+              <div className="bg-emerald-950 p-8 sm:p-10 rounded-3xl text-white shadow-2xl relative overflow-hidden border border-emerald-800">
+                <div className="space-y-6 relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Plateforme Digitale</span>
+                    <Smartphone className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-extrabold leading-tight">
+                    Une solution connectée pour Kinshasa et la RDC
+                  </h3>
+                  <p className="text-emerald-200/80 text-sm leading-relaxed">
+                    Accessible sur mobile et web, notre infrastructure connecte les citoyens, les entreprises, 
+                    les transporteurs et les recycleurs au sein d'un écosystème circulaire et traçable.
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-emerald-800/80">
+                    <div>
+                      <p className="text-2xl font-black text-emerald-400">{impactData?.realTimeCollection || 98}%</p>
+                      <p className="text-[11px] text-emerald-200 uppercase font-semibold">Taux de réponse terrain</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-black text-emerald-400">24/7</p>
+                      <p className="text-[11px] text-emerald-200 uppercase font-semibold">Surveillance & Alertes</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="relative rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white dark:border-gray-800 rotate-2">
-                 <img src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80" className="w-full h-auto" />
-              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-               <div className="bg-primary text-white p-12 rounded-[3.5rem] shadow-xl relative overflow-hidden">
-                  <Target className="absolute -right-10 -bottom-10 w-64 h-64 opacity-10" />
-                  <h3 className="text-3xl font-bold uppercase tracking-tighter mb-6">Notre Mission</h3>
-                  <p className="text-lg opacity-90 leading-relaxed font-medium">Réinventer la gestion des déchets à Kinshasa en transformant un problem urbain en opportunité environnementale, économique et sociale.</p>
-               </div>
-               <div className="bg-secondary text-white p-12 rounded-[3.5rem] shadow-xl relative overflow-hidden">
-                  <Eye className="absolute -right-10 -bottom-10 w-64 h-64 opacity-10" />
-                  <h3 className="text-3xl font-bold uppercase tracking-tighter mb-6">Notre Vision</h3>
-                  <p className="text-lg opacity-90 leading-relaxed font-medium">Faire de Kinshasa une ville propre, moderne et durable, en positionnant la RDC comme référence africaine de l’économie circulaire.</p>
-               </div>
-            </div>
-
-            <div className="space-y-12">
-              <div className="text-center">
-                <h3 className="text-3xl font-bold uppercase tracking-tighter mb-4">Nos Services de Pointe</h3>
-                <p className="text-gray-400 font-medium max-w-2xl mx-auto uppercase text-xs tracking-widest">Des solutions adaptées aux besoins urbains et professionnels</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                 {[
-                   { title: "Collecte & Tri", icon: Truck, desc: "Collecte sélective, points de tri de quartier et accompagnement à la gestion des flux de déchets ménagers." },
-                   { title: "Recyclage", icon: Recycle, desc: "Transformation des plastiques et déchets ménagers secs en ressources réutilisables dans l'économie locale." },
-                   { title: "Service de Nettoyage", icon: Sparkles, desc: "Nettoyage professionnel de sites, assainissement après événements et entretien spécialisé d'espaces urbains." },
-                   { title: "Solutions Pro", icon: Building2, desc: "Gestion externalisée des déchets d’entreprise et accompagnement à la conformité environnementale (RSE)." },
-                   { title: "Éducation", icon: GraduationCap, desc: "Programmes de sensibilisation communautaire et actions éducatives dans les écoles de la ville-province." },
-                   { title: "Digitalisation", icon: Globe, desc: "Propulsion de Kin Eco-Map, première carte intelligente de gestion environnementale structurant l’écosystème." }
-                 ].map((service, i) => (
-                   <div key={i} className="p-8 bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-white/5 hover:border-primary transition-all group">
-                      <div className="w-14 h-14 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform"><service.icon size={28}/></div>
-                      <h4 className="text-xl font-bold uppercase mb-4 tracking-tight">{service.title}</h4>
-                      <p className="text-sm text-gray-500 font-medium leading-relaxed">{service.desc}</p>
-                   </div>
-                 ))}
-              </div>
-            </div>
           </div>
-        )}
 
-        {/* PAGE: FONCTIONNEMENT */}
-        {currentView === AppView.LANDING_PROCESS && (
-          <div className="max-w-5xl mx-auto px-6 space-y-20">
-            <div className="text-center space-y-4">
-              <p className="text-lg text-gray-500 font-medium leading-relaxed">Kin Eco-Map est une plateforme digitale simple, intuitive et accessible à tous, qui permet aux citoyens et entreprises de gérer efficacement leurs besoins.</p>
-            </div>
+        </div>
+      </section>
 
-            <div className="space-y-16">
-               {[
-                 { step: "01", title: "Compte & Abonnement", icon: User, desc: "Création de compte en quelques clics, choix d'un plan adapté (ménage, entreprise, institution) et paiement sécurisé en ligne pour un accès immédiat.", items: ["Validation directe", "Outils numériques intégrés"] },
-                 { step: "02", title: "Signalement Intelligent", icon: Camera, desc: "Faites un signalement rapide avec photo, localisation GPS automatique et description. Ouvert aux citoyens, entreprises et associations.", items: ["Photo HD", "Priorisation par urgence"] },
-                 { step: "03", title: "Évacuations Spéciales", icon: Zap, desc: "Commandez une intervention ponctuelle pour des encombrants, après un événement ou pour des déchets industriels spécifiques.", items: ["Suivi programmation", "Confirmation mission"] },
-                 { step: "04", title: "Alertes Live", icon: Bell, desc: "Restez informé en permanence : confirmation des signalements, suivi de traitement et notifications d’intervention dans votre zone.", items: ["Traçabilité", "Confiance accrue"] },
-                 { step: "05", title: "Academy Éducative", icon: GraduationCap, desc: "Accès à des contenus pédagogiques sur le tri et la gestion durable. Formations pour écoles et entreprises avec certifications.", items: ["Quiz écolo", "Certificats officiels"] },
-                 { step: "06", title: "Géolocalisation SIG", icon: MapPin, desc: "Visualisez les tricycles et camions affectés à votre secteur en temps réel sur la carte pour une coordination parfaite.", items: ["Mouvements actifs", "Identification équipe"] },
-                 { step: "07", title: "Console Client", icon: Layout, desc: "Espace personnel sécurisé centralisant factures, historique, statistiques d'impact et suivi complet des interventions.", items: ["Tableau de bord pro", "Historique paiements"] }
-               ].map((step, i) => (
-                 <div key={i} className="flex flex-col md:flex-row gap-10 items-start group">
-                    <div className="shrink-0 w-24 h-24 bg-primary text-white rounded-[2rem] flex flex-col items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
-                      <span className="text-xs font-black opacity-40 leading-none mb-1">{step.step}</span>
-                      <step.icon size={32} />
-                    </div>
-                    <div className="flex-1 space-y-4">
-                       <h3 className="text-2xl font-bold uppercase tracking-tighter">{step.title}</h3>
-                       <p className="text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">{step.desc}</p>
-                       <div className="flex flex-wrap gap-2">
-                         {step.items.map(it => <span key={it} className="px-3 py-1 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-full text-[10px] font-bold uppercase tracking-widest text-primary">{it}</span>)}
-                       </div>
-                    </div>
-                 </div>
-               ))}
-            </div>
+      {/* ═══════════════════════════════════════════════
+          7. SECTION CTA FINALE (Call-to-Action)
+          ═══════════════════════════════════════════════ */}
+      <section className="py-20 md:py-28 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 text-white text-center relative overflow-hidden">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 relative z-10">
+          
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">
+            Vous avez un besoin environnemental spécifique ?
+          </h2>
 
-            <div className="bg-gray-900 p-12 rounded-[4rem] text-center text-white relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-12 opacity-5"><Smartphone size={200}/></div>
-               <h3 className="text-3xl font-bold uppercase tracking-tighter mb-6">Tout Kinshasa dans votre poche</h3>
-               <p className="text-lg opacity-80 mb-10 max-w-xl mx-auto">Plus qu'une simple carte, Kin Eco-Map est votre partenaire quotidien pour une ville durable.</p>
-               <button onClick={onStart} className="px-10 py-5 bg-primary rounded-2xl font-bold uppercase tracking-widest shadow-2xl hover:scale-105 transition-all">Démarrer l'expérience</button>
-            </div>
+          <p className="text-base sm:text-lg md:text-xl text-emerald-100/90 max-w-2xl mx-auto leading-relaxed">
+            Nos équipes peuvent effectuer une évaluation de votre site et vous proposer une solution adaptée.
+          </p>
+
+          <div className="pt-4">
+            <button 
+              onClick={() => scrollToSection('contact')}
+              className="px-10 py-5 bg-white hover:bg-emerald-50 text-emerald-950 rounded-2xl font-extrabold text-sm uppercase tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all inline-flex items-center gap-3"
+            >
+              <span>DEMANDER UNE ÉVALUATION</span>
+              <ArrowRight className="w-5 h-5 text-emerald-700" />
+            </button>
           </div>
-        )}
 
-        {/* PAGE: IMPACT */}
-        {currentView === AppView.LANDING_IMPACT && (
-          <div className="max-w-6xl mx-auto px-6 space-y-20">
-            <div className="bg-primary/5 p-10 rounded-[3.5rem] border border-primary/10 text-center">
-              <h3 className="text-2xl font-bold uppercase tracking-tight mb-4">Ce que nous changeons concrètement</h3>
-              <p className="text-gray-500 font-medium max-w-3xl mx-auto">Kin Eco-Map est une solution mesurable et durable pour transformer les déchets en valeur et l’écologie en moteur de développement pour Kinshasa.</p>
-            </div>
+        </div>
+      </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               {[
-                 { title: "Impact Environnemental", color: "text-green-600", bg: "bg-green-50", items: ["Réduction des déchets abandonnés", "Amélioration de la propreté urbaine", "Protection des sols et cours d’eau", "Promotion de comportements responsables"] },
-                 { title: "Impact Économique", color: "text-blue-600", bg: "bg-blue-50", items: ["Création d’emplois verts", "Stimulation de la filière recyclage", "Opportunités pour entrepreneurs", "Économie circulaire locale"] },
-                 { title: "Impact Social", color: "text-red-600", bg: "bg-red-50", items: ["Sensibilisation des citoyens", "Participation communautaire active", "Amélioration du cadre de vie", "Contribution à la santé publique"] },
-                 { title: "Impact Structurel", color: "text-purple-600", bg: "bg-purple-50", items: ["Cartographie de l’écosystème", "Mise en relation des acteurs", "Données exploitables (Open Data)", "Support aux initiatives publiques"] },
-               ].map((axe, i) => (
-                 <div key={i} className="p-10 bg-white dark:bg-gray-900 rounded-[3.5rem] border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-xl transition-all">
-                    <h4 className={`text-2xl font-bold uppercase tracking-tight mb-8 ${axe.color}`}>{axe.title}</h4>
-                    <ul className="space-y-4">
-                      {axe.items.map((item, j) => (
-                        <li key={j} className="flex gap-4 items-center">
-                           <div className={`w-2 h-2 rounded-full ${axe.bg.replace('50', '500')}`}></div>
-                           <span className="text-sm font-bold dark:text-white uppercase tracking-tight opacity-70">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                 </div>
-               ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center pt-10">
-               <div className="space-y-8">
-                  <h3 className="text-4xl font-bold uppercase tracking-tighter leading-none">Indicateurs de Performance (KPI)</h3>
-                  <div className="space-y-6">
-                     {[
-                        { label: "Digitalisation des Zones", val: impactData.digitalization, icon: Smartphone },
-                        { label: "Recyclage Plastique", val: impactData.recyclingRate, icon: Recycle },
-                        { label: "Éducation Academy", val: impactData.education, icon: GraduationCap },
-                        { label: "Réponse Terrain Live", val: impactData.realTimeCollection, icon: Activity }
-                     ].map((kpi, i) => (
-                       <div key={i} className="space-y-2">
-                          <div className="flex justify-between items-end px-2">
-                             <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest flex items-center gap-2"><kpi.icon size={12}/> {kpi.label}</span>
-                             <span className="text-xl font-bold text-primary">{kpi.val}%</span>
-                          </div>
-                          <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full transition-all duration-[2s]" style={{ width: `${kpi.val}%` }}></div></div>
-                       </div>
-                     ))}
-                  </div>
-               </div>
-               <div className="p-10 bg-gray-50 dark:bg-gray-900 rounded-[3.5rem] border dark:border-white/5 text-center flex flex-col items-center gap-6">
-                  <div className="w-20 h-20 bg-primary/10 text-primary rounded-[2rem] flex items-center justify-center"><BarChart3 size={40}/></div>
-                  <p className="text-sm text-gray-500 font-medium leading-relaxed italic">"Toutes nos données sont auditées et accessibles via notre console administrative pour les partenaires gouvernementaux et institutionnels."</p>
-                  <button onClick={onStart} className="text-xs font-black uppercase text-primary border-b-2 border-primary tracking-widest pb-1">Voir le rapport complet 2024</button>
-               </div>
-            </div>
-          </div>
-        )}
-
-        {/* PAGE: ÉCOSYSTÈME (MODULES) */}
-        {currentView === AppView.LANDING_ECOSYSTEM && (
-          <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { title: 'Citoyens', icon: Home, color: 'bg-green-50 text-primary', desc: 'Gérez votre abonnement ménager, programmez vos collectes et transformez vos déchets plastiques en Eco-Points pour payer vos factures.', features: ['Collecte à domicile', 'Points Fidélité'] },
-              { title: 'Entreprises', icon: Building2, color: 'bg-blue-50 text-secondary', desc: 'Optimisez votre gestion des déchets industriels. Obtenez des certificats officiels de valorisation pour vos rapports RSE et audits.', features: ['Rapportage RSE', 'Audit Déchets'] },
-              { title: 'Logistique', icon: Truck, color: 'bg-orange-50 text-orange-600', desc: 'Outil pro pour les opérateurs de terrain. Planification intelligente des tournées, suivi GPS des flottes et validation par IA.', features: ['GPS Live', 'Preuve Photo IA'] },
-              { title: 'Academy', icon: GraduationCap, color: 'bg-purple-50 text-purple-600', desc: 'Apprenez les gestes qui sauvent l\'environnement. Formations, Quiz et certifications pour écoles et agents municipaux.', features: ['Quiz Écolo', 'Certificats'] },
-            ].map((mod, i) => (
-              <div key={i} className="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-white/5 hover:shadow-2xl transition-all group flex flex-col hover:-translate-y-2">
-                  <div className={`w-16 h-16 ${mod.color} rounded-2xl flex items-center justify-center mb-8 group-hover:rotate-12 transition-transform`}><mod.icon className="w-8 h-8"/></div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white uppercase mb-4 tracking-tight">{mod.title}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-8 leading-relaxed flex-1">{mod.desc}</p>
-                  <div className="flex flex-wrap gap-2 mb-8">
-                    {mod.features.map(f => <span key={f} className="text-[0.6rem] font-semibold uppercase text-gray-400 border border-gray-200 dark:border-gray-800 px-2 py-1 rounded-lg">{f}</span>)}
-                  </div>
-                  <button onClick={onStart} className="w-full py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl font-bold text-xs uppercase tracking-widest text-gray-900 dark:text-white hover:bg-primary hover:text-white transition-all">Accéder à l'espace</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* PAGE: CONTACT */}
-        {currentView === AppView.LANDING_CONTACT && (
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="bg-white dark:bg-gray-900 rounded-[4rem] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 border border-gray-100 dark:border-gray-800">
-              <div className="p-12 lg:p-20 space-y-12">
-                  <div className="space-y-4">
-                    <h2 className="text-4xl font-bold text-gray-900 dark:text-white uppercase tracking-tighter">Parlons d'Impact</h2>
-                    <p className="text-gray-500 font-medium italic leading-relaxed">Vous êtes une autorité municipale ou une entreprise engagée ? Contactez notre équipe dédiée aux partenariats institutionnels.</p>
-                  </div>
-
-                  <div className="space-y-8">
-                    <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"><Mail className="w-7 h-7"/></div>
-                        <div>
-                          <p className="text-[0.6rem] font-semibold text-gray-400 uppercase tracking-widest">Email Partenaires</p>
-                          <p className="text-lg font-bold dark:text-white">contact@bisopeto.com</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"><Phone className="w-7 h-7"/></div>
-                        <div>
-                          <p className="text-[0.6rem] font-semibold text-gray-400 uppercase tracking-widest">Urgence / WhatsApp</p>
-                          <p className="text-lg font-bold dark:text-white">+243 85 229 1755</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"><MapPin className="w-7 h-7"/></div>
-                        <div>
-                          <p className="text-[0.6rem] font-semibold text-gray-400 uppercase tracking-widest">Quartier Général</p>
-                          <p className="text-base font-bold dark:text-white">63, Av. Colonel Mondjiba, Kinshasa</p>
-                        </div>
-                    </div>
-                  </div>
+      {/* ═══════════════════════════════════════════════
+          SECTION CONTACT & FORMULAIRE (#contact)
+          ═══════════════════════════════════════════════ */}
+      <section id="contact" className="py-20 md:py-28 bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+            
+            {/* Infos de contact */}
+            <div className="lg:col-span-5 space-y-8">
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Échange Direct</p>
+                <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+                  Contactez BISO PETO GROUP
+                </h2>
+                <p className="text-gray-600 text-base leading-relaxed">
+                  Que ce soit pour une étude de site, un contrat de collecte, un service de nettoyage ou un partenariat, 
+                  notre équipe d'experts est à votre entière écoute.
+                </p>
               </div>
 
-              <div className="bg-gray-900 p-12 lg:p-20 relative overflow-hidden flex flex-col justify-center">
-                  <div className="absolute top-0 right-0 p-8 opacity-5 text-white"><Shield className="w-[12rem] h-[12rem]"/></div>
-                  {isSent ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 animate-scale-up">
-                        <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white shadow-2xl"><Check className="w-10 h-10" strokeWidth={4}/></div>
-                        <h3 className="text-3xl font-bold text-white uppercase tracking-tight leading-none">Message Reçu</h3>
-                        <p className="text-gray-400 font-medium max-w-xs mx-auto text-sm">Votre message a été transmis à <span className="text-primary font-bold">contact@bisopeto.com</span>. Un consultant environnemental vous recontactera sous 24h.</p>
-                        <button onClick={() => setIsSent(false)} className="text-primary text-xs font-semibold uppercase tracking-widest underline underline-offset-4">Envoyer un autre message</button>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-                      <div className="space-y-2">
-                          <label className="text-[0.6rem] font-semibold text-gray-500 uppercase tracking-widest ml-1">Identité / Entreprise</label>
-                          <input required className="w-full bg-white/5 border-2 border-white/10 text-white p-5 rounded-3xl focus:border-primary outline-none font-medium transition-all" placeholder="Nom complet" value={formState.name} onChange={e => setFormState({...formState, name: e.target.value})} />
-                      </div>
-                      <div className="space-y-2">
-                          <label className="text-[0.6rem] font-semibold text-gray-500 uppercase tracking-widest ml-1">E-mail professionnel</label>
-                          <input required type="email" className="w-full bg-white/5 border-2 border-white/10 text-white p-5 rounded-3xl focus:border-primary outline-none font-medium transition-all" placeholder="votre@email.com" value={formState.email} onChange={e => setFormState({...formState, email: e.target.value})} />
-                      </div>
-                      <div className="space-y-2">
-                          <label className="text-[0.6rem] font-semibold text-gray-500 uppercase tracking-widest ml-1">Votre Message</label>
-                          <textarea required rows={4} className="w-full bg-white/5 border-2 border-white/10 text-white p-5 rounded-3xl focus:border-primary outline-none font-medium resize-none transition-all" placeholder="Décrivez votre besoin..." value={formState.message} onChange={e => setFormState({...formState, message: e.target.value})} />
-                      </div>
-                      <button disabled={isSending} className="w-full py-5 bg-primary hover:bg-primary-light text-white rounded-3xl font-bold uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 transition-all disabled:opacity-50">
-                        {isSending ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Send className="w-5 h-5"/> Envoyer la demande</>}
-                      </button>
-                    </form>
-                  )}
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* FOOTER */}
-      <footer className="bg-gray-950 text-white pt-32 pb-16">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-24">
-            <div className="col-span-1 lg:col-span-2 space-y-8">
-               <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 bg-white rounded-3xl p-3 shadow-2xl">
-                    <img src={appLogo} className="w-full h-full object-contain" alt="Logo"/>
+              <div className="space-y-6 pt-2">
+                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[#F8FAF8] border border-gray-100">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                    <Mail className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-4xl font-bold tracking-tighter leading-none">BISO PETO</h3>
-                    <p className="text-[0.6rem] font-semibold text-gray-500 uppercase tracking-[0.4em] mt-1">Group SARL</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Adresse E-mail</p>
+                    <a href="mailto:contact@bisopeto.com" className="text-base font-bold text-gray-900 hover:text-emerald-700 transition-colors">
+                      contact@bisopeto.com
+                    </a>
                   </div>
-               </div>
-               <p className="text-gray-400 font-medium leading-relaxed max-w-sm">
-                 Première plateforme congolaise de digitalisation environnementale, certifiée pour l'assainissement durable de la ville-province de Kinshasa.
-               </p>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[#F8FAF8] border border-gray-100">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                    <Phone className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Téléphone / WhatsApp</p>
+                    <a href="tel:+243852291755" className="text-base font-bold text-gray-900 hover:text-emerald-700 transition-colors">
+                      +243 85 229 1755
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[#F8FAF8] border border-gray-100">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Siège Social</p>
+                    <p className="text-base font-bold text-gray-900">
+                      Kinshasa, République Démocratique du Congo
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500 mb-10">Navigation</h4>
-              <ul className="space-y-5 font-bold uppercase text-[0.6rem] tracking-[0.2em] text-gray-400">
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => handleNavClick(AppView.LANDING_ABOUT)}>À Propos</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => handleNavClick(AppView.LANDING_ECOSYSTEM)}>Écosystème</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => handleNavClick(AppView.LANDING_PROCESS)}>Fonctionnement</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => handleNavClick(AppView.LANDING_IMPACT)}>Impact</li>
+            {/* Formulaire de contact */}
+            <div className="lg:col-span-7">
+              <div className="bg-[#F8FAF8] p-8 sm:p-10 rounded-3xl border border-gray-200/90 shadow-sm">
+                
+                <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                  Demande d'évaluation ou d'information
+                </h3>
+
+                {isSent ? (
+                  <div className="py-12 flex flex-col items-center text-center space-y-4 animate-fade-in">
+                    <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-lg">
+                      <Check className="w-8 h-8" strokeWidth={3} />
+                    </div>
+                    <h4 className="text-2xl font-bold text-gray-900">Message Transmis avec Succès</h4>
+                    <p className="text-gray-600 text-sm max-w-md">
+                      Votre demande a été envoyée à l'adresse officielle <span className="font-bold text-emerald-700">{COMPANY_EMAIL}</span>. 
+                      Notre équipe vous répondra dans les plus brefs délais.
+                    </p>
+                    <button 
+                      onClick={() => setIsSent(false)} 
+                      className="text-emerald-700 text-xs font-bold uppercase tracking-wider underline pt-2"
+                    >
+                      Envoyer une nouvelle demande
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Nom complet / Entreprise <span className="text-emerald-600">*</span>
+                        </label>
+                        <input 
+                          type="text" 
+                          required 
+                          placeholder="Ex: Entreprise Sarl ou M. Jean" 
+                          value={formState.name}
+                          onChange={e => setFormState({ ...formState, name: e.target.value })}
+                          className="w-full px-4 py-3 bg-white rounded-xl border border-gray-300 text-gray-900 text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Adresse E-mail <span className="text-emerald-600">*</span>
+                        </label>
+                        <input 
+                          type="email" 
+                          required 
+                          placeholder="contact@organisation.com" 
+                          value={formState.email}
+                          onChange={e => setFormState({ ...formState, email: e.target.value })}
+                          className="w-full px-4 py-3 bg-white rounded-xl border border-gray-300 text-gray-900 text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Téléphone
+                        </label>
+                        <input 
+                          type="tel" 
+                          placeholder="+243 ..." 
+                          value={formState.phone}
+                          onChange={e => setFormState({ ...formState, phone: e.target.value })}
+                          className="w-full px-4 py-3 bg-white rounded-xl border border-gray-300 text-gray-900 text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Prestation concernée
+                        </label>
+                        <select 
+                          value={formState.service}
+                          onChange={e => setFormState({ ...formState, service: e.target.value })}
+                          className="w-full px-4 py-3 bg-white rounded-xl border border-gray-300 text-gray-900 text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all"
+                        >
+                          <option value="Gestion des déchets">Gestion des déchets</option>
+                          <option value="Études & Conseil environnemental">Études & Conseil environnemental</option>
+                          <option value="Santé environnementale">Santé environnementale</option>
+                          <option value="Nettoyage professionnel">Nettoyage professionnel</option>
+                          <option value="Évaluation globale de site">Évaluation globale de site</option>
+                          <option value="Autre demande">Autre demande</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Votre Message / Spécifications <span className="text-emerald-600">*</span>
+                      </label>
+                      <textarea 
+                        required 
+                        rows={4}
+                        placeholder="Précisez la nature de votre besoin (localisation, type d'activité, volume estimé...)" 
+                        value={formState.message}
+                        onChange={e => setFormState({ ...formState, message: e.target.value })}
+                        className="w-full px-4 py-3 bg-white rounded-xl border border-gray-300 text-gray-900 text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none resize-none transition-all"
+                      />
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      disabled={isSending}
+                      className="w-full py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    >
+                      {isSending ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          <span>ENVOYER MA DEMANDE</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
+
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          9. FOOTER
+          ═══════════════════════════════════════════════ */}
+      <footer className="bg-gray-950 text-gray-400 pt-16 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-gray-800">
+            
+            {/* Colonne 1 & 2 : Logo & Description */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-900/50 border border-emerald-700/50 flex items-center justify-center p-1.5">
+                  <img src={appLogo} alt="Logo" className="w-full h-full object-contain" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold text-white tracking-tight">BISO PETO <span className="text-emerald-400">GROUP</span></h3>
+                  <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">SARL • Services Environnementaux</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-400 leading-relaxed max-w-sm">
+                Entreprise congolaise de référence spécialisée dans l'assainissement, la gestion intégrée des déchets, 
+                le nettoyage professionnel et le conseil en durabilité environnementale.
+              </p>
+            </div>
+
+            {/* Colonne 3 : Liens Rapides */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white">Liens Rapides</h4>
+              <ul className="space-y-2 text-xs font-semibold">
+                <li>
+                  <button onClick={() => scrollToSection('accueil')} className="hover:text-emerald-400 transition-colors">
+                    Accueil
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => scrollToSection('prestations')} className="hover:text-emerald-400 transition-colors">
+                    Prestations
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => scrollToSection('innovation')} className="hover:text-emerald-400 transition-colors">
+                    Innovation
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => scrollToSection('apropos')} className="hover:text-emerald-400 transition-colors">
+                    À Propos
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => scrollToSection('contact')} className="hover:text-emerald-400 transition-colors">
+                    Contact
+                  </button>
+                </li>
               </ul>
             </div>
 
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500 mb-10">Plateforme</h4>
-              <ul className="space-y-5 font-bold uppercase text-[0.6rem] tracking-[0.2em] text-gray-400">
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={onLogin}>Mon Compte</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={onStart}>Eco Citoyen</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={onStart}>Eco Academy</li>
+            {/* Colonne 4 : Nos 4 Pôles */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white">Nos Prestations</h4>
+              <ul className="space-y-2 text-xs font-semibold">
+                <li>
+                  <button onClick={() => handleServiceSelect('dechets', 'Gestion des déchets')} className="hover:text-emerald-400 transition-colors text-left">
+                    Gestion des déchets
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => handleServiceSelect('etudes', 'Études & Conseil')} className="hover:text-emerald-400 transition-colors text-left">
+                    Études & Conseil
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => handleServiceSelect('sante', 'Santé environnementale')} className="hover:text-emerald-400 transition-colors text-left">
+                    Santé environnementale
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => handleServiceSelect('nettoyage', 'Nettoyage professionnel')} className="hover:text-emerald-400 transition-colors text-left">
+                    Nettoyage professionnel
+                  </button>
+                </li>
               </ul>
+            </div>
+
+            {/* Colonne 5 : Coordonnées */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white">Contact Direct</h4>
+              <p className="text-xs leading-relaxed">
+                <strong className="text-white">RDC :</strong> Kinshasa
+              </p>
+              <p className="text-xs leading-relaxed">
+                <strong className="text-white">Email :</strong> contact@bisopeto.com
+              </p>
+              <p className="text-xs leading-relaxed">
+                <strong className="text-white">Tél :</strong> +243 85 229 1755
+              </p>
+            </div>
+
+          </div>
+
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+            <p>© 2026 BISO PETO GROUP SARL. Tous droits réservés.</p>
+            <div className="flex items-center gap-6">
+              <span className="hover:text-gray-400 cursor-pointer">Politique de confidentialité</span>
+              <span className="hover:text-gray-400 cursor-pointer">Mentions légales</span>
+              <span className="hover:text-gray-400 cursor-pointer">RDC</span>
             </div>
           </div>
 
-          <div className="pt-16 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
-            <p className="text-[0.6rem] font-semibold tracking-[0.3em] text-gray-600">© 2025 BISO PETO Group SARL. KIN ECO-MAP est un produit protégé.</p>
-            <div className="flex items-center gap-8">
-                <span className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-gray-500 hover:text-white cursor-pointer transition-colors">Confidentialité</span>
-                <span className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-gray-500 hover:text-white cursor-pointer transition-colors">Mentions Légales</span>
-                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all cursor-pointer"><Rocket className="w-4 h-4"/></div>
-            </div>
-          </div>
         </div>
       </footer>
+
     </div>
   );
 };
