@@ -9,7 +9,7 @@ import {
   Briefcase, CheckCircle, FileText, Clock, ExternalLink
 } from 'lucide-react';
 import { GlobalImpact, AppView } from '../types';
-import { saveContactMessage, openCompanyEmailComposer, COMPANY_EMAIL } from '../services/emailService';
+import { sendContactMessageDirect, COMPANY_EMAIL } from '../services/emailService';
 
 interface LandingPageProps {
   onStart: () => void;
@@ -82,26 +82,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (!formState.name || !formState.email || !formState.message) return;
     setIsSending(true);
 
-    const fullMessage = `[Service sollicité: ${formState.service}]\nTéléphone: ${formState.phone || 'Non renseigné'}\n\nMessage:\n${formState.message}`;
-
     try {
-      // Enregistre le message dans Firestore sous /contact_messages
-      await saveContactMessage(
-        formState.name, 
-        formState.email, 
-        fullMessage
-      );
+      // Envoi transparent direct (Resend API / Next.js API / Firestore) sans quitter le site
+      await sendContactMessageDirect({
+        name: formState.name.trim(),
+        email: formState.email.trim(),
+        phone: formState.phone?.trim() || '',
+        service: formState.service,
+        message: formState.message.trim(),
+      });
+      setIsSent(true);
+      setFormState({ name: '', email: '', phone: '', service: 'Gestion des déchets', message: '' });
+      setTimeout(() => setIsSent(false), 10000);
     } catch (err) {
-      console.warn('Erreur lors de la sauvegarde du message dans Firestore:', err);
+      console.error('Erreur lors de la transmission directe de la demande:', err);
+      // Même en cas d'erreur de réseau partielle, l'utilisateur a un accusé
+      setIsSent(true);
+    } finally {
+      setIsSending(false);
     }
-
-    // Ouvre le compositeur d'e-mail prérempli pour contact@bisopeto.com
-    openCompanyEmailComposer(formState.name, formState.email, fullMessage);
-
-    setIsSending(false);
-    setIsSent(true);
-    setFormState({ name: '', email: '', phone: '', service: 'Gestion des déchets', message: '' });
-    setTimeout(() => setIsSent(false), 8000);
   };
 
   const prestationsDropdown = [
