@@ -45,6 +45,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
 
+  // Carrousel d'images Mission (défilement automatique toutes les 3 secondes)
+  const missionImages = [
+    "https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/66694c9c-637f-4354-8d15-5323fe20f999.png",
+    "https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/b8fbda37-b153-4bb2-a869-314313622497.png"
+  ];
+  const [currentMissionImageIndex, setCurrentMissionImageIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentMissionImageIndex((prevIndex) => (prevIndex + 1) % missionImages.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [missionImages.length]);
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -460,13 +474,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {/* Colonne droite visuel */}
             <div className="lg:col-span-5 relative">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
-                <img 
-                  src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=1000&q=80" 
-                  alt="Équipe terrain environnementale" 
-                  className="w-full h-80 sm:h-96 lg:h-[420px] object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/80 via-transparent to-transparent flex items-end p-8">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 h-80 sm:h-96 lg:h-[420px] bg-emerald-950">
+                {missionImages.map((src, idx) => (
+                  <img 
+                    key={src}
+                    src={src} 
+                    alt={`Biso Peto Mission & Vision ${idx + 1}`} 
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+                      idx === currentMissionImageIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-105 pointer-events-none'
+                    }`}
+                  />
+                ))}
+
+                {/* Indicateurs interactifs de défilement (3s) */}
+                <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
+                  {missionImages.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentMissionImageIndex(idx)}
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        idx === currentMissionImageIndex ? 'w-6 bg-emerald-400' : 'w-2 bg-white/50 hover:bg-white'
+                      }`}
+                      aria-label={`Afficher image ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+
+                <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/85 via-emerald-950/20 to-transparent flex items-end p-8 z-10">
                   <div className="text-white">
                     <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">Présence Terrain & Proximité</p>
                     <p className="text-lg font-bold">Kinshasa & Provinces de la RDC</p>
