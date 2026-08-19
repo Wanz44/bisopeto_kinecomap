@@ -355,7 +355,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Arrière-plan avec image bien visible et filtre vert ajusté à 50% */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <img 
-            src="https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/66694c9c-637f-4354-8d15-5323fe20f999.png" 
+            src="https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/4df2ec36-5f82-439d-8fb0-c8154b5e61c6.png" 
             alt="BISO PETO Environnement durable" 
             className="w-full h-full object-cover opacity-80"
           />
