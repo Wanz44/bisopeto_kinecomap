@@ -352,14 +352,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           ═══════════════════════════════════════════════ */}
       <section id="accueil" className="relative pt-32 pb-20 md:pt-44 md:pb-32 overflow-hidden bg-gradient-to-b from-emerald-950 via-emerald-900 to-gray-950 text-white">
         
-        {/* Arrière-plan avec overlay professionnel */}
-        <div className="absolute inset-0 z-0">
+        {/* Arrière-plan avec image bien visible et filtre vert ajusté à 50% */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
           <img 
-            src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=2000&q=80" 
-            alt="Environnement durable" 
-            className="w-full h-full object-cover opacity-25 mix-blend-overlay"
+            src="https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/66694c9c-637f-4354-8d15-5323fe20f999.png" 
+            alt="BISO PETO Environnement durable" 
+            className="w-full h-full object-cover opacity-80"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/95 via-emerald-950/85 to-gray-950/90" />
+          {/* Overlay vert calibré à 50% de transparence avec protection de contraste pour la lisibilité */}
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/70 via-emerald-950/50 to-gray-950/60" />
         </div>
 
         {/* Effets lumineux subtils */}
