@@ -83,18 +83,24 @@ export async function sendContactMessageDirect(payload: SendContactPayload): Pro
     console.log('[Biso Peto Contact] Essai envoi alternatif:', apiErr);
   }
 
-  // 3. Fallback direct avec clé client Resend si définie
-  const clientResendKey = (typeof window !== 'undefined' && (window as any).VITE_RESEND_API_KEY) || '';
+  // 3. Fallback direct avec clé Resend si définie
+  const clientResendKey = process.env.RESEND_API_KEY || (typeof window !== 'undefined' && ((window as any).VITE_RESEND_API_KEY || (window as any).RESEND_API_KEY)) || '';
   if (clientResendKey) {
     try {
       const htmlBody = `
-        <h3>Nouvelle demande Biso Peto</h3>
-        <p><strong>Nom:</strong> ${name}</p>
-        <p><strong>E-mail:</strong> ${email}</p>
-        <p><strong>Téléphone:</strong> ${phone || 'N/A'}</p>
-        <p><strong>Service:</strong> ${service || 'Général'}</p>
-        <p><strong>Message:</strong></p>
-        <p>${message}</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+          <div style="background-color: #065f46; padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; text-align: center;">
+            <h2 style="color: #ffffff; margin: 0; font-size: 18px;">BISO PETO GROUP</h2>
+            <p style="color: #a7f3d0; margin: 4px 0 0 0; font-size: 12px;">Nouvelle demande de contact / évaluation</p>
+          </div>
+          <p><strong>Nom / Entreprise :</strong> ${name}</p>
+          <p><strong>E-mail :</strong> <a href="mailto:${email}">${email}</a></p>
+          <p><strong>Téléphone :</strong> ${phone || 'Non renseigné'}</p>
+          <p><strong>Prestation :</strong> ${service || 'Générale'}</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+          <p><strong>Message :</strong></p>
+          <div style="background-color: #f9fafb; padding: 12px; border-radius: 8px; white-space: pre-wrap;">${message}</div>
+        </div>
       `;
 
       const directRes = await fetch('https://api.resend.com/emails', {
