@@ -284,6 +284,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     const [registrationFinished, setRegistrationFinished] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isResending, setIsResending] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [countryModalOpen, setCountryModalOpen] = useState(false);
@@ -636,22 +637,40 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                     </div>
 
                     <button 
+                        type="button"
+                        id="btn-google-auth"
+                        disabled={isLoading || isGoogleLoading}
                         onClick={async () => {
+                            setIsGoogleLoading(true);
+                            setError(null);
                             try {
-                                if (onToast) onToast("Redirection vers Google...", "info");
+                                if (onToast) onToast("Connexion avec Google...", "info");
                                 const loggedInUser = await UserAPI.loginWithGoogle();
                                 if (loggedInUser) {
                                     if (onToast) onToast(`Mbote ${loggedInUser.firstName} !`, "success");
                                     onComplete(loggedInUser);
                                 }
                             } catch (err: any) {
-                                setError(err.message || "Erreur Google Login");
+                                if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+                                    // Fenêtre fermée par l'utilisateur
+                                    console.log("Authentification Google annulée.");
+                                } else {
+                                    setError(err.message || "Impossible de se connecter avec Google. Veuillez réessayer.");
+                                }
+                            } finally {
+                                setIsGoogleLoading(false);
                             }
                         }}
-                        className="w-full bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-800 py-4 rounded-[1.5rem] flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-all active:scale-[0.98]"
+                        className="w-full bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-800 py-4 rounded-[1.5rem] flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-all active:scale-[0.98] shadow-sm hover:shadow disabled:opacity-60 cursor-pointer"
                     >
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
-                        <span className="text-[11px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300">Commencer avec Google</span>
+                        {isGoogleLoading ? (
+                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                        ) : (
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+                        )}
+                        <span className="text-[11px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300">
+                            {isGoogleLoading ? 'Connexion en cours...' : 'Commencer avec Google'}
+                        </span>
                     </button>
 
                     <div className="flex flex-col items-center gap-5">
