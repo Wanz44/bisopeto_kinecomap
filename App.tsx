@@ -173,6 +173,15 @@ function App() {
         localStorage.setItem('kinecomap_theme', theme);
     }, [theme]);
 
+    useEffect(() => {
+        if (appLogo) {
+            const iconLinks = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon'], link[rel='apple-touch-icon']");
+            iconLinks.forEach(link => {
+                link.href = appLogo;
+            });
+        }
+    }, [appLogo]);
+
     const navigateTo = (newView: AppView) => { if (newView !== view) setHistory([...history, newView]); };
     const goBack = () => { if (history.length > 1) setHistory(prev => prev.slice(0, -1)); };
 
