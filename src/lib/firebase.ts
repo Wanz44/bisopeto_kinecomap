@@ -1,1 +1,1 @@
-export { app, db, auth } from '../../services/firebase';
+export { app, db, auth, signInWithGoogle } from '../../lib/firebase';

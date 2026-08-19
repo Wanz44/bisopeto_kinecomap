@@ -651,11 +651,18 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                                     onComplete(loggedInUser);
                                 }
                             } catch (err: any) {
-                                if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
-                                    // Fenêtre fermée par l'utilisateur
-                                    console.log("Authentification Google annulée.");
+                                console.warn("Google Auth indisponible ou bloqué, basculement manuel :", err);
+                                // Ne pas afficher l'erreur technique Firebase. Basculer immédiatement vers la saisie manuelle.
+                                setError(null);
+                                if (showLogin) {
+                                    if (onToast) onToast("Veuillez renseigner vos identifiants ci-dessus", "info");
+                                    const input = document.querySelector('input[type="text"]') as HTMLInputElement | null;
+                                    input?.focus();
                                 } else {
-                                    setError(err.message || "Impossible de se connecter avec Google. Veuillez réessayer.");
+                                    if (onToast) onToast("Veuillez renseigner vos informations ci-dessus", "info");
+                                    setRegStep(1);
+                                    const input = document.querySelector('input[placeholder="Prénom"]') as HTMLInputElement | null;
+                                    input?.focus();
                                 }
                             } finally {
                                 setIsGoogleLoading(false);
@@ -669,7 +676,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
                         )}
                         <span className="text-[11px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300">
-                            {isGoogleLoading ? 'Connexion en cours...' : 'Commencer avec Google'}
+                            {isGoogleLoading ? 'Connexion en cours...' : 'Continuer avec Google'}
                         </span>
                     </button>
 
