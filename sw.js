@@ -41,23 +41,20 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// Interception des requêtes réseau
+// Interception des requêtes réseau (Stratégie hybride Stale-While-Revalidate + Cache Tuiles)
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // CRITIQUE : Ne JAMAIS mettre en cache les appels vers Supabase ou les API dynamiques
-  // Cela évite que les signalements supprimés réapparaissent à cause du cache local
-  if (url.href.includes('supabase.co') || event.request.method !== 'GET') {
-    return; // Laisser passer la requête directement vers le réseau sans intercepter
+  // Ne pas mettre en cache les API dynamiques Firestore/Supabase pour préserver la cohérence temps réel
+  if (url.href.includes('supabase.co') || url.href.includes('firestore.googleapis.com') || event.request.method !== 'GET') {
+    return;
   }
 
-  // Gestion spécifique pour les tuiles de la carte (OpenStreetMap / Carto)
+  // Cache dédié aux tuiles cartographiques
   if (url.href.includes('tile.openstreetmap.org') || url.href.includes('basemaps.cartocdn.com')) {
-     event.respondWith(
+    event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
+        if (cachedResponse) return cachedResponse;
         return fetch(event.request).then((networkResponse) => {
           return caches.open(DYNAMIC_CACHE).then((cache) => {
             cache.put(event.request, networkResponse.clone());
@@ -69,25 +66,73 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stratégie Stale-While-Revalidate pour le reste des assets statiques
+  // Stale-While-Revalidate pour le reste des assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Optionnel : ne mettre en cache que si c'est un asset statique (image, css, js)
-        const isStatic = /\.(js|css|png|jpg|jpeg|svg|woff2)$/.test(url.pathname);
-        if (isStatic) {
-          return caches.open(DYNAMIC_CACHE).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
-            return networkResponse;
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Fallback si réseau KO
-        return cachedResponse;
-      });
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          const isStatic = /\.(js|css|png|jpg|jpeg|svg|woff2|ico)$/.test(url.pathname);
+          if (isStatic) {
+            caches.open(DYNAMIC_CACHE).then((cache) => {
+              cache.put(event.request, networkResponse.clone());
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => cachedResponse);
 
       return cachedResponse || fetchPromise;
     })
   );
 });
+
+// Background Sync pour synchroniser les signalements hors-ligne
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-reports') {
+    event.waitUntil(
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'SYNC_PENDING_REPORTS' });
+        });
+      })
+    );
+  }
+});
+
+// Notifications Push
+self.addEventListener('push', (event) => {
+  let data = { title: 'BISO PETO', body: 'Nouvelle notification environnementale' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: 'https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/logo-1766239701120-logo_bisopeto.png',
+    badge: 'https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/logo-1766239701120-logo_bisopeto.png',
+    data: data.url || '/',
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === event.notification.data && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(event.notification.data || '/');
+      }
+    })
+  );
+});
+

@@ -73,7 +73,7 @@ export const AdminAds: React.FC<AdminAdsProps> = ({ onBack, onToast }) => {
                 model: 'gemini-3-flash-preview',
                 contents: `Génère une accroche publicitaire courte (max 60 caractères) pour un partenaire de Biso Peto nommé "${adForm.partner}". Le style doit être professionnel mais kinois (mélange français/lingala). Réponds uniquement par le texte brut sans guillemets.`,
             });
-            setAdForm({ ...adForm, title: response.text.replace(/"/g, '') });
+            setAdForm({ ...adForm, title: (response.text || '').replace(/"/g, '') });
             onToast?.("Slogan IA généré !", "success");
         } catch (e) {
             onToast?.("IA indisponible", "error");

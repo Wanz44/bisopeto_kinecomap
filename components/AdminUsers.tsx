@@ -183,8 +183,8 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ onBack, currentUser, onN
                 return matchesStatus && matchesRole && matchesSearch;
             })
             .sort((a, b) => {
-                let valA: any = a[sortBy === 'name' ? 'firstName' : sortBy === 'tonnage' ? 'totalTonnage' : sortBy] || 0;
-                let valB: any = b[sortBy === 'name' ? 'firstName' : sortBy === 'tonnage' ? 'totalTonnage' : sortBy] || 0;
+                let valA: any = sortBy === 'name' ? a.firstName : sortBy === 'tonnage' ? a.totalTonnage : sortBy === 'points' ? a.points : ((a as any).createdAt || 0);
+                let valB: any = sortBy === 'name' ? b.firstName : sortBy === 'tonnage' ? b.totalTonnage : sortBy === 'points' ? b.points : ((b as any).createdAt || 0);
                 if (sortOrder === 'asc') return valA > valB ? 1 : -1;
                 return valA < valB ? 1 : -1;
             });

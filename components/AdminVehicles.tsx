@@ -135,7 +135,7 @@ export const AdminVehicles: React.FC<AdminVehiclesProps> = ({ onBack, onToast })
                     });
                 })
                 .subscribe();
-            return () => { supabase.removeChannel(channel); }
+            return () => { supabase?.removeChannel(channel); }
         }
     }, []);
 

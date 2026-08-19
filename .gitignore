@@ -9,21 +9,36 @@ lerna-debug.log*
 
 # Dependencies
 node_modules/
+.pnp
+.pnp.js
 
-# Production output
+# Production output & Caches
 dist/
 dist-ssr/
+build/
+.cache/
+.parcel-cache/
+.turbo/
 
-# Environment files
+# Environment and Secret Files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
--1.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+*.cert
+*.crt
+serviceAccountKey.json
+google-services.json
 
-# Vercel artifacts
+# Vercel & Deployment artifacts
 .vercel
+.output
+
+# Testing & Coverage
+coverage/
+.nyc_output/
 
 # Editor & System
 .vscode/*

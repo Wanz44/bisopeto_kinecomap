@@ -59,7 +59,7 @@ export const AdminCashBook: React.FC<AdminCashBookProps> = ({ onBack, currentUse
                     setIsLive(status === 'SUBSCRIBED');
                 });
 
-            return () => { supabase.removeChannel(channel); };
+            return () => { supabase?.removeChannel(channel); };
         }
     }, []);
 
