@@ -92,30 +92,64 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formState.name || !formState.email || !formState.message) return;
-    setIsSending(true);
+  e.preventDefault();
 
-    try {
-      // Envoi transparent direct (Resend API / Next.js API / Firestore) sans quitter le site
-      await sendContactMessageDirect({
-        name: formState.name.trim(),
-        email: formState.email.trim(),
-        phone: formState.phone?.trim() || '',
-        service: formState.service,
-        message: formState.message.trim(),
-      });
-      setIsSent(true);
-      setFormState({ name: '', email: '', phone: '', service: 'Gestion des déchets', message: '' });
-      setTimeout(() => setIsSent(false), 10000);
-    } catch (err) {
-      console.error('Erreur lors de la transmission directe de la demande:', err);
-      // Même en cas d'erreur de réseau partielle, l'utilisateur a un accusé
-      setIsSent(true);
-    } finally {
-      setIsSending(false);
+  if (
+    !formState.name.trim() ||
+    !formState.email.trim() ||
+    !formState.message.trim()
+  ) {
+    return;
+  }
+
+  setIsSending(true);
+
+  try {
+    const result = await sendContactMessageDirect({
+      name: formState.name.trim(),
+      email: formState.email.trim(),
+      phone: formState.phone.trim(),
+      service: formState.service,
+      message: formState.message.trim(),
+    });
+
+    if (!result.success) {
+      throw new Error(
+        result.error || 'Impossible d’envoyer votre demande.'
+      );
     }
-  };
+
+    // Succès uniquement si l'API confirme réellement l'envoi.
+    setIsSent(true);
+
+    setFormState({
+      name: '',
+      email: '',
+      phone: '',
+      service: 'Gestion des déchets',
+      message: '',
+    });
+
+    setTimeout(() => {
+      setIsSent(false);
+    }, 10000);
+
+  } catch (error) {
+    console.error(
+      '[BISO PETO] Erreur lors de l’envoi du formulaire:',
+      error
+    );
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : 'Une erreur est survenue lors de l’envoi. Veuillez réessayer.'
+    );
+
+  } finally {
+    setIsSending(false);
+  }
+};
 
   const prestationsDropdown = [
     { id: 'dechets', label: 'Gestion des déchets', desc: 'Collecter. Trier. Valoriser.', icon: Recycle },
