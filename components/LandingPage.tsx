@@ -281,12 +281,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Boutons d'action droite */}
           <div className="hidden sm:flex items-center gap-3">
             <button 
-              onClick={onLogin}
-              className="text-xs font-bold uppercase tracking-wider text-gray-700 hover:text-emerald-700 px-4 py-2.5 rounded-xl hover:bg-gray-100 transition-all"
-            >
-              Espace Client
-            </button>
-            <button 
               onClick={onStart}
               className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md active:scale-95 transition-all flex items-center gap-2"
             >
@@ -364,12 +358,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             <div className="pt-4 flex flex-col gap-3">
-              <button 
-                onClick={() => { setIsMenuOpen(false); onLogin(); }}
-                className="w-full py-3 bg-gray-100 text-gray-800 rounded-xl font-bold uppercase text-xs tracking-wider"
-              >
-                Espace Client
-              </button>
               <button 
                 onClick={() => { setIsMenuOpen(false); onStart(); }}
                 className="w-full py-3.5 bg-emerald-700 text-white rounded-xl font-bold uppercase text-xs tracking-wider shadow-md"

@@ -46,7 +46,7 @@ cp .env.example .env
 ```
 
 Variables requises :
-- `API_KEY` ou `VITE_GEMINI_API_KEY` : Clé API Google Gemini
+- `API_KEY` : Clé API pour les services optionnels
 - `RESEND_API_KEY` : Clé API pour l'envoi d'e-mails
 - `SUPABASE_URL` / `SUPABASE_KEY` : Configuration Supabase (si activé)
 - `CONTACT_EMAIL` : Adresse de réception (`contact@bisopeto.com`)

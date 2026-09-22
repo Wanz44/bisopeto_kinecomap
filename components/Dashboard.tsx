@@ -14,8 +14,7 @@ import {
 } from 'recharts';
 import { User, AppView, UserType, WasteReport, UserPermission, Payment, AdCampaign, CashBookEntry } from '../types';
 import { UserAPI, ReportsAPI, PaymentsAPI, AdsAPI, CashBookAPI, mapReport } from '../services/api';
-import { db } from '../services/firebase';
-import { collection, query, onSnapshot, where, orderBy } from 'firebase/firestore';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 interface DashboardProps {
     user: User;
@@ -38,26 +37,27 @@ function AdminDashboard({ user, onChangeView, onToast }: DashboardProps) {
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         
-        const qUsers = query(collection(db, 'users'));
-        const unsubscribeUsers = onSnapshot(qUsers, () => refreshData());
-
-        const qReports = query(collection(db, 'waste_reports'));
-        const unsubscribeReports = onSnapshot(qReports, () => refreshData());
-
-        const qPayments = query(collection(db, 'payments'));
-        const unsubscribePayments = onSnapshot(qPayments, () => refreshData());
-
-        const qCash = query(collection(db, 'cash_book'));
-        const unsubscribeCash = onSnapshot(qCash, () => refreshData());
+        let channel: any = null;
+        if (supabase && isSupabaseConfigured()) {
+            try {
+                channel = supabase.channel('dashboard_realtime_feed')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => refreshData())
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, () => refreshData())
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => refreshData())
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_book' }, () => refreshData())
+                    .subscribe();
+            } catch (err) {
+                console.warn("[Dashboard] Supabase Realtime non initialisé :", err);
+            }
+        }
 
         initDashboard();
 
         return () => {
             clearInterval(timer);
-            unsubscribeUsers();
-            unsubscribeReports();
-            unsubscribePayments();
-            unsubscribeCash();
+            if (channel && supabase) {
+                supabase.removeChannel(channel);
+            }
         };
     }, []);
 
@@ -241,13 +241,25 @@ function CitizenDashboard({ user, onChangeView }: DashboardProps) {
             }
         };
 
-        const qReports = query(collection(db, 'waste_reports'), where('reporterId', '==', user.id));
-        const unsubscribeReports = onSnapshot(qReports, () => loadMyData());
+        let channel: any = null;
+        if (supabase && isSupabaseConfigured()) {
+            try {
+                channel = supabase.channel(`user_reports_realtime_${user.id}`)
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, () => {
+                        loadMyData();
+                    })
+                    .subscribe();
+            } catch (err) {
+                console.warn("[Dashboard] Supabase Realtime non initialisé :", err);
+            }
+        }
 
         loadMyData();
 
         return () => {
-            unsubscribeReports();
+            if (channel && supabase) {
+                supabase.removeChannel(channel);
+            }
         };
     }, [user.id, user.commune, user.type]);
 

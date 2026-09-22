@@ -21,7 +21,7 @@ VOTRE PERSONNALITÉ :
 let chatSession: Chat | null = null;
 
 const getApiKey = (): string => {
-    const key = process.env.API_KEY || (typeof window !== 'undefined' && (window as any).VITE_GEMINI_API_KEY) || '';
+    const key = process.env.API_KEY || '';
     return typeof key === 'string' ? key.trim() : '';
 };
 
@@ -54,7 +54,7 @@ export async function* sendMessageStream(message: string) {
     try {
         const chat = getOrInitChat();
         if (!chat) {
-            yield "Mbote ! Je suis Biso Peto AI, votre assistant d'assainissement et de recyclage à Kinshasa. Pour activer mes réponses en direct par intelligence artificielle, vous pouvez ajouter votre clé Gemini dans les paramètres ou les variables d'environnement. En attendant, n'hésitez pas à trier vos plastiques (PET/PEHD) et à signaler les dépôts sauvages sur la carte !";
+            yield "Mbote ! Je suis Biso Peto AI, votre assistant d'assainissement et de recyclage à Kinshasa. N'hésitez pas à trier vos plastiques (PET/PEHD) et à signaler les dépôts sauvages sur la carte pour assainir notre ville !";
             return;
         }
         const streamResponse = await chat.sendMessageStream({ message });
@@ -84,7 +84,7 @@ export const findLocationsWithMaps = async (query: string, userLat?: number, use
 }> => {
     const apiKey = getApiKey();
     if (!apiKey) {
-        return { text: "Recherche locale active. Renseignez la clé Gemini pour le grounding Maps en direct.", places: [] };
+        return { text: "Recherche de lieux à Kinshasa en mode local.", places: [] };
     }
 
     try {

@@ -15,8 +15,7 @@ import {
 } from 'lucide-react';
 import { WasteReport, User as AppUser, UserType } from '../types';
 import { ReportsAPI, UserAPI, mapReport } from '../services/api';
-import { db } from '../services/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 const KINSHASA_COMMUNES = [
     "Barumbu", "Bumbu", "Bandalungwa", "Gombe", "Kalamu", "Kasa-Vubu", 
@@ -114,15 +113,24 @@ export const AdminReports: React.FC<AdminReportsProps> = ({ onBack, onToast, onN
     };
 
     useEffect(() => {
-        const q = query(collection(db, 'waste_reports'), orderBy('date', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const updatedReports = snapshot.docs.map(doc => mapReport(doc.data(), doc.id));
-            setReports(updatedReports);
-        }, (error) => {
-            console.error("AdminReports Snapshot Error:", error);
-        });
+        let channel: any = null;
+        if (supabase && isSupabaseConfigured()) {
+            try {
+                channel = supabase.channel('admin_reports_realtime')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'waste_reports' }, () => {
+                        loadData(0, true);
+                    })
+                    .subscribe();
+            } catch (err) {
+                console.warn("[AdminReports] Supabase Realtime non initialisé :", err);
+            }
+        }
 
-        return () => unsubscribe();
+        return () => {
+            if (channel && supabase) {
+                supabase.removeChannel(channel);
+            }
+        };
     }, [selectedReport, onToast]);
 
     useEffect(() => {

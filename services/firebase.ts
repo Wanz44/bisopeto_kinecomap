@@ -1,9 +1,8 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
 import defaultConfig from '../firebase-applet-config.json';
 
-// Configuration Firebase dynamique alimentée par les variables d'environnement (avec fallback sécurisé)
+// Configuration Firebase dynamique pour l'authentification
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY || defaultConfig.apiKey,
   authDomain: process.env.FIREBASE_AUTH_DOMAIN || defaultConfig.authDomain,
@@ -13,15 +12,13 @@ const firebaseConfig = {
   appId: process.env.FIREBASE_APP_ID || defaultConfig.appId,
 };
 
-const databaseId = process.env.FIREBASE_DATABASE_ID || defaultConfig.firestoreDatabaseId;
-
 // Initialisation de l'instance Firebase en mode singleton
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Initialisation de Firestore avec la base de données configurée
-export const db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
-
-// Service d'authentification Firebase
+// Service d'authentification Firebase (Google & Email Auth)
 export const auth = getAuth(app);
+export const db = null as any;
+
+
 
 

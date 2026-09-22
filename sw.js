@@ -45,8 +45,18 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Ne pas mettre en cache les API dynamiques Firestore/Supabase pour préserver la cohérence temps réel
-  if (url.href.includes('supabase.co') || url.href.includes('firestore.googleapis.com') || event.request.method !== 'GET') {
+  // Ne pas intercepter les requêtes API dynamiques (Firestore, Firebase, Google APIs, Supabase)
+  if (
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('firebaseio.com') ||
+    url.hostname.includes('firebaseapp.com') ||
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('google.com') ||
+    url.hostname.includes('gstatic.com') ||
+    url.protocol === 'ws:' ||
+    url.protocol === 'wss:' ||
+    event.request.method !== 'GET'
+  ) {
     return;
   }
 

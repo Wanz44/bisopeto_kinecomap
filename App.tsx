@@ -25,12 +25,12 @@ import { CollectorJobs } from './components/CollectorJobs';
 import { Reporting } from './components/Reporting';
 import { SplashScreen } from './components/SplashScreen';
 import { User, AppView, Theme, Language, NotificationItem, SystemSettings, UserType, GlobalImpact, SubscriptionPlan } from './types';
-import { SettingsAPI, NotificationsAPI, UserAPI } from './services/api';
+import { SettingsAPI, NotificationsAPI, UserAPI, mapUser } from './services/api';
 import { OfflineManager } from './services/offlineManager';
 import { NotificationService } from './services/notificationService';
-import { auth, db } from './services/firebase';
+import { auth } from './services/firebase';
+import { supabase } from './services/supabaseClient';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
 import { LogOut } from 'lucide-react';
 
 const DEFAULT_LOGO = 'https://xjllcclxkffrpdnbttmj.supabase.co/storage/v1/object/public/branding/logo-1766239701120-logo_bisopeto.png';
@@ -121,25 +121,39 @@ function App() {
     }, []);
 
     useEffect(() => {
-        if (user?.id) {
-            const userRef = doc(db, 'users', user.id);
-            const unsubscribeUser = onSnapshot(userRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const updatedData = docSnap.data();
-                    const mapped = { ...updatedData, id: docSnap.id } as User;
-                    setUser(mapped);
-                    localStorage.setItem('kinecomap_user', JSON.stringify(mapped));
-                    if (mapped.status === 'active' && user.status === 'pending') {
-                        showToast("Compte débloqué ! Mbote !", "success");
-                        setHistory([AppView.DASHBOARD]);
-                    }
-                }
-            }, (error) => {
-                console.error("User Snapshot Error:", error);
-            });
+        if (!user?.id) return;
 
-            return () => unsubscribeUser();
+        let channel: any = null;
+        if (supabase) {
+            try {
+                channel = supabase
+                    .channel(`user_realtime_${user.id}`)
+                    .on(
+                        'postgres_changes',
+                        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
+                        (payload) => {
+                            if (payload.new) {
+                                const mapped = mapUser(payload.new, (payload.new as any).id);
+                                setUser(mapped);
+                                localStorage.setItem('kinecomap_user', JSON.stringify(mapped));
+                                if (mapped.status === 'active' && user.status === 'pending') {
+                                    showToast("Compte débloqué ! Mbote !", "success");
+                                    setHistory([AppView.DASHBOARD]);
+                                }
+                            }
+                        }
+                    )
+                    .subscribe();
+            } catch (err) {
+                console.warn("[App] Supabase realtime non activé :", err);
+            }
         }
+
+        return () => {
+            if (channel && supabase) {
+                supabase.removeChannel(channel);
+            }
+        };
     }, [user?.id, user?.status, showToast]);
 
     useEffect(() => {

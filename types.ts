@@ -179,6 +179,7 @@ export interface SystemSettings {
     marketplaceCommission: number;
     exchangeRate: number;
     logoUrl?: string;
+    rolesConfig?: Record<string, UserPermission[]>;
 }
 
 export interface GlobalImpact {
@@ -215,6 +216,12 @@ export interface Vehicle {
     gpsId?: string;
     lastUpdate?: string;
     heading?: number;
+    registrationNumber?: string;
+    capacityKg?: number;
+    fuelLevel?: number;
+    currentDriverId?: string;
+    currentDriverName?: string;
+    lastMaintenanceDate?: string;
 }
 
 export interface ChatMessage {
